@@ -39,6 +39,10 @@ let state: VehicleState = { ...defaultState };
 let blinkMode = "off" as VehicleState["turn"]["mode"];
 let blinkPhaseOn = false;
 let blinkTimer: NodeJS.Timeout | null = null;
+let blinkStartMs = 0;
+let lastBlinkLeft = false;
+let lastBlinkRight = false;
+let lastModeUpdateMs = 0;
 
 const eventLog: Array<{ topic: string; payload: string; ts: number }> = [];
 
@@ -78,18 +82,22 @@ const scheduleBroadcast = () => {
   }, 50 - elapsed);
 };
 
-const publishTurnPulse = (leftOn: boolean, rightOn: boolean) => {
+const publishTurnPulse = (leftOn: boolean, rightOn: boolean, pulseOn: boolean) => {
   if (!mqttClient.connected) return;
   mqttClient.publish("car/state/turn/left", leftOn ? "1" : "0", { retain: true });
   mqttClient.publish("car/state/turn/right", rightOn ? "1" : "0", { retain: true });
+  mqttClient.publish("car/state/turn/pulse", pulseOn ? "1" : "0", { retain: true });
 };
 
 const applyBlinkOutputs = (nextPhaseOn: boolean) => {
   const leftOn = blinkMode === "left" || blinkMode === "hazard" ? nextPhaseOn : false;
   const rightOn = blinkMode === "right" || blinkMode === "hazard" ? nextPhaseOn : false;
+  if (leftOn === lastBlinkLeft && rightOn === lastBlinkRight) return;
+  lastBlinkLeft = leftOn;
+  lastBlinkRight = rightOn;
   state = { ...state, turn: { ...state.turn, left: leftOn, right: rightOn } };
   scheduleBroadcast();
-  publishTurnPulse(leftOn, rightOn);
+  publishTurnPulse(leftOn, rightOn, nextPhaseOn);
 };
 
 const stopBlink = () => {
@@ -101,20 +109,22 @@ const stopBlink = () => {
 
 const scheduleBlink = () => {
   stopBlink();
+  blinkStartMs = Date.now();
   const step = () => {
-    blinkPhaseOn = !blinkPhaseOn;
+    const elapsed = Date.now() - blinkStartMs;
+    const cycleMs = BLINK_ON_MS + BLINK_OFF_MS;
+    const inOnPhase = elapsed % cycleMs < BLINK_ON_MS;
+    blinkPhaseOn = inOnPhase;
     applyBlinkOutputs(blinkPhaseOn);
-    const delay = blinkPhaseOn ? BLINK_ON_MS : BLINK_OFF_MS;
-    blinkTimer = setTimeout(step, delay);
+    blinkTimer = setTimeout(step, 30);
   };
   blinkPhaseOn = false;
   applyBlinkOutputs(false);
-  const initialDelay = BLINK_OFF_MS;
-  blinkTimer = setTimeout(step, initialDelay);
+  blinkTimer = setTimeout(step, 0);
 };
 
 const setBlinkMode = (mode: VehicleState["turn"]["mode"]) => {
-  if (blinkMode === mode) return;
+  lastModeUpdateMs = Date.now();
   blinkMode = mode;
   state = { ...state, turn: { ...state.turn, mode } };
   scheduleBroadcast();
