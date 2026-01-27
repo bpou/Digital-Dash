@@ -135,7 +135,13 @@ export default function ClusterScreen() {
 
                 <div className="relative flex items-center">
                   <div className="absolute -left-28 top-1/2 -translate-y-1/2">
-                    <svg width="100" height="56" viewBox="0 0 100 56" fill="none">
+                    <svg
+                      width="100"
+                      height="56"
+                      viewBox="0 0 100 56"
+                      fill="none"
+                      className={`turn-arrow ${data.turn.left ? "turn-arrow--active" : ""}`}
+                    >
                       <defs>
                         <linearGradient id="turn-left-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" stopColor="#2dd4bf" />
@@ -174,7 +180,13 @@ export default function ClusterScreen() {
                   </div>
 
                   <div className="absolute -right-28 top-1/2 -translate-y-1/2">
-                    <svg width="100" height="56" viewBox="0 0 100 56" fill="none">
+                    <svg
+                      width="100"
+                      height="56"
+                      viewBox="0 0 100 56"
+                      fill="none"
+                      className={`turn-arrow ${data.turn.right ? "turn-arrow--active" : ""}`}
+                    >
                       <defs>
                         <linearGradient id="turn-right-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" stopColor="#2dd4bf" />
