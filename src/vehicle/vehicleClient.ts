@@ -77,7 +77,8 @@ let state: VehicleState = {
 
 const listeners = new Set<Listener>();
 let socket: WebSocket | null = null;
-let connectUrl = "ws://localhost:8765";
+let connectUrl = `ws://${window.location.hostname}:8765`;
+
 let connectedOnce = false;
 let mockInterval: number | null = null;
 
@@ -324,5 +325,7 @@ export const useVehicleState = () => {
 export const subscribe = (listener: Listener) => {
   listeners.add(listener);
   listener(state);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 };
