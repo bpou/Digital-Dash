@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import MusicPlayer from "../components/MusicPlayer";
 import SquircleGauge from "../components/SquircleGauge";
 import { useVehicleState } from "../vehicle/vehicleClient";
@@ -11,15 +11,18 @@ const formatDuration = (totalSeconds: number) => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
+const estimateRangeKm = (fuelPercent: number) => Math.round(250 - (1 - fuelPercent / 100) * 40);
+
 export default function ClusterScreen() {
   const data = useVehicleState();
   const [scale, setScale] = useState(1);
 
-  const tempPct = clamp((data.tempC - 0) / 160, 0, 1) * 100;
+  const tempPct = clamp((data.temp.coolantC - 0) / 160, 0, 1) * 100;
   const nowPlaying = useMemo(
-    () => ({ ...data.audio.nowPlaying, isPlaying: data.audio.isPlaying }),
+    () => ({ ...data.audio.nowPlaying, isPlaying: data.audio.nowPlaying.isPlaying }),
     [data.audio]
   );
+  const rangeKm = estimateRangeKm(data.fuel.percent);
 
   useEffect(() => {
     const baseWidth = 2048;
@@ -86,14 +89,13 @@ export default function ClusterScreen() {
             <div className="absolute bottom-[34px] right-[68px]">
               <div className="flex items-center gap-4 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[14px] text-white/65">
                 <span className="text-white/50">BATTERY</span>
-                <span className="text-white">{data.batteryV.toFixed(1)}V</span>
-                <span className="text-white/40">{data.auxV}V</span>
+                <span className="text-white">{data.electrical.batteryV.toFixed(1)}V</span>
               </div>
             </div>
 
             <div className="relative flex h-full items-center justify-between px-[90px]">
               <SquircleGauge
-                currentValue={data.rpm}
+                currentValue={data.engine.rpm}
                 min={0}
                 max={8000}
                 unit="RPM"
@@ -118,14 +120,14 @@ export default function ClusterScreen() {
                   <div className="flex flex-col items-start">
                     <span className="text-[11px] uppercase tracking-[0.35em] text-white/45">Fuel</span>
                     <span className="mt-2 text-[26px] font-semibold text-white">
-                      {Math.round(data.fuelPct)}%
+                      {Math.round(data.fuel.percent)}%
                     </span>
-                    <span className="text-[12px] text-white/45">{data.rangeKm} KM range</span>
+                    <span className="text-[12px] text-white/45">{rangeKm} KM range</span>
                   </div>
                   <div className="relative h-[90px] w-[12px] overflow-hidden rounded-full bg-white/10">
                     <div
                       className="absolute bottom-0 left-0 w-full rounded-full bg-gradient-to-t from-emerald-400/70 via-emerald-300/50 to-emerald-200/30"
-                      style={{ height: `${Math.max(6, Math.min(100, data.fuelPct))}%` }}
+                      style={{ height: `${Math.max(6, Math.min(100, data.fuel.percent))}%` }}
                     />
                     <div className="absolute left-1/2 top-1/2 h-[2px] w-[18px] -translate-x-1/2 -translate-y-1/2 bg-white/25" />
                   </div>
@@ -193,7 +195,7 @@ export default function ClusterScreen() {
               </div>
 
               <SquircleGauge
-                currentValue={data.speedKmh}
+                currentValue={data.vehicle.speedKmh}
                 min={0}
                 max={200}
                 unit="km/h"

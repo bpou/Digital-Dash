@@ -1,83 +1,27 @@
-import { useEffect, useState } from "react";
-
-type AudioSource = "BT" | "AUX" | "Spotify";
-
-export type VehicleState = {
-  speedKmh: number;
-  rpm: number;
-  fuelPct: number;
-  rangeKm: number;
-  batteryV: number;
-  auxV: number;
-  tempC: number;
-  audio: {
-    volume: number;
-    source: AudioSource;
-    nowPlaying: {
-      title: string;
-      artist: string;
-      album?: string;
-      artworkUrl?: string;
-      durationSec: number;
-      positionSec: number;
-    };
-    isPlaying: boolean;
-  };
-  climate: {
-    tempSet: number;
-    fan: number;
-    ac: boolean;
-    recirc: boolean;
-    defrost: boolean;
-    auto: boolean;
-  };
-  car: {
-    lights: boolean;
-    hazards: boolean;
-    locked: boolean;
-  };
-};
-
-type Command =
-  | { type: "audio/togglePlay" }
-  | { type: "audio/next" }
-  | { type: "audio/prev" }
-  | { type: "audio/setVolume"; payload: number }
-  | { type: "audio/setSource"; payload: AudioSource }
-  | { type: "climate/setTemp"; payload: number }
-  | { type: "climate/setFan"; payload: number }
-  | { type: "climate/toggleAc" }
-  | { type: "climate/toggleRecirc" }
-  | { type: "climate/toggleDefrost" }
-  | { type: "climate/toggleAuto" }
-  | { type: "car/toggleLights" }
-  | { type: "car/toggleHazards" }
-  | { type: "car/toggleLock" };
+﻿import { useEffect, useState } from "react";
+import type { VehicleState } from "../shared/vehicleTypes";
 
 type Listener = (state: VehicleState) => void;
 
-const listeners = new Set<Listener>();
+type Track = Omit<VehicleState["audio"]["nowPlaying"], "positionSec" | "isPlaying">;
 
-const tracks = [
+const tracks: Track[] = [
   {
     title: "Midnight Lights",
     artist: "Eliora",
     album: "Signals",
-    artworkUrl: "",
     durationSec: 256,
   },
   {
     title: "Neon Drift",
     artist: "Atlas Run",
     album: "Night City",
-    artworkUrl: "",
     durationSec: 212,
   },
   {
     title: "Magnetic",
     artist: "Nova Phase",
     album: "Binary Sky",
-    artworkUrl: "",
     durationSec: 284,
   },
 ];
@@ -85,29 +29,44 @@ const tracks = [
 let trackIndex = 0;
 
 let state: VehicleState = {
-  speedKmh: 54,
-  rpm: 1650,
-  fuelPct: 47,
-  rangeKm: 250,
-  batteryV: 14.4,
-  auxV: 0,
-  tempC: 80,
-  audio: {
-    volume: 38,
-    source: "BT",
-    nowPlaying: {
-      ...tracks[0],
-      positionSec: 114,
-    },
-    isPlaying: true,
+  turn: {
+    mode: "off",
+    left: false,
+    right: false,
+  },
+  engine: {
+    rpm: 1650,
+  },
+  vehicle: {
+    speedKmh: 54,
+  },
+  fuel: {
+    percent: 47,
+  },
+  temp: {
+    oilC: 82,
+    coolantC: 80,
+  },
+  electrical: {
+    batteryV: 14.4,
   },
   climate: {
-    tempSet: 21,
+    tempSetC: 21,
     fan: 2,
     ac: true,
     recirc: false,
     defrost: false,
     auto: true,
+  },
+  audio: {
+    volume: 38,
+    muted: false,
+    source: "bt",
+    nowPlaying: {
+      ...tracks[0],
+      positionSec: 114,
+      isPlaying: true,
+    },
   },
   car: {
     lights: false,
@@ -116,21 +75,71 @@ let state: VehicleState = {
   },
 };
 
+const listeners = new Set<Listener>();
+let socket: WebSocket | null = null;
+let connectUrl = "ws://localhost:8765";
+let connectedOnce = false;
+let mockInterval: number | null = null;
+
 const notify = () => {
   listeners.forEach((listener) => listener(state));
 };
 
-export const subscribe = (listener: Listener) => {
-  listeners.add(listener);
-  listener(state);
-  return () => listeners.delete(listener);
+export const connectVehicleWS = (url: string) => {
+  connectUrl = url;
+  connect();
 };
 
-export const getVehicleState = () => state;
+const connect = () => {
+  if (socket && socket.readyState === WebSocket.OPEN) return;
+
+  try {
+    socket = new WebSocket(connectUrl);
+  } catch {
+    startMock();
+    return;
+  }
+
+  socket.addEventListener("open", () => {
+    connectedOnce = true;
+  });
+
+  socket.addEventListener("message", (event) => {
+    try {
+      const message = JSON.parse(event.data as string) as { type: string; payload: VehicleState };
+      if (message.type === "state" && message.payload) {
+        state = message.payload;
+        notify();
+      }
+    } catch {
+      // Ignore malformed messages
+    }
+  });
+
+  socket.addEventListener("close", () => {
+    socket = null;
+    if (!connectedOnce) startMock();
+    setTimeout(connect, 2000);
+  });
+
+  socket.addEventListener("error", () => {
+    if (!connectedOnce) startMock();
+  });
+};
+
+export const sendVehicleCommand = (type: string, payload?: unknown) => {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type, payload }));
+    return;
+  }
+
+  applyCommand(type, payload);
+  notify();
+};
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-const nextTrack = (direction: 1 | -1) => {
+const setTrack = (direction: 1 | -1) => {
   trackIndex = (trackIndex + direction + tracks.length) % tracks.length;
   const next = tracks[trackIndex];
   state = {
@@ -140,71 +149,114 @@ const nextTrack = (direction: 1 | -1) => {
       nowPlaying: {
         ...next,
         positionSec: 0,
+        isPlaying: true,
       },
     },
   };
 };
 
-export const sendCommand = (type: Command["type"], payload?: unknown) => {
+const applyCommand = (type: string, payload?: unknown) => {
   switch (type) {
-    case "audio/togglePlay":
-      state = { ...state, audio: { ...state.audio, isPlaying: !state.audio.isPlaying } };
-      break;
-    case "audio/next":
-      nextTrack(1);
-      break;
-    case "audio/prev":
-      nextTrack(-1);
-      break;
-    case "audio/setVolume":
-      state = { ...state, audio: { ...state.audio, volume: clamp(Number(payload), 0, 100) } };
-      break;
-    case "audio/setSource":
-      state = { ...state, audio: { ...state.audio, source: payload as AudioSource } };
-      break;
-    case "climate/setTemp":
-      state = { ...state, climate: { ...state.climate, tempSet: clamp(Number(payload), 16, 28) } };
-      break;
-    case "climate/setFan":
-      state = { ...state, climate: { ...state.climate, fan: clamp(Number(payload), 0, 5) } };
-      break;
-    case "climate/toggleAc":
-      state = { ...state, climate: { ...state.climate, ac: !state.climate.ac } };
-      break;
-    case "climate/toggleRecirc":
-      state = { ...state, climate: { ...state.climate, recirc: !state.climate.recirc } };
-      break;
-    case "climate/toggleDefrost":
-      state = { ...state, climate: { ...state.climate, defrost: !state.climate.defrost } };
-      break;
-    case "climate/toggleAuto":
-      state = { ...state, climate: { ...state.climate, auto: !state.climate.auto } };
-      break;
+    case "climate/set": {
+      const next = payload as Partial<VehicleState["climate"]>;
+      state = {
+        ...state,
+        climate: {
+          ...state.climate,
+          ...next,
+          tempSetC: next?.tempSetC !== undefined ? clamp(next.tempSetC, 16, 28) : state.climate.tempSetC,
+          fan: next?.fan !== undefined ? clamp(next.fan, 0, 5) : state.climate.fan,
+        },
+      };
+      return;
+    }
+    case "audio/set": {
+      const next = payload as Partial<VehicleState["audio"]>;
+      state = {
+        ...state,
+        audio: {
+          ...state.audio,
+          ...next,
+        },
+      };
+      return;
+    }
+    case "audio/control": {
+      const action = (payload as { action?: string })?.action;
+      if (action === "toggle") {
+        state = {
+          ...state,
+          audio: {
+            ...state.audio,
+            nowPlaying: {
+              ...state.audio.nowPlaying,
+              isPlaying: !state.audio.nowPlaying.isPlaying,
+            },
+          },
+        };
+      }
+      if (action === "play") {
+        state = {
+          ...state,
+          audio: {
+            ...state.audio,
+            nowPlaying: {
+              ...state.audio.nowPlaying,
+              isPlaying: true,
+            },
+          },
+        };
+      }
+      if (action === "pause") {
+        state = {
+          ...state,
+          audio: {
+            ...state.audio,
+            nowPlaying: {
+              ...state.audio.nowPlaying,
+              isPlaying: false,
+            },
+          },
+        };
+      }
+      if (action === "next") {
+        setTrack(1);
+      }
+      if (action === "prev") {
+        setTrack(-1);
+      }
+      return;
+    }
+    case "turn/set":
+      state = {
+        ...state,
+        turn: {
+          ...state.turn,
+          ...(payload as Partial<VehicleState["turn"]>),
+        },
+      };
+      return;
     case "car/toggleLights":
       state = { ...state, car: { ...state.car, lights: !state.car.lights } };
-      break;
+      return;
     case "car/toggleHazards":
       state = { ...state, car: { ...state.car, hazards: !state.car.hazards } };
-      break;
+      return;
     case "car/toggleLock":
       state = { ...state, car: { ...state.car, locked: !state.car.locked } };
-      break;
+      return;
     default:
-      break;
+      return;
   }
-
-  notify();
 };
 
-let mockStarted = false;
+const startMock = () => {
+  if (mockInterval !== null) return;
 
-export const startMockVehicleService = () => {
-  if (mockStarted) return;
-  mockStarted = true;
   const seed = Math.random() * Math.PI * 2;
   let startTime = Date.now();
 
-  setInterval(() => {
+  mockInterval = window.setInterval(() => {
     const elapsed = (Date.now() - startTime) / 1000;
     const dt = 0.05;
 
@@ -213,30 +265,37 @@ export const startMockVehicleService = () => {
 
     const targetSpeed = clamp(80 + wave * 60 + wave2 * 40, 10, 190);
     const targetRpm = clamp(2000 + targetSpeed * 30 + Math.sin(elapsed * 1.2) * 600, 1000, 7500);
-    const targetTemp = clamp(75 + Math.sin(elapsed * 0.15) * 10, 60, 110);
+    const targetTemp = clamp(78 + Math.sin(elapsed * 0.15) * 8, 60, 110);
 
-    const smoothSpeed = state.speedKmh + (targetSpeed - state.speedKmh) * 0.08;
-    const smoothRpm = state.rpm + (targetRpm - state.rpm) * 0.1;
-    const smoothTemp = state.tempC + (targetTemp - state.tempC) * 0.05;
+    const smoothSpeed = state.vehicle.speedKmh + (targetSpeed - state.vehicle.speedKmh) * 0.08;
+    const smoothRpm = state.engine.rpm + (targetRpm - state.engine.rpm) * 0.1;
+    const smoothTemp = state.temp.coolantC + (targetTemp - state.temp.coolantC) * 0.05;
 
-    const nextFuel = clamp(state.fuelPct - dt * 0.01, 15, 90);
-    const nextRange = Math.round(250 - (1 - nextFuel / 100) * 40);
-
-    let nextPosition = state.audio.nowPlaying.positionSec;
+    const nextFuel = clamp(state.fuel.percent - dt * 0.01, 15, 90);
     const duration = Math.max(1, state.audio.nowPlaying.durationSec);
-    if (state.audio.isPlaying) {
+    let nextPosition = state.audio.nowPlaying.positionSec;
+    if (state.audio.nowPlaying.isPlaying) {
       nextPosition = (nextPosition + dt) % duration;
     }
 
     state = {
       ...state,
-      speedKmh: smoothSpeed,
-      rpm: smoothRpm,
-      tempC: smoothTemp,
-      fuelPct: nextFuel,
-      rangeKm: nextRange,
-      batteryV: 14.2 + Math.sin(elapsed * 0.4) * 0.3,
-      auxV: 0,
+      vehicle: {
+        speedKmh: smoothSpeed,
+      },
+      engine: {
+        rpm: smoothRpm,
+      },
+      temp: {
+        ...state.temp,
+        coolantC: smoothTemp,
+      },
+      fuel: {
+        percent: nextFuel,
+      },
+      electrical: {
+        batteryV: 14.2 + Math.sin(elapsed * 0.4) * 0.3,
+      },
       audio: {
         ...state.audio,
         nowPlaying: {
@@ -254,9 +313,16 @@ export const useVehicleState = () => {
   const [vehicleState, setVehicleState] = useState(state);
 
   useEffect(() => {
-    startMockVehicleService();
-    return subscribe(setVehicleState);
+    connect();
+    const unsubscribe = subscribe(setVehicleState);
+    return () => unsubscribe();
   }, []);
 
   return vehicleState;
+};
+
+export const subscribe = (listener: Listener) => {
+  listeners.add(listener);
+  listener(state);
+  return () => listeners.delete(listener);
 };

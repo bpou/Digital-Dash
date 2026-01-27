@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { sendCommand, useVehicleState } from "../../vehicle/vehicleClient";
+﻿import { motion } from "framer-motion";
+import { sendVehicleCommand, useVehicleState } from "../../vehicle/vehicleClient";
 
 interface QuickControlsBarProps {
   onLauncherToggle: () => void;
@@ -16,53 +16,19 @@ export default function QuickControlsBar({
 
   return (
     <div className="flex h-16 w-full items-center justify-between border-t border-[var(--tesla-border-subtle)] bg-[var(--tesla-bg-primary)]/90 px-4 backdrop-blur-xl">
-      {/* Left section - App launcher button */}
       <button
         type="button"
         onClick={onLauncherToggle}
         className="flex h-11 w-11 items-center justify-center rounded-[var(--tesla-radius-md)] bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-secondary)] transition hover:bg-[var(--tesla-bg-surface-hover)] hover:text-[var(--tesla-text-primary)]"
       >
         <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-          <rect
-            x="3"
-            y="3"
-            width="7"
-            height="7"
-            rx="1.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <rect
-            x="14"
-            y="3"
-            width="7"
-            height="7"
-            rx="1.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <rect
-            x="3"
-            y="14"
-            width="7"
-            height="7"
-            rx="1.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <rect
-            x="14"
-            y="14"
-            width="7"
-            height="7"
-            rx="1.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
+          <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
         </svg>
       </button>
 
-      {/* Center section - Mini music player */}
       <motion.button
         type="button"
         onClick={onMediaOpen}
@@ -70,7 +36,6 @@ export default function QuickControlsBar({
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
       >
-        {/* Album art thumbnail */}
         <div className="h-10 w-10 overflow-hidden rounded-[var(--tesla-radius-sm)] bg-[var(--tesla-bg-surface)] shadow-[var(--tesla-shadow-sm)]">
           {audio.nowPlaying.artworkUrl ? (
             <img
@@ -95,7 +60,6 @@ export default function QuickControlsBar({
           )}
         </div>
 
-        {/* Song info */}
         <div className="flex w-32 flex-col">
           <span className="truncate text-[14px] font-medium text-[var(--tesla-text-primary)]">
             {audio.nowPlaying.title || "Not Playing"}
@@ -105,21 +69,15 @@ export default function QuickControlsBar({
           </span>
         </div>
 
-        {/* Playback controls */}
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => sendCommand("audio/togglePlay")}
+            onClick={() => sendVehicleCommand("audio/control", { action: "toggle" })}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-primary)] transition hover:bg-[var(--tesla-bg-surface-hover)]"
           >
-            {audio.isPlaying ? (
+            {audio.nowPlaying.isPlaying ? (
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-                <path
-                  d="M8 6v12M16 6v12"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
+                <path d="M8 6v12M16 6v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             ) : (
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
@@ -129,7 +87,7 @@ export default function QuickControlsBar({
           </button>
           <button
             type="button"
-            onClick={() => sendCommand("audio/next")}
+            onClick={() => sendVehicleCommand("audio/control", { action: "next" })}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--tesla-text-secondary)] transition hover:text-[var(--tesla-text-primary)]"
           >
             <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
@@ -139,7 +97,6 @@ export default function QuickControlsBar({
         </div>
       </motion.button>
 
-      {/* Right section - Quick climate access */}
       <button
         type="button"
         className="flex items-center gap-2 rounded-[var(--tesla-radius-md)] bg-[var(--tesla-bg-surface)] px-4 py-2 text-[var(--tesla-text-secondary)] transition hover:bg-[var(--tesla-bg-surface-hover)] hover:text-[var(--tesla-text-primary)]"

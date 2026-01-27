@@ -8,11 +8,13 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "ytm-server": "node tools/ytm-server/server.js"
+    "ytm-server": "node tools/ytm-server/server.js",
+    "vehicle-service": "tsx server/vehicle-service/index.ts"
   },
   "dependencies": {
     "framer-motion": "^11.2.0",
     "lucide-react": "^0.562.0",
+    "mqtt": "^5.10.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^6.28.2",
@@ -32,6 +34,7 @@
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.19.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "npm:rolldown-vite@7.2.5"
