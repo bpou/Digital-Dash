@@ -1,0 +1,13 @@
+{
+  "name": "ytm-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for YouTube Music integration",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

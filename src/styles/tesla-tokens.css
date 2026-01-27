@@ -1,0 +1,29 @@
+:root {
+  /* Tesla-accurate colors */
+  --tesla-bg-primary: #000000;
+  --tesla-bg-surface: rgba(255, 255, 255, 0.05);
+  --tesla-bg-surface-hover: rgba(255, 255, 255, 0.08);
+  --tesla-bg-surface-active: rgba(255, 255, 255, 0.12);
+
+  --tesla-text-primary: #ffffff;
+  --tesla-text-secondary: rgba(255, 255, 255, 0.6);
+  --tesla-text-tertiary: rgba(255, 255, 255, 0.4);
+
+  --tesla-accent-blue: #3e6ae1;
+  --tesla-accent-red: #e82127;
+  --tesla-accent-green: #00c853;
+  --tesla-accent-orange: #ff9800;
+
+  /* Tesla-accurate radii */
+  --tesla-radius-sm: 8px;
+  --tesla-radius-md: 12px;
+  --tesla-radius-lg: 16px;
+
+  /* Tesla-accurate borders */
+  --tesla-border-subtle: rgba(255, 255, 255, 0.06);
+
+  /* Shadows */
+  --tesla-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --tesla-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --tesla-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+}

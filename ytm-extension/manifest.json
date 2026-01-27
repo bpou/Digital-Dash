@@ -1,0 +1,18 @@
+{
+  "name": "YTM Now Playing Bridge",
+  "version": "0.1.0",
+  "manifest_version": 3,
+  "description": "Sends YouTube Music now-playing data to a local WebSocket.",
+  "permissions": [],
+  "host_permissions": ["https://music.youtube.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://music.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

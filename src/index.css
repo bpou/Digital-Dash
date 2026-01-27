@@ -1,0 +1,132 @@
+@import "tailwindcss";
+@import "./tailwind.css";
+@import "./styles/tesla-tokens.css";
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap");
+
+@font-face {
+  font-family: "Bilgen";
+  src: url("/fonts/Font.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Straightfont";
+  src: url("/fonts/Straightfont.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "NewFont";
+  src: url("/fonts/Font.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Quadaptor";
+  src: url("/fonts/Quadaptor.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Panoptic Mono";
+  src: url("/fonts/PanopticMonospace-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire";
+  src: url("/fonts/jurist_dire/juristdire.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire";
+  src: url("/fonts/jurist_dire/juristdireital.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire";
+  src: url("/fonts/jurist_dire/juristdiresemibold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire";
+  src: url("/fonts/jurist_dire/juristdiresemiboldital.ttf") format("truetype");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire";
+  src: url("/fonts/jurist_dire/juristdirebold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire";
+  src: url("/fonts/jurist_dire/juristdireboldital.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire Title";
+  src: url("/fonts/jurist_dire/juristdiretitle.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire Title";
+  src: url("/fonts/jurist_dire/juristdiretitleital.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire Cond";
+  src: url("/fonts/jurist_dire/juristdirecond.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Jurist Dire Cond";
+  src: url("/fonts/jurist_dire/juristdirecondital.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
