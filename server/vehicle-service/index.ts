@@ -5,6 +5,8 @@ import type { VehicleState } from "../../src/shared/vehicleTypes";
 const MQTT_URL = process.env.MQTT_URL ?? "mqtt://localhost:1883";
 const WS_PORT = Number(process.env.VEHICLE_WS_PORT ?? 8765);
 const EVENT_LOG_SIZE = 100;
+const BLINK_ON_MS = 330;
+const BLINK_OFF_MS = 330;
 
 const defaultState: VehicleState = {
   turn: { mode: "off", left: false, right: false },
@@ -34,6 +36,9 @@ const defaultState: VehicleState = {
 };
 
 let state: VehicleState = { ...defaultState };
+let blinkMode = "off" as VehicleState["turn"]["mode"];
+let blinkPhaseOn = false;
+let blinkTimer: NodeJS.Timeout | null = null;
 
 const eventLog: Array<{ topic: string; payload: string; ts: number }> = [];
 
@@ -71,6 +76,54 @@ const scheduleBroadcast = () => {
     lastBroadcast = Date.now();
     broadcastState();
   }, 50 - elapsed);
+};
+
+const publishTurnPulse = (leftOn: boolean, rightOn: boolean) => {
+  if (!mqttClient.connected) return;
+  mqttClient.publish("car/state/turn/left", leftOn ? "1" : "0", { retain: true });
+  mqttClient.publish("car/state/turn/right", rightOn ? "1" : "0", { retain: true });
+};
+
+const applyBlinkOutputs = (nextPhaseOn: boolean) => {
+  const leftOn = blinkMode === "left" || blinkMode === "hazard" ? nextPhaseOn : false;
+  const rightOn = blinkMode === "right" || blinkMode === "hazard" ? nextPhaseOn : false;
+  state = { ...state, turn: { ...state.turn, left: leftOn, right: rightOn } };
+  scheduleBroadcast();
+  publishTurnPulse(leftOn, rightOn);
+};
+
+const stopBlink = () => {
+  if (blinkTimer) {
+    clearTimeout(blinkTimer);
+    blinkTimer = null;
+  }
+};
+
+const scheduleBlink = () => {
+  stopBlink();
+  const step = () => {
+    blinkPhaseOn = !blinkPhaseOn;
+    applyBlinkOutputs(blinkPhaseOn);
+    const delay = blinkPhaseOn ? BLINK_ON_MS : BLINK_OFF_MS;
+    blinkTimer = setTimeout(step, delay);
+  };
+  blinkPhaseOn = false;
+  applyBlinkOutputs(false);
+  const initialDelay = BLINK_OFF_MS;
+  blinkTimer = setTimeout(step, initialDelay);
+};
+
+const setBlinkMode = (mode: VehicleState["turn"]["mode"]) => {
+  if (blinkMode === mode) return;
+  blinkMode = mode;
+  state = { ...state, turn: { ...state.turn, mode } };
+  scheduleBroadcast();
+  if (blinkMode === "off") {
+    stopBlink();
+    applyBlinkOutputs(false);
+    return;
+  }
+  scheduleBlink();
 };
 
 wss.on("connection", (socket) => {
@@ -134,17 +187,14 @@ mqttClient.on("message", (topic, raw) => {
   }
 
   switch (topic) {
-    case "car/state/turn/mode":
-      state = { ...state, turn: { ...state.turn, mode: payload as VehicleState["turn"]["mode"] } };
-      scheduleBroadcast();
+    case "car/state/turn/mode": {
+      const mode = payload as VehicleState["turn"]["mode"];
+      setBlinkMode(mode);
       return;
+    }
     case "car/state/turn/left":
-      state = { ...state, turn: { ...state.turn, left: parseBoolean(payload) } };
-      scheduleBroadcast();
-      return;
     case "car/state/turn/right":
-      state = { ...state, turn: { ...state.turn, right: parseBoolean(payload) } };
-      scheduleBroadcast();
+      // Ignore direct turn pulses from elsewhere; Pi owns pulse generation.
       return;
     case "car/state/engine/rpm":
       state = { ...state, engine: { rpm: parseNumber(payload) } };
