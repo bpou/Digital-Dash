@@ -48,4 +48,8 @@ export type VehicleState = {
     hazards: boolean;
     locked: boolean;
   };
+  ambient: {
+    color: string;
+    brightness: number;
+  };
 };

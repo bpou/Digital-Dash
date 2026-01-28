@@ -28,7 +28,7 @@ const tracks: Track[] = [
 
 let trackIndex = 0;
 
-let state: VehicleState = {
+let rawState: VehicleState = {
   turn: {
     mode: "off",
     left: false,
@@ -73,17 +73,85 @@ let state: VehicleState = {
     hazards: false,
     locked: true,
   },
+  ambient: {
+    color: "#7EE3FF",
+    brightness: 65,
+  },
 };
 
+let state: VehicleState = rawState;
 const listeners = new Set<Listener>();
 let socket: WebSocket | null = null;
 let connectUrl = `ws://${window.location.hostname}:8765`;
 
-let connectedOnce = false;
-let mockInterval: number | null = null;
+const BLINK_INTERVAL_MS = 330;
+let blinkTimer: number | null = null;
+let blinkPhaseOn = false;
+let blinkEnabled = false;
+let lastBlinkApplied = false;
 
 const notify = () => {
   listeners.forEach((listener) => listener(state));
+};
+
+const commit = (next: VehicleState) => {
+  rawState = next;
+  deriveState();
+};
+
+const deriveState = () => {
+  const hazardsOn = rawState.car.hazards;
+  const mode = hazardsOn ? "hazard" : rawState.turn.mode;
+  blinkEnabled = hazardsOn || mode !== "off";
+  if (!blinkEnabled) {
+    blinkPhaseOn = false;
+    state = {
+      ...rawState,
+      turn: {
+        ...rawState.turn,
+        mode,
+        left: rawState.turn.left,
+        right: rawState.turn.right,
+      },
+    };
+    return;
+  }
+  const leftOn = blinkPhaseOn && (mode === "left" || mode === "hazard");
+  const rightOn = blinkPhaseOn && (mode === "right" || mode === "hazard");
+  state = {
+    ...rawState,
+    turn: {
+      ...rawState.turn,
+      mode,
+      left: leftOn,
+      right: rightOn,
+    },
+  };
+};
+
+const applyBlinkPhase = () => {
+  const shouldApply = blinkEnabled && blinkPhaseOn;
+  if (shouldApply === lastBlinkApplied && blinkEnabled === false) return;
+  lastBlinkApplied = shouldApply;
+  deriveState();
+  notify();
+};
+
+const startBlinkLoop = () => {
+  if (blinkTimer !== null) return;
+  blinkTimer = window.setInterval(() => {
+    if (!blinkEnabled) {
+      if (lastBlinkApplied) {
+        lastBlinkApplied = false;
+        blinkPhaseOn = false;
+        deriveState();
+        notify();
+      }
+      return;
+    }
+    blinkPhaseOn = !blinkPhaseOn;
+    applyBlinkPhase();
+  }, BLINK_INTERVAL_MS);
 };
 
 export const connectVehicleWS = (url: string) => {
@@ -97,19 +165,21 @@ const connect = () => {
   try {
     socket = new WebSocket(connectUrl);
   } catch {
-    startMock();
     return;
   }
 
-  socket.addEventListener("open", () => {
-    connectedOnce = true;
-  });
-
   socket.addEventListener("message", (event) => {
     try {
-      const message = JSON.parse(event.data as string) as { type: string; payload: VehicleState };
+      const message = JSON.parse(event.data as string) as {
+        type: string;
+        payload: VehicleState | (Omit<VehicleState, "ambient"> & { ambient?: VehicleState["ambient"] });
+      };
       if (message.type === "state" && message.payload) {
-        state = message.payload;
+        rawState = {
+          ...(message.payload as VehicleState),
+          ambient: message.payload.ambient ?? rawState.ambient,
+        };
+        deriveState();
         notify();
       }
     } catch {
@@ -119,18 +189,19 @@ const connect = () => {
 
   socket.addEventListener("close", () => {
     socket = null;
-    if (!connectedOnce) startMock();
     setTimeout(connect, 2000);
   });
 
   socket.addEventListener("error", () => {
-    if (!connectedOnce) startMock();
+    // stay idle without mock updates
   });
 };
 
 export const sendVehicleCommand = (type: string, payload?: unknown) => {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type, payload }));
+    applyCommand(type, payload);
+    notify();
     return;
   }
 
@@ -143,82 +214,82 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 const setTrack = (direction: 1 | -1) => {
   trackIndex = (trackIndex + direction + tracks.length) % tracks.length;
   const next = tracks[trackIndex];
-  state = {
-    ...state,
+  commit({
+    ...rawState,
     audio: {
-      ...state.audio,
+      ...rawState.audio,
       nowPlaying: {
         ...next,
         positionSec: 0,
         isPlaying: true,
       },
     },
-  };
+  });
 };
 
 const applyCommand = (type: string, payload?: unknown) => {
   switch (type) {
     case "climate/set": {
       const next = payload as Partial<VehicleState["climate"]>;
-      state = {
-        ...state,
+      commit({
+        ...rawState,
         climate: {
-          ...state.climate,
+          ...rawState.climate,
           ...next,
-          tempSetC: next?.tempSetC !== undefined ? clamp(next.tempSetC, 16, 28) : state.climate.tempSetC,
-          fan: next?.fan !== undefined ? clamp(next.fan, 0, 5) : state.climate.fan,
+          tempSetC: next?.tempSetC !== undefined ? clamp(next.tempSetC, 16, 28) : rawState.climate.tempSetC,
+          fan: next?.fan !== undefined ? clamp(next.fan, 0, 5) : rawState.climate.fan,
         },
-      };
+      });
       return;
     }
     case "audio/set": {
       const next = payload as Partial<VehicleState["audio"]>;
-      state = {
-        ...state,
+      commit({
+        ...rawState,
         audio: {
-          ...state.audio,
+          ...rawState.audio,
           ...next,
         },
-      };
+      });
       return;
     }
     case "audio/control": {
       const action = (payload as { action?: string })?.action;
       if (action === "toggle") {
-        state = {
-          ...state,
+        commit({
+          ...rawState,
           audio: {
-            ...state.audio,
+            ...rawState.audio,
             nowPlaying: {
-              ...state.audio.nowPlaying,
-              isPlaying: !state.audio.nowPlaying.isPlaying,
+              ...rawState.audio.nowPlaying,
+              isPlaying: !rawState.audio.nowPlaying.isPlaying,
             },
           },
-        };
+        });
       }
       if (action === "play") {
-        state = {
-          ...state,
+        commit({
+          ...rawState,
           audio: {
-            ...state.audio,
+            ...rawState.audio,
             nowPlaying: {
-              ...state.audio.nowPlaying,
+              ...rawState.audio.nowPlaying,
               isPlaying: true,
             },
           },
-        };
+        });
       }
       if (action === "pause") {
-        state = {
-          ...state,
+        commit({
+          ...rawState,
           audio: {
-            ...state.audio,
+            ...rawState.audio,
             nowPlaying: {
-              ...state.audio.nowPlaying,
+              ...rawState.audio.nowPlaying,
               isPlaying: false,
             },
           },
-        };
+        });
       }
       if (action === "next") {
         setTrack(1);
@@ -229,92 +300,57 @@ const applyCommand = (type: string, payload?: unknown) => {
       return;
     }
     case "turn/set":
-      state = {
-        ...state,
+      commit({
+        ...rawState,
         turn: {
-          ...state.turn,
+          ...rawState.turn,
           ...(payload as Partial<VehicleState["turn"]>),
         },
-      };
+      });
       return;
     case "car/toggleLights":
-      state = { ...state, car: { ...state.car, lights: !state.car.lights } };
+      commit({ ...rawState, car: { ...rawState.car, lights: !rawState.car.lights } });
       return;
-    case "car/toggleHazards":
-      state = { ...state, car: { ...state.car, hazards: !state.car.hazards } };
+    case "car/toggleHazards": {
+      const hazardsOn = !rawState.car.hazards;
+      commit({
+        ...rawState,
+        car: { ...rawState.car, hazards: hazardsOn },
+        turn: {
+          ...rawState.turn,
+          mode: hazardsOn ? "hazard" : "off",
+          left: false,
+          right: false,
+        },
+      });
       return;
+    }
     case "car/toggleLock":
-      state = { ...state, car: { ...state.car, locked: !state.car.locked } };
+      commit({ ...rawState, car: { ...rawState.car, locked: !rawState.car.locked } });
       return;
+    case "ambient/set": {
+      const next = payload as Partial<VehicleState["ambient"]>;
+      commit({
+        ...rawState,
+        ambient: {
+          ...rawState.ambient,
+          ...next,
+        },
+      });
+      return;
+    }
     default:
       return;
   }
 };
 
-const startMock = () => {
-  if (mockInterval !== null) return;
-
-  const seed = Math.random() * Math.PI * 2;
-  let startTime = Date.now();
-
-  mockInterval = window.setInterval(() => {
-    const elapsed = (Date.now() - startTime) / 1000;
-    const dt = 0.05;
-
-    const wave = Math.sin(elapsed * 0.8 + seed);
-    const wave2 = Math.sin(elapsed * 0.5 + seed * 1.5);
-
-    const targetSpeed = clamp(80 + wave * 60 + wave2 * 40, 10, 190);
-    const targetRpm = clamp(2000 + targetSpeed * 30 + Math.sin(elapsed * 1.2) * 600, 1000, 7500);
-    const targetTemp = clamp(78 + Math.sin(elapsed * 0.15) * 8, 60, 110);
-
-    const smoothSpeed = state.vehicle.speedKmh + (targetSpeed - state.vehicle.speedKmh) * 0.08;
-    const smoothRpm = state.engine.rpm + (targetRpm - state.engine.rpm) * 0.1;
-    const smoothTemp = state.temp.coolantC + (targetTemp - state.temp.coolantC) * 0.05;
-
-    const nextFuel = clamp(state.fuel.percent - dt * 0.01, 15, 90);
-    const duration = Math.max(1, state.audio.nowPlaying.durationSec);
-    let nextPosition = state.audio.nowPlaying.positionSec;
-    if (state.audio.nowPlaying.isPlaying) {
-      nextPosition = (nextPosition + dt) % duration;
-    }
-
-    state = {
-      ...state,
-      vehicle: {
-        speedKmh: smoothSpeed,
-      },
-      engine: {
-        rpm: smoothRpm,
-      },
-      temp: {
-        ...state.temp,
-        coolantC: smoothTemp,
-      },
-      fuel: {
-        percent: nextFuel,
-      },
-      electrical: {
-        batteryV: 14.2 + Math.sin(elapsed * 0.4) * 0.3,
-      },
-      audio: {
-        ...state.audio,
-        nowPlaying: {
-          ...state.audio.nowPlaying,
-          positionSec: nextPosition,
-        },
-      },
-    };
-
-    notify();
-  }, 50);
-};
 
 export const useVehicleState = () => {
   const [vehicleState, setVehicleState] = useState(state);
 
   useEffect(() => {
     connect();
+    startBlinkLoop();
     const unsubscribe = subscribe(setVehicleState);
     return () => unsubscribe();
   }, []);
@@ -324,6 +360,7 @@ export const useVehicleState = () => {
 
 export const subscribe = (listener: Listener) => {
   listeners.add(listener);
+  deriveState();
   listener(state);
   return () => {
     listeners.delete(listener);

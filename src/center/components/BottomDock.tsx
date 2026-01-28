@@ -95,7 +95,7 @@ const navItems = [
 
 export default function BottomDock() {
   return (
-    <div className="flex h-20 w-full items-center justify-around border-t border-[var(--tesla-border-subtle)] bg-[var(--tesla-bg-primary)]/90 px-6 backdrop-blur-xl">
+    <div className="flex h-20 w-full items-center justify-around rounded-t-[26px] border-t border-[var(--tesla-border-subtle)] bg-[var(--tesla-bg-primary)]/90 px-6 backdrop-blur-xl">
       {navItems.map((item) => (
         <NavLink
           key={item.to}

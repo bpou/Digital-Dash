@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import MusicPlayer from "../components/MusicPlayer";
 import SquircleGauge from "../components/SquircleGauge";
+import { hexToRgba } from "../utils/color";
 import { useVehicleState } from "../vehicle/vehicleClient";
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -16,6 +17,9 @@ const estimateRangeKm = (fuelPercent: number) => Math.round(250 - (1 - fuelPerce
 export default function ClusterScreen() {
   const data = useVehicleState();
   const [scale, setScale] = useState(1);
+  const ambientColor = data.ambient?.color ?? "#7EE3FF";
+  const ambientBrightness = data.ambient?.brightness ?? 65;
+  const ambientStrength = ambientBrightness / 100;
 
   const tempPct = clamp((data.temp.coolantC - 0) / 160, 0, 1) * 100;
   const nowPlaying = useMemo(
@@ -23,10 +27,12 @@ export default function ClusterScreen() {
     [data.audio]
   );
   const rangeKm = estimateRangeKm(data.fuel.percent);
+  const leftBlink = data.turn.left;
+  const rightBlink = data.turn.right;
 
   useEffect(() => {
-    const baseWidth = 2048;
-    const baseHeight = 672;
+    const baseWidth = 1920;
+    const baseHeight = 720;
     const handleResize = () => {
       const next = Math.min(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
       setScale(Number.isFinite(next) ? next : 1);
@@ -40,7 +46,18 @@ export default function ClusterScreen() {
     <div className="min-h-screen bg-[#07090c] text-white">
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 cluster-ambient" />
+          <div
+            className="absolute inset-0 cluster-ambient ambient-glow"
+            style={{
+              background: `radial-gradient(circle at 30% 40%, ${hexToRgba(
+                ambientColor,
+                0.22 * ambientStrength
+              )}, transparent 55%), radial-gradient(circle at 70% 60%, ${hexToRgba(
+                ambientColor,
+                0.18 * ambientStrength
+              )}, transparent 60%)`,
+            }}
+          />
           <div className="absolute inset-0 cluster-vignette" />
           <div className="absolute inset-0 cluster-noise" />
         </div>
@@ -48,12 +65,20 @@ export default function ClusterScreen() {
         <div
           className="relative z-10 origin-center"
           style={{
-            width: 2048,
-            height: 672,
+            width: 1920,
+            height: 720,
             transform: `scale(${scale})`,
           }}
         >
-          <div className="relative h-full w-full overflow-hidden rounded-[60px] bg-[radial-gradient(circle_at_40%_40%,rgba(26,44,45,0.9),rgba(6,8,10,0.95)_60%,rgba(4,5,7,1)_100%)]">
+          <div
+            className="relative h-full w-full overflow-hidden ambient-panel"
+            style={{
+              background: `radial-gradient(circle at 40% 40%, ${hexToRgba(
+                ambientColor,
+                0.25 * ambientStrength
+              )}, rgba(6, 8, 10, 0.95) 60%, rgba(4, 5, 7, 1) 100%)`,
+            }}
+          >
             <div className="absolute inset-0 cluster-edge" />
 
             <div className="absolute left-1/2 top-[28px] w-[720px] -translate-x-1/2">
@@ -134,25 +159,8 @@ export default function ClusterScreen() {
                 </div>
 
                 <div className="relative flex items-center">
-                  <div className="absolute -left-28 top-1/2 -translate-y-1/2">
-                    <svg
-                      width="100"
-                      height="56"
-                      viewBox="0 0 100 56"
-                      fill="none"
-                      className={`turn-arrow ${data.turn.left ? "turn-arrow--active" : ""}`}
-                    >
-                      <defs>
-                        <linearGradient id="turn-left-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#2dd4bf" />
-                          <stop offset="50%" stopColor="#60a5fa" />
-                          <stop offset="100%" stopColor="#2dd4bf" />
-                          <animate attributeName="x1" values="0%;100%" dur="4.5s" repeatCount="indefinite" />
-                          <animate attributeName="x2" values="100%;200%" dur="4.5s" repeatCount="indefinite" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M56 10L30 28l26 18v-11h24V21H56V10z" fill="url(#turn-left-gradient)" />
-                    </svg>
+                  <div className="absolute -left-16 top-1/2 -translate-y-1/2">
+                    <div className={`turn-orb turn-orb--left ${leftBlink ? "turn-orb--active" : ""}`} />
                   </div>
 
                   <div className="flex items-center gap-3 rounded-full border border-white/10 px-4 py-2">
@@ -179,29 +187,8 @@ export default function ClusterScreen() {
                     </div>
                   </div>
 
-                  <div className="absolute -right-28 top-1/2 -translate-y-1/2">
-                    <svg
-                      width="100"
-                      height="56"
-                      viewBox="0 0 100 56"
-                      fill="none"
-                      className={`turn-arrow ${data.turn.right ? "turn-arrow--active" : ""}`}
-                    >
-                      <defs>
-                        <linearGradient id="turn-right-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#2dd4bf" />
-                          <stop offset="50%" stopColor="#60a5fa" />
-                          <stop offset="100%" stopColor="#2dd4bf" />
-                          <animate attributeName="x1" values="0%;100%" dur="4.5s" repeatCount="indefinite" />
-                          <animate attributeName="x2" values="100%;200%" dur="4.5s" repeatCount="indefinite" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M56 10L30 28l26 18v-11h24V21H56V10z"
-                        fill="url(#turn-right-gradient)"
-                        transform="translate(100 0) scale(-1 1)"
-                      />
-                    </svg>
+                  <div className="absolute -right-16 top-1/2 -translate-y-1/2">
+                    <div className={`turn-orb turn-orb--right ${rightBlink ? "turn-orb--active" : ""}`} />
                   </div>
                 </div>
               </div>

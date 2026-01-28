@@ -131,11 +131,134 @@ body {
   margin: 0;
 }
 
- .turn-arrow {
-  opacity: 0.25;
-  filter: drop-shadow(0 0 0 rgba(45, 212, 191, 0));
+.ambient-glow {
+  transition: background 320ms ease, opacity 320ms ease;
 }
+
+.ambient-panel {
+  transition: background 320ms ease;
+}
+
+ .turn-arrow {
+   opacity: 0.25;
+   filter: drop-shadow(0 0 0 rgba(45, 212, 191, 0));
+ }
 .turn-arrow--active {
   opacity: 1;
   filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.7)) drop-shadow(0 0 18px rgba(96, 165, 250, 0.45));
+}
+
+.turn-orb {
+  height: 32px;
+  width: 32px;
+  background: rgba(148, 163, 184, 0.35);
+  box-shadow: inset 0 0 6px rgba(15, 23, 42, 0.5);
+  clip-path: path("M16 4 C17.1 4 18.1 4.5 18.7 5.5 L28 23.7 C28.5 24.7 28 26 26.8 26.4 C25.7 26.8 24.5 26.2 23.9 25.3 L16 14.4 L8.1 25.3 C7.5 26.2 6.3 26.8 5.2 26.4 C4 26 3.5 24.7 4 23.7 L13.3 5.5 C13.9 4.5 14.9 4 16 4 Z");
+  transform: rotate(var(--turn-rotate, 0deg));
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.turn-orb--left {
+  --turn-rotate: -90deg;
+}
+
+.turn-orb--right {
+  --turn-rotate: 90deg;
+}
+
+.turn-orb--active {
+  background: rgba(74, 222, 128, 0.95);
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.6), 0 0 20px rgba(74, 222, 128, 0.4);
+  transform: rotate(var(--turn-rotate, 0deg)) scale(1.08);
+}
+
+
+.control-tile {
+  height: 96px;
+  width: 96px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  position: relative;
+  transition: transform 180ms ease, box-shadow 220ms ease, background 220ms ease, border-color 220ms ease,
+    color 220ms ease;
+}
+
+.control-tile:hover {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px) scale(1.01);
+}
+
+.control-tile:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.control-tile--active {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.control-icon {
+  opacity: 0.8;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.control-tile--active .control-icon {
+  opacity: 1;
+  transform: translateY(1px);
+}
+
+.glow-animate {
+  animation: teslaGlow 2.6s ease-in-out infinite;
+}
+
+.glow-blue {
+  --glow-primary: rgba(56, 189, 248, 0.55);
+  --glow-secondary: rgba(59, 130, 246, 0.35);
+}
+
+.glow-emerald {
+  --glow-primary: rgba(52, 211, 153, 0.45);
+  --glow-secondary: rgba(16, 185, 129, 0.35);
+}
+
+.glow-amber {
+  --glow-primary: rgba(251, 191, 36, 0.55);
+  --glow-secondary: rgba(245, 158, 11, 0.35);
+}
+
+.glow-purple {
+  --glow-primary: rgba(167, 139, 250, 0.55);
+  --glow-secondary: rgba(99, 102, 241, 0.35);
+}
+
+.glow-red {
+  --glow-primary: rgba(248, 113, 113, 0.6);
+  --glow-secondary: rgba(239, 68, 68, 0.4);
+}
+
+.glow-green {
+  --glow-primary: rgba(74, 222, 128, 0.55);
+  --glow-secondary: rgba(34, 197, 94, 0.4);
+}
+
+@keyframes teslaGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 12px var(--glow-primary), 0 0 26px var(--glow-secondary);
+  }
+  50% {
+    box-shadow: 0 0 18px var(--glow-primary), 0 0 36px var(--glow-secondary);
+  }
 }

@@ -1,7 +1,8 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { useVehicleState } from "../vehicle/vehicleClient";
+import { hexToRgba } from "../utils/color";
 import AppLauncher, { type AppType } from "../center/components/AppLauncher";
-import BottomDock from "../center/components/BottomDock";
 import QuickControlsBar from "../center/components/QuickControlsBar";
 import StatusBar from "../center/components/StatusBar";
 
@@ -27,6 +28,9 @@ export default function CenterScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const [launcherOpen, setLauncherOpen] = useState(false);
+  const { ambient } = useVehicleState();
+  const ambientColor = ambient?.color ?? "#7EE3FF";
+  const ambientBrightness = ambient?.brightness ?? 65;
 
   const activeApp = useMemo(() => getActiveApp(location.pathname), [location.pathname]);
 
@@ -35,24 +39,34 @@ export default function CenterScreen() {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-[var(--tesla-bg-primary)] text-white">
+    <div className="relative flex h-[768px] w-[1280px] flex-col overflow-hidden bg-[var(--tesla-bg-primary)] text-white">
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute inset-0 ambient-glow"
+          style={{
+            background: `radial-gradient(circle at 18% 15%, ${hexToRgba(ambientColor, 0.22)}, transparent 55%), radial-gradient(circle at 82% 35%, ${hexToRgba(ambientColor, 0.18)}, transparent 60%)`,
+            opacity: ambientBrightness / 100,
+          }}
+        />
+      </div>
       <StatusBar />
-      <div className="flex min-h-[calc(100vh-8rem)] flex-1 flex-col gap-6 px-6 py-5">
+      <div className="flex min-h-[calc(768px-4rem)] flex-1 flex-col gap-6 px-6 pb-24 pt-5">
         <div className="relative flex-1 rounded-[28px] border border-white/10 bg-white/5 p-6">
           <Outlet />
-          <AppLauncher
-            isOpen={launcherOpen}
-            onClose={() => setLauncherOpen(false)}
-            onSelectApp={handleAppSelect}
-            activeApp={activeApp}
-          />
         </div>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0">
         <QuickControlsBar
           onLauncherToggle={() => setLauncherOpen(true)}
           onMediaOpen={() => navigate("/center/media")}
         />
       </div>
-      <BottomDock />
+      <AppLauncher
+        isOpen={launcherOpen}
+        onClose={() => setLauncherOpen(false)}
+        onSelectApp={handleAppSelect}
+        activeApp={activeApp}
+      />
     </div>
   );
 }

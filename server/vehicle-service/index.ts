@@ -1,4 +1,7 @@
-﻿import mqtt from "mqtt";
+import fs from "fs";
+import path from "path";
+import mqtt from "mqtt";
+import { fileURLToPath } from "url";
 import { WebSocketServer } from "ws";
 import type { VehicleState } from "../../src/shared/vehicleTypes";
 
@@ -7,6 +10,9 @@ const WS_PORT = Number(process.env.VEHICLE_WS_PORT ?? 8765);
 const EVENT_LOG_SIZE = 100;
 const BLINK_ON_MS = 330;
 const BLINK_OFF_MS = 330;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const STATE_PATH = path.join(__dirname, "state.json");
 
 const defaultState: VehicleState = {
   turn: { mode: "off", left: false, right: false },
@@ -33,6 +39,10 @@ const defaultState: VehicleState = {
     hazards: false,
     locked: true,
   },
+  ambient: {
+    color: "#7EE3FF",
+    brightness: 65,
+  },
 };
 
 let state: VehicleState = { ...defaultState };
@@ -45,6 +55,29 @@ let lastBlinkRight = false;
 let lastModeUpdateMs = 0;
 
 const eventLog: Array<{ topic: string; payload: string; ts: number }> = [];
+
+const readPersistedHazards = () => {
+  try {
+    if (!fs.existsSync(STATE_PATH)) return false;
+    const raw = fs.readFileSync(STATE_PATH, "utf-8");
+    const parsed = JSON.parse(raw) as { hazards?: boolean };
+    return Boolean(parsed.hazards);
+  } catch {
+    return false;
+  }
+};
+
+const persistHazards = () => {
+  try {
+    fs.writeFileSync(
+      STATE_PATH,
+      JSON.stringify({ hazards: state.car.hazards }, null, 2),
+      "utf-8"
+    );
+  } catch {
+    // ignore persistence errors
+  }
+};
 
 const logEvent = (topic: string, payload: string) => {
   eventLog.unshift({ topic, payload, ts: Date.now() });
@@ -80,6 +113,13 @@ const scheduleBroadcast = () => {
     lastBroadcast = Date.now();
     broadcastState();
   }, 50 - elapsed);
+};
+
+const restoreHazards = () => {
+  if (!readPersistedHazards()) return;
+  state = { ...state, car: { ...state.car, hazards: true } };
+  setBlinkMode("hazard");
+  scheduleBroadcast();
 };
 
 const publishTurnPulse = (leftOn: boolean, rightOn: boolean, pulseOn: boolean) => {
@@ -154,12 +194,37 @@ wss.on("connection", (socket) => {
         case "audio/control":
           mqttClient.publish("car/cmd/audio/control", JSON.stringify(message.payload ?? {}));
           return;
+        case "ambient/set":
+          state = {
+            ...state,
+            ambient: {
+              ...state.ambient,
+              ...(message.payload as Partial<VehicleState["ambient"]>),
+            },
+          };
+          scheduleBroadcast();
+          mqttClient.publish("car/cmd/ambient/set", JSON.stringify(message.payload ?? {}));
+          return;
         case "turn/set":
           mqttClient.publish("car/cmd/turn/set", JSON.stringify(message.payload ?? {}));
           return;
         case "car/toggleLights":
-        case "car/toggleHazards":
+          state = { ...state, car: { ...state.car, lights: !state.car.lights } };
+          scheduleBroadcast();
+          mqttClient.publish("car/cmd/car", JSON.stringify({ action: message.type }));
+          return;
+        case "car/toggleHazards": {
+          const hazardsOn = !state.car.hazards;
+          state = { ...state, car: { ...state.car, hazards: hazardsOn } };
+          setBlinkMode(hazardsOn ? "hazard" : "off");
+          scheduleBroadcast();
+          persistHazards();
+          mqttClient.publish("car/cmd/car", JSON.stringify({ action: message.type }));
+          return;
+        }
         case "car/toggleLock":
+          state = { ...state, car: { ...state.car, locked: !state.car.locked } };
+          scheduleBroadcast();
           mqttClient.publish("car/cmd/car", JSON.stringify({ action: message.type }));
           return;
         default:
@@ -172,6 +237,7 @@ wss.on("connection", (socket) => {
 });
 
 console.log(`Vehicle WS listening on ws://localhost:${WS_PORT}`);
+restoreHazards();
 
 const mqttClient = mqtt.connect(MQTT_URL);
 

@@ -26,11 +26,11 @@ export default function MusicPlayer({
   }, [nowPlaying.positionSec, nowPlaying.durationSec]);
 
   return (
-    <div className="relative flex h-[96px] w-[760px] items-center gap-5 overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_10%_20%,rgba(90,150,150,0.12),rgba(10,12,14,0.96)_55%,rgba(6,7,9,1))] px-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+    <div className="relative flex h-[96px] w-[760px] items-center gap-5 overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_10%_20%,rgba(90,150,150,0.12),rgba(10,12,14,0.96)_55%,rgba(6,7,9,1))] px-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
       {/* Ambient background layers */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 rounded-[28px]" />
-        <div className="absolute inset-0 rounded-[28px] bg-[linear-gradient(120deg,rgba(255,255,255,0.05),transparent_45%,rgba(255,255,255,0.04))]" />
+        <div className="absolute inset-0 rounded-[32px]" />
+        <div className="absolute inset-0 rounded-[32px] bg-[linear-gradient(120deg,rgba(255,255,255,0.05),transparent_45%,rgba(255,255,255,0.04))]" />
         <div className="absolute -left-10 top-3 h-[140px] w-[140px] rounded-full bg-[radial-gradient(circle,rgba(110,190,190,0.16),transparent_65%)] blur-2xl" />
         <div className="absolute -right-16 bottom-6 h-[140px] w-[140px] rounded-full bg-[radial-gradient(circle,rgba(90,160,160,0.10),transparent_65%)] blur-2xl" />
       </div>
