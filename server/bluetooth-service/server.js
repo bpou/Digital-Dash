@@ -4,7 +4,7 @@ import path from "node:path";
 import http from "node:http";
 import { execFile, spawn } from "node:child_process";
 import { URL } from "node:url";
-import { systemBus } from "dbus-next";
+import { systemBus, sessionBus } from "dbus-next";
 
 const PORT = Number(process.env.BLUETOOTH_WS_PORT ?? 5175);
 const SCAN_TIMEOUT_MS = 20000;
@@ -280,21 +280,36 @@ const parseBusctlDict = (raw) => {
   };
 };
 
-const bus = systemBus();
+const bluezBus = systemBus();
+const obexBusCandidates = [
+  { name: "session", bus: sessionBus() },
+  { name: "system", bus: bluezBus },
+];
+let obexBusInfo = null;
 let obexClientPromise = null;
 const obexSessions = new Map();
 const obexSessionCreations = new Map();
 
+const logObex = (...args) => {
+  console.log("[Bluetooth][OBEX]", ...args);
+};
+
 const getObexClientInterface = async () => {
   if (obexClientPromise) return obexClientPromise;
   obexClientPromise = (async () => {
-    try {
-      const proxy = await bus.getProxyObject("org.bluez.obex", "/org/bluez/obex");
-      return proxy.getInterface("org.bluez.obex.Client1");
-    } catch {
-      obexClientPromise = null;
-      return null;
+    for (const candidate of obexBusCandidates) {
+      try {
+        const proxy = await candidate.bus.getProxyObject("org.bluez.obex", "/org/bluez/obex");
+        const iface = proxy.getInterface("org.bluez.obex.Client1");
+        obexBusInfo = candidate;
+        logObex(`Using ${candidate.name} bus for org.bluez.obex`);
+        return iface;
+      } catch (err) {
+        logObex(`Failed to connect to org.bluez.obex on ${candidate.name} bus`, err?.message ?? err);
+      }
     }
+    obexClientPromise = null;
+    return null;
   })();
   return obexClientPromise;
 };
@@ -338,10 +353,14 @@ const ensureObexSession = async (mac, port) => {
   const creation = (async () => {
     await removeObexSession(mac);
     const client = await getObexClientInterface();
-    if (!client) return null;
+    const obexBus = obexBusInfo?.bus ?? null;
+    if (!client || !obexBus) {
+      logObex("OBEX client unavailable; cannot create session");
+      return null;
+    }
     try {
       const sessionPath = await client.CreateSession(mac, { Target: "bip-avrcp", PSM: Number(port) });
-      const sessionProxy = await bus.getProxyObject("org.bluez.obex", sessionPath);
+      const sessionProxy = await obexBus.getProxyObject("org.bluez.obex", sessionPath);
       const imageInterface = sessionProxy.getInterface("org.bluez.obex.Image1");
       const sessionData = {
         path: sessionPath,
@@ -352,8 +371,10 @@ const ensureObexSession = async (mac, port) => {
         downloadPromise: null,
       };
       obexSessions.set(mac, sessionData);
+      logObex(`Created OBEX session for ${mac} at ${sessionPath} (PSM ${port})`);
       return sessionData;
-    } catch {
+    } catch (err) {
+      logObex("Failed to create OBEX session", err?.message ?? err);
       return null;
     }
   })();
@@ -439,12 +460,14 @@ const downloadCoverArt = async (session, handle) => {
     `digital-dash-cover-${Date.now()}-${Math.random().toString(16).slice(2)}.img`
   );
   try {
+    logObex(`Fetching cover art (handle=${handle}) to ${targetFile}`);
     await withTimeout(session.imageInterface.Get(targetFile, handle, {}), 5000, "obex-get");
     const data = await fs.readFile(targetFile);
     if (!data.length) return null;
     const mime = detectImageMime(data);
     return `data:${mime};base64,${data.toString("base64")}`;
-  } catch {
+  } catch (err) {
+    logObex("Cover art fetch failed", err?.message ?? err);
     return null;
   } finally {
     await fs.unlink(targetFile).catch(() => {});
@@ -497,6 +520,7 @@ const getNowPlaying = async () => {
     };
   }
 
+  let session = null;
   try {
     const trackRaw = await runBusctl([
       "get-property",
@@ -515,7 +539,12 @@ const getNowPlaying = async () => {
     const status = statusRaw.toLowerCase().includes("playing");
     const track = parseBusctlDict(trackRaw);
     const obexPort = track.obexPort || (await getMediaPlayerObexPort(playerPath));
-    let session = null;
+    if (!track.imgHandle) {
+      logObex("No ImgHandle in track metadata", track);
+    }
+    if (!obexPort) {
+      logObex("No ObexPort in track metadata or player properties");
+    }
     if (obexPort > 0) {
       session = await ensureObexSession(connected.mac, obexPort);
     } else {
@@ -538,7 +567,8 @@ const getNowPlaying = async () => {
       isPlaying: status,
       artworkUrl,
     };
-  } catch {
+  } catch (err) {
+    logObex("Failed to fetch now playing metadata", err?.message ?? err);
     return {
       connected: true,
       title: connected.name || connected.alias || "Bluetooth",
