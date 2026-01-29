@@ -377,10 +377,11 @@ const ensureObexSession = async (mac, port) => {
       return null;
     }
     try {
-      const sessionPath = await client.CreateSession(mac, {
+      const options = new Variant("a{sv}", {
         Target: new Variant("s", "bip-avrcp"),
-        PSM: new Variant("u", Number(port)),
+        PSM: new Variant("q", Number(port)),
       });
+      const sessionPath = await client.CreateSession(mac, options);
       const sessionProxy = await obexBus.getProxyObject("org.bluez.obex", sessionPath);
       const imageInterface = sessionProxy.getInterface("org.bluez.obex.Image1");
       const sessionData = {
