@@ -281,18 +281,35 @@ const parseBusctlDict = (raw) => {
 };
 
 const bluezBus = systemBus();
-const obexBusCandidates = [
-  { name: "session", bus: sessionBus() },
-  { name: "system", bus: bluezBus },
-];
+const logObex = (...args) => {
+  console.log("[Bluetooth][OBEX]", ...args);
+};
+
+const canUseSessionBus = () => {
+  if (process.env.DBUS_SESSION_BUS_ADDRESS) return true;
+  return Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY || process.env.XDG_SESSION_TYPE);
+};
+
+const buildObexBusCandidates = () => {
+  const candidates = [];
+  if (canUseSessionBus()) {
+    try {
+      candidates.push({ name: "session", bus: sessionBus() });
+    } catch (err) {
+      logObex("Skipping session bus (unavailable)", err?.message ?? err);
+    }
+  } else {
+    logObex("Skipping session bus (no DISPLAY/DBUS_SESSION_BUS_ADDRESS)");
+  }
+  candidates.push({ name: "system", bus: bluezBus });
+  return candidates;
+};
+
+const obexBusCandidates = buildObexBusCandidates();
 let obexBusInfo = null;
 let obexClientPromise = null;
 const obexSessions = new Map();
 const obexSessionCreations = new Map();
-
-const logObex = (...args) => {
-  console.log("[Bluetooth][OBEX]", ...args);
-};
 
 const getObexClientInterface = async () => {
   if (obexClientPromise) return obexClientPromise;
@@ -308,6 +325,7 @@ const getObexClientInterface = async () => {
         logObex(`Failed to connect to org.bluez.obex on ${candidate.name} bus`, err?.message ?? err);
       }
     }
+    logObex("OBEX client unavailable on all buses");
     obexClientPromise = null;
     return null;
   })();
