@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { URL } from "node:url";
 
 const PORT = Number(process.env.BLUETOOTH_WS_PORT ?? 5175);
-const SCAN_TIMEOUT_MS = 15000;
+const SCAN_TIMEOUT_MS = 20000;
 
 const json = (res, status, body) => {
   res.writeHead(status, {
