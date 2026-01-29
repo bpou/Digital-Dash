@@ -193,7 +193,7 @@ const parseBusctlDict = (raw) => {
     album: get("Album"),
     artist: artistMatch ? artistMatch[1] : "",
     durationSec: durationUs ? Math.round(durationUs / 1000000) : 0,
-    imgHandle: get("ImgHandle"),
+    imageHandle: get("ImageHandle"),
   };
 };
 
@@ -426,8 +426,8 @@ const getNowPlaying = async () => {
     const status = statusRaw.toLowerCase().includes("playing");
     const track = parseBusctlDict(trackRaw);
     let artworkUrl = session?.artworkUrl;
-    if (track.imgHandle && session) {
-      const fetched = await getArtworkUrlForSession(session, track.imgHandle);
+    if (track.imageHandle && session) {
+      const fetched = await getArtworkUrlForSession(session, track.imageHandle);
       if (fetched) {
         artworkUrl = fetched;
       }
