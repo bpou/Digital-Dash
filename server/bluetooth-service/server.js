@@ -235,6 +235,24 @@ const getBluezPlayerPath = async (mac) => {
   }
 };
 
+const getMediaControlPlayerPath = async (mac) => {
+  if (!mac) return "";
+  const devicePath = `/org/bluez/hci0/dev_${mac.replace(/:/g, "_")}`;
+  try {
+    const raw = await runBusctl([
+      "get-property",
+      "org.bluez",
+      devicePath,
+      "org.bluez.MediaControl1",
+      "Player",
+    ]);
+    const match = raw.match(/\"([^\"]+)\"/);
+    return match ? match[1] : "";
+  } catch {
+    return "";
+  }
+};
+
 const tokenizeBusctl = (raw) => {
   const tokens = [];
   let current = "";
@@ -488,6 +506,27 @@ const getMediaPlayerObexPort = async (playerPath) => {
   return Number.isFinite(port) ? port : 0;
 };
 
+const getMediaPlayerStatus = async (playerPath) => {
+  const raw = await getMediaPlayerPropertyRaw(playerPath, "Status");
+  return raw.toLowerCase().includes("playing");
+};
+
+const callMediaPlayer = async (playerPath, method) => {
+  if (!playerPath) throw new Error("No player path available");
+  await runBusctl([
+    "call",
+    "org.bluez",
+    playerPath,
+    "org.bluez.MediaPlayer1",
+    method,
+  ]);
+};
+
+const playMedia = async (playerPath) => callMediaPlayer(playerPath, "Play");
+const pauseMedia = async (playerPath) => callMediaPlayer(playerPath, "Pause");
+const nextMedia = async (playerPath) => callMediaPlayer(playerPath, "Next");
+const previousMedia = async (playerPath) => callMediaPlayer(playerPath, "Previous");
+
 const detectImageMime = (buffer) => {
   if (!buffer || !buffer.length) return "application/octet-stream";
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
@@ -642,7 +681,7 @@ const getNowPlaying = async () => {
 
   await cleanupObexSessions(connected.mac);
 
-  const playerPath = await getBluezPlayerPath(connected.mac);
+  const playerPath = (await getBluezPlayerPath(connected.mac)) || (await getMediaControlPlayerPath(connected.mac));
   if (!playerPath) {
     await removeObexSession(connected.mac);
     return {
@@ -665,14 +704,7 @@ const getNowPlaying = async () => {
       "org.bluez.MediaPlayer1",
       "Track",
     ]);
-    const statusRaw = await runBusctl([
-      "get-property",
-      "org.bluez",
-      playerPath,
-      "org.bluez.MediaPlayer1",
-      "Status",
-    ]);
-    const status = statusRaw.toLowerCase().includes("playing");
+    const status = await getMediaPlayerStatus(playerPath);
     const track = parseBusctlDict(trackRaw);
     const obexPort = track.obexPort || (await getMediaPlayerObexPort(playerPath));
     if (!track.imgHandle) {
@@ -1017,6 +1049,49 @@ const server = http.createServer(async (req, res) => {
         await ensureBluetoothAudio(mac);
       } catch {
         // ignore audio routing failures
+      }
+      json(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/media/control") {
+      const action = url.searchParams.get("action");
+      const mac = url.searchParams.get("mac");
+      const targetMac = mac || (await getConnectedDevice())?.mac;
+      if (!targetMac) {
+        json(res, 400, { error: "No connected device" });
+        return;
+      }
+      const playerPath = (await getBluezPlayerPath(targetMac)) || (await getMediaControlPlayerPath(targetMac));
+      if (!playerPath) {
+        json(res, 400, { error: "No media player" });
+        return;
+      }
+      switch (action) {
+        case "play":
+          await playMedia(playerPath);
+          break;
+        case "pause":
+          await pauseMedia(playerPath);
+          break;
+        case "next":
+          await nextMedia(playerPath);
+          break;
+        case "prev":
+          await previousMedia(playerPath);
+          break;
+        case "toggle": {
+          const playing = await getMediaPlayerStatus(playerPath);
+          if (playing) {
+            await pauseMedia(playerPath);
+          } else {
+            await playMedia(playerPath);
+          }
+          break;
+        }
+        default:
+          json(res, 400, { error: "Unknown action" });
+          return;
       }
       json(res, 200, { ok: true });
       return;

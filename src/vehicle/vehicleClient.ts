@@ -104,6 +104,9 @@ let blinkPhaseOn = false;
 let blinkEnabled = false;
 let lastBlinkApplied = false;
 
+const PLAYBACK_TICK_MS = 1000;
+let playbackTimer: number | null = null;
+
 const MOCK_INTERVAL_MS = 120;
 let mockTimer: number | null = null;
 let mockTick = 0;
@@ -385,6 +388,15 @@ const startBluetoothNowPlayingLoop = () => {
 };
 
 export const sendVehicleCommand = (type: string, payload?: unknown) => {
+  if (type === "bt/media/control") {
+    const action = (payload as { action?: string })?.action;
+    if (action) {
+      fetch(`${btBaseUrl}/media/control?action=${encodeURIComponent(action)}`, { method: "POST" }).catch(() => {
+        // ignore control failures
+      });
+    }
+  }
+
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type, payload }));
     applyCommand(type, payload);
@@ -562,6 +574,34 @@ const stopMockLoop = () => {
   mockTimer = null;
 };
 
+const startPlaybackLoop = () => {
+  if (playbackTimer !== null) return;
+  playbackTimer = window.setInterval(() => {
+    const nowPlaying = rawState.audio.nowPlaying;
+    if (!nowPlaying.isPlaying || nowPlaying.durationSec <= 0) return;
+    const nextPosition = Math.min(nowPlaying.positionSec + 1, nowPlaying.durationSec);
+    if (nextPosition === nowPlaying.positionSec) return;
+    commit({
+      ...rawState,
+      audio: {
+        ...rawState.audio,
+        nowPlaying: {
+          ...nowPlaying,
+          positionSec: nextPosition,
+          isPlaying: nextPosition >= nowPlaying.durationSec ? false : nowPlaying.isPlaying,
+        },
+      },
+    });
+    notify();
+  }, PLAYBACK_TICK_MS);
+};
+
+const stopPlaybackLoop = () => {
+  if (playbackTimer === null) return;
+  window.clearInterval(playbackTimer);
+  playbackTimer = null;
+};
+
 export const useVehicleState = () => {
   const [vehicleState, setVehicleState] = useState(state);
 
@@ -570,9 +610,13 @@ export const useVehicleState = () => {
     connectYtm();
     startBluetoothNowPlayingLoop();
     startBlinkLoop();
+    startPlaybackLoop();
     startMockLoop();
     const unsubscribe = subscribe(setVehicleState);
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      stopPlaybackLoop();
+    };
   }, []);
 
   return vehicleState;

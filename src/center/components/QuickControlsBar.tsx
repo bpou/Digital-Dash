@@ -72,7 +72,7 @@ export default function QuickControlsBar({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => sendVehicleCommand("audio/control", { action: "toggle" })}
+            onClick={() => sendVehicleCommand("bt/media/control", { action: "toggle" })}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-primary)] transition hover:bg-[var(--tesla-bg-surface-hover)]"
           >
             {audio.nowPlaying.isPlaying ? (
@@ -87,7 +87,7 @@ export default function QuickControlsBar({
           </button>
           <button
             type="button"
-            onClick={() => sendVehicleCommand("audio/control", { action: "next" })}
+            onClick={() => sendVehicleCommand("bt/media/control", { action: "next" })}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--tesla-text-secondary)] transition hover:text-[var(--tesla-text-primary)]"
           >
             <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">

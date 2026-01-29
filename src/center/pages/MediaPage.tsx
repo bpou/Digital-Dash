@@ -67,44 +67,44 @@ export default function MediaPage() {
 
       <div className="flex items-center justify-between rounded-[24px] border border-white/10 bg-white/5 px-6 py-5">
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => sendVehicleCommand("audio/control", { action: "prev" })}
-            className="h-10 w-10 rounded-full border border-white/10 text-white/70 hover:text-white"
-          >
-            <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-4 w-4">
-              <path d="M7 6v12M17 6l-8 6 8 6V6z" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              sendVehicleCommand("audio/control", {
-                action: audio.nowPlaying.isPlaying ? "pause" : "play",
-              })
-            }
-            className="h-12 w-12 rounded-full border border-white/20 bg-white/10 text-white"
-          >
-            {audio.nowPlaying.isPlaying ? (
-              <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-5 w-5">
-                <path d="M8 6v12M16 6v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <button
+              type="button"
+              onClick={() => sendVehicleCommand("bt/media/control", { action: "prev" })}
+              className="h-10 w-10 rounded-full border border-white/10 text-white/70 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-4 w-4">
+                <path d="M7 6v12M17 6l-8 6 8 6V6z" stroke="currentColor" strokeWidth="1.6" />
               </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="currentColor" className="mx-auto h-5 w-5">
-                <path d="M8 5l11 7-11 7V5z" />
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                sendVehicleCommand("bt/media/control", {
+                  action: audio.nowPlaying.isPlaying ? "pause" : "play",
+                })
+              }
+              className="h-12 w-12 rounded-full border border-white/20 bg-white/10 text-white"
+            >
+              {audio.nowPlaying.isPlaying ? (
+                <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-5 w-5">
+                  <path d="M8 6v12M16 6v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="currentColor" className="mx-auto h-5 w-5">
+                  <path d="M8 5l11 7-11 7V5z" />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => sendVehicleCommand("bt/media/control", { action: "next" })}
+              className="h-10 w-10 rounded-full border border-white/10 text-white/70 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-4 w-4">
+                <path d="M17 6v12M7 6l8 6-8 6V6z" stroke="currentColor" strokeWidth="1.6" />
               </svg>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => sendVehicleCommand("audio/control", { action: "next" })}
-            className="h-10 w-10 rounded-full border border-white/10 text-white/70 hover:text-white"
-          >
-            <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-4 w-4">
-              <path d="M17 6v12M7 6l8 6-8 6V6z" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
-          </button>
-        </div>
+            </button>
+</div>
 
         <div className="flex items-center gap-4">
           <button

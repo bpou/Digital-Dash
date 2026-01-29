@@ -194,6 +194,9 @@ wss.on("connection", (socket) => {
         case "audio/control":
           mqttClient.publish("car/cmd/audio/control", JSON.stringify(message.payload ?? {}));
           return;
+        case "bt/media/control":
+          mqttClient.publish("car/cmd/bt/media/control", JSON.stringify(message.payload ?? {}));
+          return;
         case "ambient/set":
           state = {
             ...state,
