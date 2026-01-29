@@ -20,8 +20,21 @@ const json = (res, status, body) => {
   res.end(JSON.stringify(body));
 };
 
+const sendBinary = (res, status, mime, data) => {
+  res.writeHead(status, {
+    "Content-Type": mime,
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  });
+  res.end(data);
+};
+
 const BTCTL = process.env.BLUETOOTHCTL_CMD ?? "bluetoothctl";
 const PACTL = process.env.PACTL_CMD ?? "pactl";
+const HOTSPOT_SCRIPT = process.env.HOTSPOT_SCRIPT ?? "tools/hotspot/start-hotspot.sh";
+const MAX_ARTWORK_BYTES = Number(process.env.MAX_ARTWORK_BYTES ?? 5_000_000);
+const artworkCache = new Map();
 
 const runBtctl = (args, timeoutMs = 10000) => {
   return new Promise((resolve, reject) => {
@@ -60,6 +73,18 @@ const runPactl = (args, timeoutMs = 8000) =>
     });
   });
 
+const startHotspot = () =>
+  new Promise((resolve, reject) => {
+    execFile("bash", [HOTSPOT_SCRIPT], { timeout: 20000 }, (err, stdout, stderr) => {
+      if (err) {
+        const details = `${stderr || ""}${stdout || ""}`.trim();
+        reject(new Error(details || err.message));
+        return;
+      }
+      resolve(stdout.toString());
+    });
+  });
+
 const runBtctlBatch = (commands, timeoutMs = 20000) =>
   new Promise((resolve, reject) => {
     const child = spawn(BTCTL, [], { stdio: ["pipe", "pipe", "pipe"] });
@@ -89,6 +114,29 @@ const runBtctlBatch = (commands, timeoutMs = 20000) =>
 
     commands.forEach((cmd) => child.stdin.write(`${cmd}\n`));
     child.stdin.end();
+  });
+
+const readJsonBody = (req) =>
+  new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", (chunk) => {
+      raw += chunk.toString();
+      if (raw.length > 5_000_000) {
+        reject(new Error("Payload too large"));
+        req.destroy();
+      }
+    });
+    req.on("end", () => {
+      if (!raw) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(raw));
+      } catch (err) {
+        reject(err);
+      }
+    });
   });
 
 const parseDevices = (output) => {
@@ -161,6 +209,12 @@ const listDevices = async () => {
   }
 
   return details;
+};
+
+const getArtworkUrl = (key) => {
+  if (!key) return null;
+  const base = process.env.ARTWORK_BASE_URL || `http://${os.hostname()}:5175`;
+  return `${base}/media/artwork/${encodeURIComponent(key)}`;
 };
 
 const getConnectedDevice = async () => {
@@ -391,6 +445,7 @@ const ensureObexSession = async (mac, port) => {
         lastHandle: "",
         artworkUrl: null,
         downloadPromise: null,
+        mac,
       };
       obexSessions.set(mac, sessionData);
       logObex(`Created OBEX session for ${mac} at ${sessionPath} (PSM ${port})`);
@@ -461,6 +516,20 @@ const detectImageMime = (buffer) => {
   return "application/octet-stream";
 };
 
+const putArtworkCache = (key, data, mime) => {
+  if (!key || !data?.length) return null;
+  if (data.length > MAX_ARTWORK_BYTES) {
+    return null;
+  }
+  artworkCache.set(key, { data, mime, ts: Date.now() });
+  return getArtworkUrl(key);
+};
+
+const readArtworkCache = (key) => {
+  if (!key) return null;
+  return artworkCache.get(key) ?? null;
+};
+
 const withTimeout = async (promise, timeoutMs, label) => {
   if (!timeoutMs) return promise;
   let timer;
@@ -487,7 +556,9 @@ const downloadCoverArt = async (session, handle) => {
     const data = await fs.readFile(targetFile);
     if (!data.length) return null;
     const mime = detectImageMime(data);
-    return `data:${mime};base64,${data.toString("base64")}`;
+    const key = `${session.mac}:${handle}`;
+    const url = putArtworkCache(key, data, mime);
+    return url;
   } catch (err) {
     logObex("Cover art fetch failed", err?.message ?? err);
     return null;
@@ -572,23 +643,29 @@ const getNowPlaying = async () => {
     } else {
       await removeObexSession(connected.mac);
     }
-    let artworkUrl = track.artworkUrl || session?.artworkUrl;
-    if (track.imgHandle && session) {
-      const fetched = await getArtworkUrlForSession(session, track.imgHandle);
-      if (fetched) {
-        artworkUrl = fetched;
-      }
-    }
-    return {
-      connected: true,
-      title: track.title || connected.name || connected.alias || "Bluetooth",
-      artist: track.artist || "Bluetooth Audio",
-      album: track.album || "",
-      durationSec: track.durationSec || 0,
-      positionSec: 0,
-      isPlaying: status,
-      artworkUrl,
-    };
+     let artworkUrl = track.artworkUrl || session?.artworkUrl;
+     if (track.imgHandle && session) {
+       const fetched = await getArtworkUrlForSession(session, track.imgHandle);
+       if (fetched) {
+         artworkUrl = fetched;
+       }
+     }
+     if (!artworkUrl && track.imgHandle) {
+       const cached = readArtworkCache(`${connected.mac}:${track.imgHandle}`);
+       if (cached) {
+         artworkUrl = getArtworkUrl(`${connected.mac}:${track.imgHandle}`);
+       }
+     }
+     return {
+       connected: true,
+       title: track.title || connected.name || connected.alias || "Bluetooth",
+       artist: track.artist || "Bluetooth Audio",
+       album: track.album || "",
+       durationSec: track.durationSec || 0,
+       positionSec: 0,
+       isPlaying: status,
+       artworkUrl,
+     };
   } catch (err) {
     logObex("Failed to fetch now playing metadata", err?.message ?? err);
     return {
@@ -790,6 +867,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && url.pathname === "/hotspot/start") {
+      await startHotspot();
+      json(res, 200, { ok: true });
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/media/now-playing") {
       const nowPlaying = await getNowPlaying();
       json(res, 200, nowPlaying);
@@ -815,6 +898,11 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const session = startPairSession(mac);
+      try {
+        await startHotspot();
+      } catch (err) {
+        logObex("Hotspot start failed", err?.message ?? err);
+      }
       json(res, 200, { ok: true, sessionId: session.id, state: session.state, passkey: session.passkey });
       return;
     }
@@ -916,6 +1004,35 @@ const server = http.createServer(async (req, res) => {
       }
       await runBtctl(["remove", mac]);
       json(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname.startsWith("/media/artwork/")) {
+      const key = decodeURIComponent(url.pathname.replace("/media/artwork/", ""));
+      const cached = readArtworkCache(key);
+      if (!cached) {
+        json(res, 404, { error: "Artwork not found" });
+        return;
+      }
+      sendBinary(res, 200, cached.mime || "application/octet-stream", cached.data);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/media/artwork/upload") {
+      const body = await readJsonBody(req);
+      const { key, data, mime } = body ?? {};
+      if (!key || !data) {
+        json(res, 400, { error: "Missing key or data" });
+        return;
+      }
+      const buffer = Buffer.from(String(data), "base64");
+      const contentType = typeof mime === "string" && mime ? mime : detectImageMime(buffer);
+      const url = putArtworkCache(String(key), buffer, contentType);
+      if (!url) {
+        json(res, 413, { error: "Artwork too large" });
+        return;
+      }
+      json(res, 200, { ok: true, artworkUrl: url });
       return;
     }
 

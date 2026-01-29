@@ -22,6 +22,10 @@ sudo cp "${ROOT_DIR}/tools/systemd/digital-dash-bluetooth.service" "${SYSTEMD_DI
 sudo sed -i "s|__ROOT_DIR__|${ROOT_DIR}|g" "${SYSTEMD_DIR}/digital-dash-bluetooth.service"
 sudo sed -i "s|__NODE_BIN__|${NODE_BIN}|g" "${SYSTEMD_DIR}/digital-dash-bluetooth.service"
 
+if [ -f "${ROOT_DIR}/tools/hotspot/start-hotspot.sh" ]; then
+  sudo chmod +x "${ROOT_DIR}/tools/hotspot/start-hotspot.sh"
+fi
+
 if ! command -v npm >/dev/null 2>&1; then
   echo "npm not found; please install Node.js/npm before running this installer."
   exit 1
