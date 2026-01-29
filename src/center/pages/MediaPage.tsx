@@ -9,6 +9,8 @@ const formatDuration = (totalSeconds: number) => {
 
 export default function MediaPage() {
   const { audio } = useVehicleState();
+  const artworkUrl = audio.nowPlaying.artworkUrl?.trim();
+  const artistLabel = audio.nowPlaying.artist?.trim() || "Unknown Artist";
 
   const progressPct = useMemo(() => {
     if (audio.nowPlaying.durationSec <= 0) return 0;
@@ -20,8 +22,8 @@ export default function MediaPage() {
     <div className="flex h-full flex-col gap-6">
       <div className="flex items-center gap-6 rounded-[26px] border border-white/10 bg-white/5 p-6">
         <div className="h-[140px] w-[140px] overflow-hidden rounded-[20px] bg-white/10">
-          {audio.nowPlaying.artworkUrl ? (
-            <img src={audio.nowPlaying.artworkUrl} alt={audio.nowPlaying.title} className="h-full w-full object-cover" />
+          {artworkUrl ? (
+            <img src={artworkUrl} alt={audio.nowPlaying.title} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-white/35">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
@@ -41,7 +43,7 @@ export default function MediaPage() {
 
         <div className="flex flex-1 flex-col">
           <p className="text-[18px] font-semibold text-white">{audio.nowPlaying.title}</p>
-          <p className="mt-1 text-[13px] text-white/50">{audio.nowPlaying.artist}</p>
+          <p className="mt-1 text-[13px] text-white/50">{artistLabel}</p>
           {audio.nowPlaying.album && (
             <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-white/30">
               {audio.nowPlaying.album}

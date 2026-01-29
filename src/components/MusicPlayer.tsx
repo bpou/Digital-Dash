@@ -21,6 +21,8 @@ export default function MusicPlayer({
   formatDuration,
   textSizeBoost = 0,
 }: MusicPlayerProps) {
+  const artworkUrl = nowPlaying.artworkUrl?.trim();
+  const artistLabel = nowPlaying.artist?.trim() || "Unknown Artist";
   const progressPct = useMemo(() => {
     if (nowPlaying.durationSec <= 0) return 0;
     const pct = (nowPlaying.positionSec / nowPlaying.durationSec) * 100;
@@ -39,9 +41,9 @@ export default function MusicPlayer({
 
       {/* Artwork */}
       <div className="relative z-10 h-[68px] w-[68px] flex-shrink-0 overflow-hidden rounded-[16px] border border-white/10 bg-white/5 shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
-        {nowPlaying.artworkUrl ? (
+        {artworkUrl ? (
           <img
-            src={nowPlaying.artworkUrl}
+            src={artworkUrl}
             alt={nowPlaying.album ?? nowPlaying.title}
             className="h-full w-full object-cover saturate-75"
           />
@@ -81,7 +83,7 @@ export default function MusicPlayer({
           className="mt-1 text-white/45 truncate"
           style={{ fontSize: 12 + textSizeBoost }}
         >
-          {nowPlaying.artist}
+          {artistLabel}
         </p>
         {nowPlaying.album && (
           <p

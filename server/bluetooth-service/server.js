@@ -179,21 +179,102 @@ const getBluezPlayerPath = async (mac) => {
   }
 };
 
-const parseBusctlDict = (raw) => {
-  const text = raw.replace(/\s+/g, " ").trim();
-  const get = (key) => {
-    const match = text.match(new RegExp(`"${key}"\\s+[^\\s]+\\s+\"([^\"]*)\"`, "i"));
-    return match ? match[1] : "";
+const tokenizeBusctl = (raw) => {
+  const tokens = [];
+  let current = "";
+  let inQuotes = false;
+  const flush = () => {
+    if (!current) return;
+    tokens.push(current);
+    current = "";
   };
-  const durationMatch = text.match(/"Duration"\s+t\s+([0-9]+)/i);
-  const durationUs = durationMatch ? Number(durationMatch[1]) : 0;
-  const artistMatch = text.match(/"Artist"\s+as\s+\\d+\\s+\"([^\"]+)\"/i);
+  for (let i = 0; i < raw.length; i += 1) {
+    const char = raw[i];
+    if (char === '"') {
+      if (inQuotes) {
+        flush();
+        inQuotes = false;
+      } else {
+        flush();
+        inQuotes = true;
+      }
+      continue;
+    }
+    if (!inQuotes && /\s/.test(char)) {
+      flush();
+      continue;
+    }
+    current += char;
+  }
+  flush();
+  return tokens;
+};
+
+const normalizeBusctlValue = (value) => {
+  if (value === undefined || value === null) return "";
+  const text = String(value).trim();
+  if (!text || text === "-" || /^none$/i.test(text) || /^null$/i.test(text)) {
+    return "";
+  }
+  return text;
+};
+
+const parseBusctlDurationSec = (value) => {
+  const duration = Number(value);
+  if (!Number.isFinite(duration) || duration <= 0) return 0;
+  if (duration > 10_000_000) {
+    return Math.round(duration / 1_000_000);
+  }
+  if (duration > 10_000) {
+    return Math.round(duration / 1000);
+  }
+  return Math.round(duration);
+};
+
+const parseBusctlDict = (raw) => {
+  const tokens = tokenizeBusctl(raw);
+  const entries = {};
+  const types = new Set(["s", "o", "u", "t", "q", "i", "n", "y", "b", "as"]);
+  for (let i = 0; i < tokens.length - 1; ) {
+    const key = tokens[i];
+    const type = tokens[i + 1];
+    if (!types.has(type)) {
+      i += 1;
+      continue;
+    }
+    i += 2;
+    if (type === "as") {
+      const count = Number(tokens[i]);
+      i += 1;
+      const values = [];
+      const total = Number.isFinite(count) ? count : 0;
+      for (let j = 0; j < total && i < tokens.length; j += 1, i += 1) {
+        values.push(tokens[i]);
+      }
+      entries[key] = values;
+      continue;
+    }
+    entries[key] = tokens[i];
+    i += 1;
+  }
+
+  const rawArtist = entries.Artist;
+  const artist = Array.isArray(rawArtist)
+    ? rawArtist.map((value) => normalizeBusctlValue(value)).filter(Boolean).join(", ")
+    : normalizeBusctlValue(rawArtist);
+  const artworkUrl =
+    normalizeBusctlValue(entries.Artwork) ||
+    normalizeBusctlValue(entries.Image) ||
+    normalizeBusctlValue(entries.Cover) ||
+    normalizeBusctlValue(entries.Icon);
+
   return {
-    title: get("Title"),
-    album: get("Album"),
-    artist: artistMatch ? artistMatch[1] : "",
-    durationSec: durationUs ? Math.round(durationUs / 1000000) : 0,
-    imageHandle: get("ImageHandle"),
+    title: normalizeBusctlValue(entries.Title),
+    album: normalizeBusctlValue(entries.Album),
+    artist,
+    durationSec: parseBusctlDurationSec(entries.Duration),
+    imgHandle: normalizeBusctlValue(entries.ImgHandle) || normalizeBusctlValue(entries.ImageHandle),
+    artworkUrl,
   };
 };
 
@@ -425,9 +506,9 @@ const getNowPlaying = async () => {
     ]);
     const status = statusRaw.toLowerCase().includes("playing");
     const track = parseBusctlDict(trackRaw);
-    let artworkUrl = session?.artworkUrl;
-    if (track.imageHandle && session) {
-      const fetched = await getArtworkUrlForSession(session, track.imageHandle);
+    let artworkUrl = track.artworkUrl || session?.artworkUrl;
+    if (track.imgHandle && session) {
+      const fetched = await getArtworkUrlForSession(session, track.imgHandle);
       if (fetched) {
         artworkUrl = fetched;
       }
