@@ -85,6 +85,9 @@ let socket: WebSocket | null = null;
 let ytmSocket: WebSocket | null = null;
 let connectUrl = `ws://${window.location.hostname}:8765`;
 let ytmOverride: Partial<VehicleState["audio"]["nowPlaying"]> | null = null;
+let btOverride: Partial<VehicleState["audio"]["nowPlaying"]> | null = null;
+let btPollTimer: number | null = null;
+const btBaseUrl = `http://${window.location.hostname}:5175`;
 const ytmUrls = (() => {
   const host = window.location.hostname;
   const urls = [`ws://${host}:5174`];
@@ -198,6 +201,18 @@ const connect = () => {
           ...(message.payload as VehicleState),
           ambient: message.payload.ambient ?? rawState.ambient,
         };
+        if (btOverride) {
+          rawState = {
+            ...rawState,
+            audio: {
+              ...rawState.audio,
+              nowPlaying: {
+                ...rawState.audio.nowPlaying,
+                ...btOverride,
+              },
+            },
+          };
+        }
         if (ytmOverride) {
           rawState = {
             ...rawState,
@@ -267,6 +282,47 @@ const applyYtmNowPlaying = (payload: {
   notify();
 };
 
+const applyBtNowPlaying = (payload: {
+  connected?: boolean;
+  title?: string;
+  artist?: string;
+  album?: string;
+  durationSec?: number;
+  positionSec?: number;
+  isPlaying?: boolean;
+}) => {
+  if (!payload?.connected) {
+    btOverride = null;
+    return;
+  }
+  btOverride = {
+    title: payload.title ?? rawState.audio.nowPlaying.title,
+    artist: payload.artist ?? rawState.audio.nowPlaying.artist,
+    album: payload.album ?? rawState.audio.nowPlaying.album,
+    durationSec: Number.isFinite(payload.durationSec)
+      ? Number(payload.durationSec)
+      : rawState.audio.nowPlaying.durationSec,
+    positionSec: Number.isFinite(payload.positionSec)
+      ? Number(payload.positionSec)
+      : rawState.audio.nowPlaying.positionSec,
+    isPlaying:
+      typeof payload.isPlaying === "boolean"
+        ? payload.isPlaying
+        : rawState.audio.nowPlaying.isPlaying,
+  };
+  commit({
+    ...rawState,
+    audio: {
+      ...rawState.audio,
+      nowPlaying: {
+        ...rawState.audio.nowPlaying,
+        ...btOverride,
+      },
+    },
+  });
+  notify();
+};
+
 const connectYtm = () => {
   if (ytmSocket && (ytmSocket.readyState === WebSocket.OPEN || ytmSocket.readyState === WebSocket.CONNECTING)) {
     return;
@@ -300,6 +356,29 @@ const connectYtm = () => {
   ytmSocket.addEventListener("error", () => {
     // reconnect on close
   });
+};
+
+const startBluetoothNowPlayingLoop = () => {
+  if (btPollTimer !== null) return;
+  btPollTimer = window.setInterval(async () => {
+    try {
+      const res = await fetch(`${btBaseUrl}/media/now-playing`);
+      if (!res.ok) return;
+      const payload = (await res.json()) as {
+        connected?: boolean;
+        title?: string;
+        artist?: string;
+        album?: string;
+        durationSec?: number;
+        positionSec?: number;
+        isPlaying?: boolean;
+      };
+      if (ytmOverride) return;
+      applyBtNowPlaying(payload);
+    } catch {
+      // ignore
+    }
+  }, 3000);
 };
 
 export const sendVehicleCommand = (type: string, payload?: unknown) => {
@@ -486,6 +565,7 @@ export const useVehicleState = () => {
   useEffect(() => {
     connect();
     connectYtm();
+    startBluetoothNowPlayingLoop();
     startBlinkLoop();
     startMockLoop();
     const unsubscribe = subscribe(setVehicleState);

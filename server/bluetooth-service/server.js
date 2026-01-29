@@ -17,6 +17,7 @@ const json = (res, status, body) => {
 };
 
 const BTCTL = process.env.BLUETOOTHCTL_CMD ?? "bluetoothctl";
+const PACTL = process.env.PACTL_CMD ?? "pactl";
 
 const runBtctl = (args, timeoutMs = 10000) => {
   return new Promise((resolve, reject) => {
@@ -30,6 +31,30 @@ const runBtctl = (args, timeoutMs = 10000) => {
     });
   });
 };
+
+const runBusctl = (args, timeoutMs = 8000) =>
+  new Promise((resolve, reject) => {
+    execFile("busctl", ["--system", ...args], { timeout: timeoutMs }, (err, stdout, stderr) => {
+      if (err) {
+        const details = `${stderr || ""}${stdout || ""}`.trim();
+        reject(new Error(details || err.message));
+        return;
+      }
+      resolve(stdout.toString());
+    });
+  });
+
+const runPactl = (args, timeoutMs = 8000) =>
+  new Promise((resolve, reject) => {
+    execFile(PACTL, args, { timeout: timeoutMs }, (err, stdout, stderr) => {
+      if (err) {
+        const details = `${stderr || ""}${stdout || ""}`.trim();
+        reject(new Error(details || err.message));
+        return;
+      }
+      resolve(stdout.toString());
+    });
+  });
 
 const runBtctlBatch = (commands, timeoutMs = 20000) =>
   new Promise((resolve, reject) => {
@@ -132,6 +157,131 @@ const listDevices = async () => {
   }
 
   return details;
+};
+
+const getConnectedDevice = async () => {
+  const devices = await listDevices();
+  return devices.find((d) => d.connected) ?? null;
+};
+
+const getBluezPlayerPath = async (mac) => {
+  const devicePath = `/org/bluez/hci0/dev_${mac.replace(/:/g, "_")}`;
+  const playerPath = `${devicePath}/player0`;
+  try {
+    await runBusctl(["introspect", "org.bluez", playerPath]);
+    return playerPath;
+  } catch {
+    return null;
+  }
+};
+
+const parseBusctlDict = (raw) => {
+  const text = raw.replace(/\s+/g, " ").trim();
+  const get = (key) => {
+    const match = text.match(new RegExp(`"${key}"\\s+[^\\s]+\\s+\"([^\"]*)\"`, "i"));
+    return match ? match[1] : "";
+  };
+  const durationMatch = text.match(/"Duration"\s+t\s+([0-9]+)/i);
+  const durationUs = durationMatch ? Number(durationMatch[1]) : 0;
+  const artistMatch = text.match(/"Artist"\s+as\s+\\d+\\s+\"([^\"]+)\"/i);
+  return {
+    title: get("Title"),
+    album: get("Album"),
+    artist: artistMatch ? artistMatch[1] : "",
+    durationSec: durationUs ? Math.round(durationUs / 1000000) : 0,
+  };
+};
+
+const getNowPlaying = async () => {
+  const connected = await getConnectedDevice();
+  if (!connected) {
+    return { connected: false };
+  }
+
+  const playerPath = await getBluezPlayerPath(connected.mac);
+  if (!playerPath) {
+    return {
+      connected: true,
+      title: connected.name || connected.alias || "Bluetooth",
+      artist: "Bluetooth Audio",
+      album: "",
+      durationSec: 0,
+      positionSec: 0,
+      isPlaying: true,
+    };
+  }
+
+  try {
+    const trackRaw = await runBusctl([
+      "get-property",
+      "org.bluez",
+      playerPath,
+      "org.bluez.MediaPlayer1",
+      "Track",
+    ]);
+    const statusRaw = await runBusctl([
+      "get-property",
+      "org.bluez",
+      playerPath,
+      "org.bluez.MediaPlayer1",
+      "Status",
+    ]);
+    const status = statusRaw.toLowerCase().includes("playing");
+    const track = parseBusctlDict(trackRaw);
+    return {
+      connected: true,
+      title: track.title || connected.name || connected.alias || "Bluetooth",
+      artist: track.artist || "Bluetooth Audio",
+      album: track.album || "",
+      durationSec: track.durationSec || 0,
+      positionSec: 0,
+      isPlaying: status,
+    };
+  } catch {
+    return {
+      connected: true,
+      title: connected.name || connected.alias || "Bluetooth",
+      artist: "Bluetooth Audio",
+      album: "",
+      durationSec: 0,
+      positionSec: 0,
+      isPlaying: true,
+    };
+  }
+};
+
+const findBluezSink = async (mac) => {
+  const sinksRaw = await runPactl(["list", "short", "sinks"]);
+  const target = `bluez_sink.${mac.replace(/:/g, "_")}`.toLowerCase();
+  const line = sinksRaw
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l.toLowerCase().includes(target));
+  if (!line) return null;
+  const parts = line.split(/\s+/);
+  return parts[1] || null;
+};
+
+const setDefaultSink = async (sinkName) => {
+  await runPactl(["set-default-sink", sinkName]);
+  const inputsRaw = await runPactl(["list", "short", "sink-inputs"]);
+  const ids = inputsRaw
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => l.split(/\s+/)[0])
+    .filter(Boolean);
+  for (const id of ids) {
+    await runPactl(["move-sink-input", id, sinkName]);
+  }
+};
+
+const ensureBluetoothAudio = async (mac) => {
+  const sinkName = await findBluezSink(mac);
+  if (!sinkName) {
+    throw new Error("Bluetooth sink not available yet");
+  }
+  await setDefaultSink(sinkName);
 };
 
 let scanTimer = null;
@@ -286,6 +436,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/media/now-playing") {
+      const nowPlaying = await getNowPlaying();
+      json(res, 200, nowPlaying);
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/scan/start") {
       await startScan();
       json(res, 200, { ok: true });
@@ -366,6 +522,23 @@ const server = http.createServer(async (req, res) => {
         "default-agent",
         `connect ${mac}`,
       ]);
+      try {
+        await ensureBluetoothAudio(mac);
+      } catch {
+        // ignore audio routing failures
+      }
+      json(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/audio/use") {
+      const mac = url.searchParams.get("mac");
+      const device = mac ? { mac } : await getConnectedDevice();
+      if (!device?.mac) {
+        json(res, 400, { error: "No connected device" });
+        return;
+      }
+      await ensureBluetoothAudio(device.mac);
       json(res, 200, { ok: true });
       return;
     }

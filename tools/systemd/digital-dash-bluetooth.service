@@ -6,6 +6,7 @@ After=network.target bluetooth.service
 Type=simple
 WorkingDirectory=/digital-dash
 ExecStart=/usr/bin/node server/bluetooth-service/server.js
+User=admin
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=development
