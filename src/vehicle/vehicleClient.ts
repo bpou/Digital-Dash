@@ -287,6 +287,7 @@ const applyBtNowPlaying = (payload: {
   title?: string;
   artist?: string;
   album?: string;
+  artworkUrl?: string;
   durationSec?: number;
   positionSec?: number;
   isPlaying?: boolean;
@@ -299,6 +300,7 @@ const applyBtNowPlaying = (payload: {
     title: payload.title ?? rawState.audio.nowPlaying.title,
     artist: payload.artist ?? rawState.audio.nowPlaying.artist,
     album: payload.album ?? rawState.audio.nowPlaying.album,
+    artworkUrl: payload.artworkUrl ?? rawState.audio.nowPlaying.artworkUrl,
     durationSec: Number.isFinite(payload.durationSec)
       ? Number(payload.durationSec)
       : rawState.audio.nowPlaying.durationSec,
@@ -369,6 +371,7 @@ const startBluetoothNowPlayingLoop = () => {
         title?: string;
         artist?: string;
         album?: string;
+        artworkUrl?: string;
         durationSec?: number;
         positionSec?: number;
         isPlaying?: boolean;

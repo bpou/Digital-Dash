@@ -1,6 +1,10 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import http from "node:http";
 import { execFile, spawn } from "node:child_process";
 import { URL } from "node:url";
+import { systemBus } from "dbus-next";
 
 const PORT = Number(process.env.BLUETOOTH_WS_PORT ?? 5175);
 const SCAN_TIMEOUT_MS = 20000;
@@ -189,17 +193,202 @@ const parseBusctlDict = (raw) => {
     album: get("Album"),
     artist: artistMatch ? artistMatch[1] : "",
     durationSec: durationUs ? Math.round(durationUs / 1000000) : 0,
+    imgHandle: get("ImgHandle"),
   };
 };
 
+const bus = systemBus();
+let obexClientPromise = null;
+const obexSessions = new Map();
+const obexSessionCreations = new Map();
+
+const getObexClientInterface = async () => {
+  if (obexClientPromise) return obexClientPromise;
+  obexClientPromise = (async () => {
+    try {
+      const proxy = await bus.getProxyObject("org.bluez.obex", "/org/bluez/obex");
+      return proxy.getInterface("org.bluez.obex.Client1");
+    } catch {
+      obexClientPromise = null;
+      return null;
+    }
+  })();
+  return obexClientPromise;
+};
+
+const removeObexSession = async (mac) => {
+  if (!mac) return;
+  const session = obexSessions.get(mac);
+  if (!session) return;
+  obexSessions.delete(mac);
+  obexSessionCreations.delete(mac);
+  const client = await getObexClientInterface();
+  if (!client) return;
+  try {
+    await client.RemoveSession(session.path);
+  } catch {
+    // ignore cleanup errors
+  }
+};
+
+const cleanupObexSessions = async (keepMac) => {
+  const tasks = [];
+  for (const mac of Array.from(obexSessions.keys())) {
+    if (keepMac && mac === keepMac) continue;
+    tasks.push(removeObexSession(mac));
+  }
+  await Promise.all(tasks);
+};
+
+const ensureObexSession = async (mac, port) => {
+  if (!mac || !port) {
+    await removeObexSession(mac);
+    return null;
+  }
+  const existing = obexSessions.get(mac);
+  if (existing && existing.port === port) {
+    return existing;
+  }
+  if (obexSessionCreations.has(mac)) {
+    return obexSessionCreations.get(mac);
+  }
+  const creation = (async () => {
+    await removeObexSession(mac);
+    const client = await getObexClientInterface();
+    if (!client) return null;
+    try {
+      const sessionPath = await client.CreateSession(mac, { Target: "bip-avrcp", PSM: Number(port) });
+      const sessionProxy = await bus.getProxyObject("org.bluez.obex", sessionPath);
+      const imageInterface = sessionProxy.getInterface("org.bluez.obex.Image1");
+      const sessionData = {
+        path: sessionPath,
+        port,
+        imageInterface,
+        lastHandle: "",
+        artworkUrl: null,
+        downloadPromise: null,
+      };
+      obexSessions.set(mac, sessionData);
+      return sessionData;
+    } catch {
+      return null;
+    }
+  })();
+  obexSessionCreations.set(mac, creation);
+  try {
+    return await creation;
+  } finally {
+    obexSessionCreations.delete(mac);
+  }
+};
+
+const getMediaPlayerPropertyRaw = async (playerPath, property) => {
+  try {
+    const raw = await runBusctl([
+      "get-property",
+      "org.bluez",
+      playerPath,
+      "org.bluez.MediaPlayer1",
+      property,
+    ]);
+    return raw.trim();
+  } catch {
+    return "";
+  }
+};
+
+const getMediaPlayerObexPort = async (playerPath) => {
+  const raw = await getMediaPlayerPropertyRaw(playerPath, "ObexPort");
+  const match = raw.match(/\b(\d+)\b/);
+  if (!match) return 0;
+  const port = Number(match[1]);
+  return Number.isFinite(port) ? port : 0;
+};
+
+const detectImageMime = (buffer) => {
+  if (!buffer || !buffer.length) return "application/octet-stream";
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (buffer.length >= 6) {
+    const header = buffer.slice(0, 6).toString("ascii");
+    if (header === "GIF89a" || header === "GIF87a") {
+      return "image/gif";
+    }
+  }
+  if (buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d) {
+    return "image/bmp";
+  }
+  return "application/octet-stream";
+};
+
+const downloadCoverArt = async (session, handle) => {
+  if (!session?.imageInterface?.Get) return null;
+  const targetFile = path.join(
+    os.tmpdir(),
+    `digital-dash-cover-${Date.now()}-${Math.random().toString(16).slice(2)}.img`
+  );
+  try {
+    await session.imageInterface.Get(targetFile, handle, {});
+    const data = await fs.readFile(targetFile);
+    if (!data.length) return null;
+    const mime = detectImageMime(data);
+    return `data:${mime};base64,${data.toString("base64")}`;
+  } catch {
+    return null;
+  } finally {
+    await fs.unlink(targetFile).catch(() => {});
+  }
+};
+
+const getArtworkUrlForSession = async (session, handle) => {
+  if (!session || !handle) return null;
+  if (session.lastHandle === handle && session.artworkUrl) {
+    return session.artworkUrl;
+  }
+  if (session.downloadPromise) {
+    return session.downloadPromise;
+  }
+  const promise = (async () => {
+    const url = await downloadCoverArt(session, handle);
+    if (url) {
+      session.artworkUrl = url;
+      session.lastHandle = handle;
+    }
+    return url;
+  })();
+  session.downloadPromise = promise;
+  try {
+    return await promise;
+  } finally {
+    session.downloadPromise = null;
+  }
+};
 const getNowPlaying = async () => {
   const connected = await getConnectedDevice();
   if (!connected) {
+    await cleanupObexSessions(null);
     return { connected: false };
   }
 
+  await cleanupObexSessions(connected.mac);
+
   const playerPath = await getBluezPlayerPath(connected.mac);
   if (!playerPath) {
+    await removeObexSession(connected.mac);
     return {
       connected: true,
       title: connected.name || connected.alias || "Bluetooth",
@@ -209,6 +398,14 @@ const getNowPlaying = async () => {
       positionSec: 0,
       isPlaying: true,
     };
+  }
+
+  let session = null;
+  const obexPort = await getMediaPlayerObexPort(playerPath);
+  if (obexPort > 0) {
+    session = await ensureObexSession(connected.mac, obexPort);
+  } else {
+    await removeObexSession(connected.mac);
   }
 
   try {
@@ -228,6 +425,13 @@ const getNowPlaying = async () => {
     ]);
     const status = statusRaw.toLowerCase().includes("playing");
     const track = parseBusctlDict(trackRaw);
+    let artworkUrl = session?.artworkUrl;
+    if (track.imgHandle && session) {
+      const fetched = await getArtworkUrlForSession(session, track.imgHandle);
+      if (fetched) {
+        artworkUrl = fetched;
+      }
+    }
     return {
       connected: true,
       title: track.title || connected.name || connected.alias || "Bluetooth",
@@ -236,6 +440,7 @@ const getNowPlaying = async () => {
       durationSec: track.durationSec || 0,
       positionSec: 0,
       isPlaying: status,
+      artworkUrl,
     };
   } catch {
     return {
@@ -246,6 +451,7 @@ const getNowPlaying = async () => {
       durationSec: 0,
       positionSec: 0,
       isPlaying: true,
+      artworkUrl: session?.artworkUrl ?? undefined,
     };
   }
 };
