@@ -15,11 +15,14 @@ const json = (res, status, body) => {
   res.end(JSON.stringify(body));
 };
 
+const BTCTL = process.env.BLUETOOTHCTL_CMD ?? "bluetoothctl";
+
 const runBtctl = (args) => {
   return new Promise((resolve, reject) => {
-    execFile("bluetoothctl", args, { timeout: 10000 }, (err, stdout, stderr) => {
+    execFile(BTCTL, args, { timeout: 10000 }, (err, stdout, stderr) => {
       if (err) {
-        reject(new Error(stderr || err.message));
+        const details = `${stderr || ""}${stdout || ""}`.trim();
+        reject(new Error(details || err.message));
         return;
       }
       resolve(stdout.toString());
@@ -62,10 +65,13 @@ const parseInfo = (mac, output) => {
 };
 
 const listDevices = async () => {
-  const [knownRaw, pairedRaw] = await Promise.all([
-    runBtctl(["devices"]),
-    runBtctl(["paired-devices"]),
-  ]);
+  const knownRaw = await runBtctl(["devices"]);
+  let pairedRaw = "";
+  try {
+    pairedRaw = await runBtctl(["paired-devices"]);
+  } catch {
+    pairedRaw = "";
+  }
   const known = parseDevices(knownRaw);
   const paired = new Set(parseDevices(pairedRaw).map((d) => d.mac));
 
