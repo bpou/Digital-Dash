@@ -18,9 +18,9 @@ const json = (res, status, body) => {
 
 const BTCTL = process.env.BLUETOOTHCTL_CMD ?? "bluetoothctl";
 
-const runBtctl = (args) => {
+const runBtctl = (args, timeoutMs = 10000) => {
   return new Promise((resolve, reject) => {
-    execFile(BTCTL, args, { timeout: 10000 }, (err, stdout, stderr) => {
+    execFile(BTCTL, args, { timeout: timeoutMs }, (err, stdout, stderr) => {
       if (err) {
         const details = `${stderr || ""}${stdout || ""}`.trim();
         reject(new Error(details || err.message));
@@ -30,6 +30,37 @@ const runBtctl = (args) => {
     });
   });
 };
+
+const runBtctlBatch = (commands, timeoutMs = 20000) =>
+  new Promise((resolve, reject) => {
+    const child = spawn(BTCTL, [], { stdio: ["pipe", "pipe", "pipe"] });
+    let out = "";
+    let err = "";
+
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error("bluetoothctl timed out"));
+    }, timeoutMs);
+
+    child.stdout.on("data", (data) => {
+      out += data.toString();
+    });
+    child.stderr.on("data", (data) => {
+      err += data.toString();
+    });
+
+    child.on("exit", (code) => {
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve(out);
+        return;
+      }
+      reject(new Error((err || out || `bluetoothctl exited ${code}`).trim()));
+    });
+
+    commands.forEach((cmd) => child.stdin.write(`${cmd}\n`));
+    child.stdin.end();
+  });
 
 const parseDevices = (output) => {
   return output
@@ -183,8 +214,14 @@ const server = http.createServer(async (req, res) => {
         json(res, 400, { error: "Missing mac" });
         return;
       }
-      await runBtctl(["pair", mac]);
-      await runBtctl(["trust", mac]);
+      await runBtctlBatch([
+        "agent on",
+        "default-agent",
+        "pairable on",
+        "discoverable on",
+        `pair ${mac}`,
+        `trust ${mac}`,
+      ]);
       json(res, 200, { ok: true });
       return;
     }
@@ -195,7 +232,11 @@ const server = http.createServer(async (req, res) => {
         json(res, 400, { error: "Missing mac" });
         return;
       }
-      await runBtctl(["connect", mac]);
+      await runBtctlBatch([
+        "agent on",
+        "default-agent",
+        `connect ${mac}`,
+      ]);
       json(res, 200, { ok: true });
       return;
     }
