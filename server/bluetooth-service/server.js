@@ -1,9 +1,10 @@
 import http from "node:http";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { URL } from "node:url";
 
 const PORT = Number(process.env.BLUETOOTH_WS_PORT ?? 5175);
 const SCAN_TIMEOUT_MS = 20000;
+const SCAN_TIMEOUT_SEC = Math.ceil(SCAN_TIMEOUT_MS / 1000);
 
 const json = (res, status, body) => {
   res.writeHead(status, {
@@ -103,10 +104,21 @@ const listDevices = async () => {
 };
 
 let scanTimer = null;
+let scanProcess = null;
 
 const startScan = async () => {
   if (scanTimer) return;
-  await runBtctl(["scan", "on"]);
+  if (!scanProcess) {
+    const child = spawn(BTCTL, ["--timeout", String(SCAN_TIMEOUT_SEC), "scan", "on"], {
+      detached: true,
+      stdio: "ignore",
+    });
+    child.unref();
+    scanProcess = child;
+    scanProcess.on("exit", () => {
+      scanProcess = null;
+    });
+  }
   scanTimer = setTimeout(async () => {
     try {
       await runBtctl(["scan", "off"]);
@@ -121,6 +133,9 @@ const stopScan = async () => {
   if (scanTimer) {
     clearTimeout(scanTimer);
     scanTimer = null;
+  }
+  if (scanProcess) {
+    scanProcess = null;
   }
   await runBtctl(["scan", "off"]);
 };

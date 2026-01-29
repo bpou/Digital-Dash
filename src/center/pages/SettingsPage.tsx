@@ -152,7 +152,7 @@ export default function SettingsPage() {
 
           <div className="rounded-[16px] bg-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Connectivity</p>
-            <div className="mt-4 max-h-[320px] space-y-3 overflow-y-auto pr-2">
+            <div className="mt-4 h-[320px] space-y-3 overflow-y-scroll pr-2">
               {[
                 { label: "Bluetooth", value: "On · 3 devices" },
                 { label: "Premium Connectivity", value: "Active" },
