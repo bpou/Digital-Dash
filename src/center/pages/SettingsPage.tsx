@@ -152,7 +152,7 @@ export default function SettingsPage() {
 
           <div className="rounded-[16px] bg-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Connectivity</p>
-            <div className="mt-4 h-[320px] space-y-3 overflow-y-scroll pr-2">
+            <div className="mt-4 space-y-3">
               {[
                 { label: "Bluetooth", value: "On · 3 devices" },
                 { label: "Premium Connectivity", value: "Active" },
@@ -181,7 +181,7 @@ export default function SettingsPage() {
 
       {showBluetooth && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-[520px] rounded-[20px] border border-white/10 bg-[#0b0f14] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
+          <div className="flex max-h-[640px] w-[520px] flex-col rounded-[20px] border border-white/10 bg-[#0b0f14] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-white/50">Bluetooth devices</p>
@@ -201,7 +201,7 @@ export default function SettingsPage() {
                 {btError}
               </div>
             )}
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 h-[320px] space-y-3 overflow-y-scroll pr-2">
               {btDevices.length === 0 ? (
                 <div className="rounded-[12px] bg-white/5 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white/40">
                   No devices found
