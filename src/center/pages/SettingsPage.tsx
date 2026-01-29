@@ -32,6 +32,9 @@ export default function SettingsPage() {
   const [btBusyMac, setBtBusyMac] = useState<string | null>(null);
   const [btError, setBtError] = useState<string | null>(null);
   const [btScanning, setBtScanning] = useState(false);
+  const [pairSessionId, setPairSessionId] = useState<string | null>(null);
+  const [pairPasskey, setPairPasskey] = useState<string | null>(null);
+  const [pairState, setPairState] = useState<string | null>(null);
 
   const btBaseUrl = useMemo(() => {
     const host = window.location.hostname;
@@ -64,6 +67,54 @@ export default function SettingsPage() {
     }
   };
 
+  const startPair = async (mac: string) => {
+    try {
+      setBtBusyMac(mac);
+      const res = await fetch(`${btBaseUrl}/pair?mac=${encodeURIComponent(mac)}`, { method: "POST" });
+      const data = (await res.json()) as { sessionId?: string; state?: string; passkey?: string; error?: string };
+      if (!res.ok || !data.sessionId) throw new Error(data.error || "Bluetooth action failed");
+      setPairSessionId(data.sessionId);
+      setPairState(data.state ?? "pairing");
+      setPairPasskey(data.passkey ?? null);
+      setBtError(null);
+    } catch (err) {
+      setBtError(err instanceof Error ? err.message : "Bluetooth action failed");
+    } finally {
+      setBtBusyMac(null);
+    }
+  };
+
+  const pollPairStatus = async (sessionId: string) => {
+    const res = await fetch(`${btBaseUrl}/pair/status?id=${encodeURIComponent(sessionId)}`);
+    const data = (await res.json()) as {
+      state?: string;
+      passkey?: string;
+      error?: string;
+    };
+    if (!res.ok) throw new Error(data.error || "Pair status failed");
+    setPairState(data.state ?? null);
+    setPairPasskey(data.passkey ?? null);
+    if (data.state === "paired" || data.state === "failed") {
+      setTimeout(fetchDevices, 500);
+    }
+  };
+
+  const confirmPair = async (accept: boolean) => {
+    if (!pairSessionId) return;
+    try {
+      const res = await fetch(
+        `${btBaseUrl}/pair/confirm?id=${encodeURIComponent(pairSessionId)}&accept=${accept ? "yes" : "no"}`,
+        { method: "POST" }
+      );
+      const data = (await res.json()) as { state?: string; passkey?: string; error?: string };
+      if (!res.ok) throw new Error(data.error || "Pair confirmation failed");
+      setPairState(data.state ?? null);
+      setPairPasskey(data.passkey ?? null);
+    } catch (err) {
+      setBtError(err instanceof Error ? err.message : "Pair confirmation failed");
+    }
+  };
+
   useEffect(() => {
     if (!showBluetooth) return;
     fetchDevices();
@@ -74,6 +125,21 @@ export default function SettingsPage() {
       btAction("/scan/stop").finally(() => setBtScanning(false));
     };
   }, [showBluetooth]);
+
+  useEffect(() => {
+    if (!pairSessionId) return;
+    let cancelled = false;
+    const interval = setInterval(() => {
+      if (cancelled) return;
+      pollPairStatus(pairSessionId).catch((err) => {
+        setBtError(err instanceof Error ? err.message : "Pair status failed");
+      });
+    }, 1200);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pairSessionId]);
 
   return (
     <motion.div
@@ -224,7 +290,7 @@ export default function SettingsPage() {
                         <motion.button
                           type="button"
                           disabled={btBusyMac === device.mac}
-                          onClick={() => btAction("/pair", device.mac)}
+                          onClick={() => startPair(device.mac)}
                           className="min-h-[36px] rounded-[10px] bg-white/10 px-3 text-[10px] uppercase tracking-[0.3em] text-white/80 hover:bg-white/20 disabled:opacity-50"
                           whileTap={{ scale: 0.95, opacity: 0.8 }}
                         >
@@ -274,6 +340,37 @@ export default function SettingsPage() {
                 whileTap={{ scale: 0.95, opacity: 0.8 }}
               >
                 {btScanning ? "Stop" : "Scan"}
+              </motion.button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pairSessionId && pairState === "confirm" && pairPasskey && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-[420px] rounded-[18px] border border-white/10 bg-[#0b0f14] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
+            <p className="text-xs uppercase tracking-[0.35em] text-white/50">Bluetooth pairing</p>
+            <p className="mt-2 text-lg font-medium text-white/90">Confirm passkey</p>
+            <div className="mt-4 rounded-[12px] bg-white/5 px-4 py-3 text-center text-[24px] tracking-[0.3em] text-white/90">
+              {pairPasskey}
+            </div>
+            <p className="mt-3 text-xs uppercase tracking-[0.2em] text-white/40">Does this match your phone?</p>
+            <div className="mt-4 flex items-center justify-between">
+              <motion.button
+                type="button"
+                onClick={() => confirmPair(false)}
+                className="min-h-[44px] rounded-[12px] bg-white/5 px-4 text-xs uppercase tracking-[0.3em] text-white/70 hover:bg-white/10"
+                whileTap={{ scale: 0.95, opacity: 0.8 }}
+              >
+                No
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={() => confirmPair(true)}
+                className="min-h-[44px] rounded-[12px] bg-emerald-500/80 px-4 text-xs uppercase tracking-[0.3em] text-white"
+                whileTap={{ scale: 0.95, opacity: 0.8 }}
+              >
+                Yes
               </motion.button>
             </div>
           </div>

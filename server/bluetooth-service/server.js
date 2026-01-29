@@ -136,6 +136,7 @@ const listDevices = async () => {
 
 let scanTimer = null;
 let scanProcess = null;
+const pairSessions = new Map();
 
 const startScan = async () => {
   if (scanTimer) return;
@@ -169,6 +170,95 @@ const stopScan = async () => {
     scanProcess = null;
   }
   await runBtctl(["scan", "off"]);
+};
+
+const startPairSession = (mac) => {
+  const id = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  const child = spawn(BTCTL, [], { stdio: ["pipe", "pipe", "pipe"] });
+  const session = {
+    id,
+    mac,
+    state: "pairing",
+    passkey: null,
+    error: null,
+    child,
+  };
+  pairSessions.set(id, session);
+
+  const handleLine = (line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const passkeyMatch = trimmed.match(/passkey\s+([0-9]+)/i);
+    if (passkeyMatch) {
+      session.passkey = passkeyMatch[1];
+      session.state = "confirm";
+      return;
+    }
+    if (/pairing successful/i.test(trimmed)) {
+      session.state = "paired";
+      return;
+    }
+    if (/failed to pair|authentication canceled|authentication failed/i.test(trimmed)) {
+      session.state = "failed";
+      session.error = trimmed;
+      return;
+    }
+  };
+
+  child.stdout.on("data", (data) => {
+    data
+      .toString()
+      .split("\n")
+      .forEach(handleLine);
+  });
+  child.stderr.on("data", (data) => {
+    data
+      .toString()
+      .split("\n")
+      .forEach(handleLine);
+  });
+
+  child.on("exit", () => {
+    if (session.state === "pairing") {
+      session.state = "failed";
+      session.error = session.error ?? "bluetoothctl exited";
+    }
+  });
+
+  const send = (cmd) => child.stdin.write(`${cmd}\n`);
+  send("agent on");
+  send("default-agent");
+  send("pairable on");
+  send("discoverable on");
+  send(`pair ${mac}`);
+
+  return session;
+};
+
+const confirmPairSession = (id, accept) => {
+  const session = pairSessions.get(id);
+  if (!session) return null;
+  try {
+    session.child.stdin.write(`${accept ? "yes" : "no"}\n`);
+  } catch {
+    session.state = "failed";
+    session.error = session.error ?? "Failed to respond to agent";
+  }
+  return session;
+};
+
+const finalizePairSession = async (session) => {
+  if (!session || session.state !== "paired") return;
+  try {
+    await runBtctl(["trust", session.mac], 8000);
+  } catch {
+    // ignore trust failures
+  }
+  try {
+    await runBtctl(["connect", session.mac], 10000);
+  } catch {
+    // ignore connect failures
+  }
 };
 
 const server = http.createServer(async (req, res) => {
@@ -214,15 +304,54 @@ const server = http.createServer(async (req, res) => {
         json(res, 400, { error: "Missing mac" });
         return;
       }
-      await runBtctlBatch([
-        "agent on",
-        "default-agent",
-        "pairable on",
-        "discoverable on",
-        `pair ${mac}`,
-        `trust ${mac}`,
-      ]);
-      json(res, 200, { ok: true });
+      const session = startPairSession(mac);
+      json(res, 200, { ok: true, sessionId: session.id, state: session.state, passkey: session.passkey });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/pair/status") {
+      const id = url.searchParams.get("id");
+      if (!id) {
+        json(res, 400, { error: "Missing id" });
+        return;
+      }
+      const session = pairSessions.get(id);
+      if (!session) {
+        json(res, 404, { error: "Session not found" });
+        return;
+      }
+      if (session.state === "paired") {
+        await finalizePairSession(session);
+      }
+      json(res, 200, {
+        id: session.id,
+        mac: session.mac,
+        state: session.state,
+        passkey: session.passkey,
+        error: session.error,
+      });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/pair/confirm") {
+      const id = url.searchParams.get("id");
+      const accept = url.searchParams.get("accept") === "yes";
+      if (!id) {
+        json(res, 400, { error: "Missing id" });
+        return;
+      }
+      const session = confirmPairSession(id, accept);
+      if (!session) {
+        json(res, 404, { error: "Session not found" });
+        return;
+      }
+      json(res, 200, {
+        id: session.id,
+        mac: session.mac,
+        state: session.state,
+        passkey: session.passkey,
+        error: session.error,
+      });
       return;
     }
 

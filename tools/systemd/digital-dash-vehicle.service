@@ -1,0 +1,14 @@
+[Unit]
+Description=Digital Dash Vehicle Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/digital-dash
+ExecStart=/usr/bin/npm run vehicle-service
+Restart=on-failure
+RestartSec=3
+Environment=NODE_ENV=development
+
+[Install]
+WantedBy=multi-user.target
