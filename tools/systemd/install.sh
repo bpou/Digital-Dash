@@ -22,6 +22,17 @@ sudo cp "${ROOT_DIR}/tools/systemd/digital-dash-bluetooth.service" "${SYSTEMD_DI
 sudo sed -i "s|__ROOT_DIR__|${ROOT_DIR}|g" "${SYSTEMD_DIR}/digital-dash-bluetooth.service"
 sudo sed -i "s|__NODE_BIN__|${NODE_BIN}|g" "${SYSTEMD_DIR}/digital-dash-bluetooth.service"
 
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm not found; please install Node.js/npm before running this installer."
+  exit 1
+fi
+
+echo "Installing bluetooth-service dependencies (npm install) in: ${ROOT_DIR}/server/bluetooth-service"
+(
+  cd "${ROOT_DIR}/server/bluetooth-service"
+  npm install
+)
+
 sudo systemctl daemon-reload
 sudo systemctl enable digital-dash-ui.service
 sudo systemctl enable digital-dash-vehicle.service

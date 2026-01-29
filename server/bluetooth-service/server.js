@@ -267,6 +267,7 @@ const parseBusctlDict = (raw) => {
     normalizeBusctlValue(entries.Image) ||
     normalizeBusctlValue(entries.Cover) ||
     normalizeBusctlValue(entries.Icon);
+  const obexPort = Number(normalizeBusctlValue(entries.ObexPort) || 0);
 
   return {
     title: normalizeBusctlValue(entries.Title),
@@ -275,6 +276,7 @@ const parseBusctlDict = (raw) => {
     durationSec: parseBusctlDurationSec(entries.Duration),
     imgHandle: normalizeBusctlValue(entries.ImgHandle) || normalizeBusctlValue(entries.ImageHandle),
     artworkUrl,
+    obexPort: Number.isFinite(obexPort) ? obexPort : 0,
   };
 };
 
@@ -416,6 +418,20 @@ const detectImageMime = (buffer) => {
   return "application/octet-stream";
 };
 
+const withTimeout = async (promise, timeoutMs, label) => {
+  if (!timeoutMs) return promise;
+  let timer;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+  const result = await Promise.race([promise, timeout]);
+  if (timer) clearTimeout(timer);
+  if (result === null && label) {
+    return null;
+  }
+  return result;
+};
+
 const downloadCoverArt = async (session, handle) => {
   if (!session?.imageInterface?.Get) return null;
   const targetFile = path.join(
@@ -423,7 +439,7 @@ const downloadCoverArt = async (session, handle) => {
     `digital-dash-cover-${Date.now()}-${Math.random().toString(16).slice(2)}.img`
   );
   try {
-    await session.imageInterface.Get(targetFile, handle, {});
+    await withTimeout(session.imageInterface.Get(targetFile, handle, {}), 5000, "obex-get");
     const data = await fs.readFile(targetFile);
     if (!data.length) return null;
     const mime = detectImageMime(data);
@@ -481,14 +497,6 @@ const getNowPlaying = async () => {
     };
   }
 
-  let session = null;
-  const obexPort = await getMediaPlayerObexPort(playerPath);
-  if (obexPort > 0) {
-    session = await ensureObexSession(connected.mac, obexPort);
-  } else {
-    await removeObexSession(connected.mac);
-  }
-
   try {
     const trackRaw = await runBusctl([
       "get-property",
@@ -506,6 +514,13 @@ const getNowPlaying = async () => {
     ]);
     const status = statusRaw.toLowerCase().includes("playing");
     const track = parseBusctlDict(trackRaw);
+    const obexPort = track.obexPort || (await getMediaPlayerObexPort(playerPath));
+    let session = null;
+    if (obexPort > 0) {
+      session = await ensureObexSession(connected.mac, obexPort);
+    } else {
+      await removeObexSession(connected.mac);
+    }
     let artworkUrl = track.artworkUrl || session?.artworkUrl;
     if (track.imgHandle && session) {
       const fetched = await getArtworkUrlForSession(session, track.imgHandle);
