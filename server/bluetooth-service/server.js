@@ -4,7 +4,7 @@ import path from "node:path";
 import http from "node:http";
 import { execFile, spawn } from "node:child_process";
 import { URL } from "node:url";
-import { systemBus, sessionBus } from "dbus-next";
+import { systemBus, sessionBus, Variant } from "dbus-next";
 
 const PORT = Number(process.env.BLUETOOTH_WS_PORT ?? 5175);
 const SCAN_TIMEOUT_MS = 20000;
@@ -377,7 +377,10 @@ const ensureObexSession = async (mac, port) => {
       return null;
     }
     try {
-      const sessionPath = await client.CreateSession(mac, { Target: "bip-avrcp", PSM: Number(port) });
+      const sessionPath = await client.CreateSession(mac, {
+        Target: new Variant("s", "bip-avrcp"),
+        PSM: new Variant("u", Number(port)),
+      });
       const sessionProxy = await obexBus.getProxyObject("org.bluez.obex", sessionPath);
       const imageInterface = sessionProxy.getInterface("org.bluez.obex.Image1");
       const sessionData = {
