@@ -35,6 +35,8 @@ const PACTL = process.env.PACTL_CMD ?? "pactl";
 const HOTSPOT_SCRIPT = process.env.HOTSPOT_SCRIPT ?? "tools/hotspot/start-hotspot.sh";
 const MAX_ARTWORK_BYTES = Number(process.env.MAX_ARTWORK_BYTES ?? 5_000_000);
 const artworkCache = new Map();
+const webArtworkCache = new Map();
+const WEB_ARTWORK_TTL_MS = Number(process.env.WEB_ARTWORK_TTL_MS ?? 6 * 60 * 60 * 1000);
 
 const runBtctl = (args, timeoutMs = 10000) => {
   return new Promise((resolve, reject) => {
@@ -530,6 +532,47 @@ const readArtworkCache = (key) => {
   return artworkCache.get(key) ?? null;
 };
 
+const buildItunesQuery = (title, artist, album) => {
+  const parts = [title, artist, album].map((value) => normalizeBusctlValue(value)).filter(Boolean);
+  return parts.join(" ");
+};
+
+const getCachedWebArtwork = (key) => {
+  if (!key) return null;
+  const cached = webArtworkCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.ts > WEB_ARTWORK_TTL_MS) {
+    webArtworkCache.delete(key);
+    return null;
+  }
+  return cached.url;
+};
+
+const cacheWebArtwork = (key, url) => {
+  if (!key || !url) return null;
+  webArtworkCache.set(key, { url, ts: Date.now() });
+  return url;
+};
+
+const fetchItunesArtwork = async (title, artist, album) => {
+  const query = buildItunesQuery(title, artist, album);
+  if (!query) return null;
+  const cacheKey = query.toLowerCase();
+  const cached = getCachedWebArtwork(cacheKey);
+  if (cached) return cached;
+  const url = new URL("https://itunes.apple.com/search");
+  url.searchParams.set("term", query);
+  url.searchParams.set("media", "music");
+  url.searchParams.set("limit", "1");
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const item = Array.isArray(data?.results) ? data.results[0] : null;
+  if (!item?.artworkUrl100) return null;
+  const artwork = String(item.artworkUrl100).replace("100x100bb", "600x600bb");
+  return cacheWebArtwork(cacheKey, artwork);
+};
+
 const withTimeout = async (promise, timeoutMs, label) => {
   if (!timeoutMs) return promise;
   let timer;
@@ -654,6 +697,12 @@ const getNowPlaying = async () => {
        const cached = readArtworkCache(`${connected.mac}:${track.imgHandle}`);
        if (cached) {
          artworkUrl = getArtworkUrl(`${connected.mac}:${track.imgHandle}`);
+       }
+     }
+     if (!artworkUrl) {
+       const webArtwork = await fetchItunesArtwork(track.title, track.artist, track.album);
+       if (webArtwork) {
+         artworkUrl = webArtwork;
        }
      }
      return {
