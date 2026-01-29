@@ -1,12 +1,15 @@
 [Unit]
 Description=Digital Dash Bluetooth Service
-After=network.target bluetooth.service
+After=network-online.target bluetooth.service
+Wants=network-online.target bluetooth.service
 
 [Service]
 Type=simple
 WorkingDirectory=/digital-dash
 ExecStart=/usr/bin/node server/bluetooth-service/server.js
 User=admin
+Environment=BLUETOOTHCTL_CMD=/usr/bin/bluetoothctl
+Environment=PACTL_CMD=/usr/bin/pactl
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=development

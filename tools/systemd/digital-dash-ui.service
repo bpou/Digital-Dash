@@ -1,6 +1,7 @@
 [Unit]
 Description=Digital Dash UI (Vite dev server)
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
