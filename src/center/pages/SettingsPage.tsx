@@ -318,6 +318,17 @@ export default function SettingsPage() {
                           Connect
                         </motion.button>
                       )}
+                      {device.paired && (
+                        <motion.button
+                          type="button"
+                          disabled={btBusyMac === device.mac}
+                          onClick={() => btAction("/remove", device.mac)}
+                          className="min-h-[36px] rounded-[10px] bg-red-500/20 px-3 text-[10px] uppercase tracking-[0.3em] text-red-200 hover:bg-red-500/30 disabled:opacity-50"
+                          whileTap={{ scale: 0.95, opacity: 0.8 }}
+                        >
+                          Forget
+                        </motion.button>
+                      )}
                     </div>
                   </div>
                 ))
