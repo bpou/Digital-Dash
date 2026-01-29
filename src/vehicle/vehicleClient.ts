@@ -82,13 +82,28 @@ let rawState: VehicleState = {
 let state: VehicleState = rawState;
 const listeners = new Set<Listener>();
 let socket: WebSocket | null = null;
+let ytmSocket: WebSocket | null = null;
 let connectUrl = `ws://${window.location.hostname}:8765`;
+let ytmOverride: Partial<VehicleState["audio"]["nowPlaying"]> | null = null;
+const ytmUrls = (() => {
+  const host = window.location.hostname;
+  const urls = [`ws://${host}:5174`];
+  if (host !== "localhost") {
+    urls.push("ws://localhost:5174");
+  }
+  return urls;
+})();
+let ytmUrlIndex = 0;
 
 const BLINK_INTERVAL_MS = 330;
 let blinkTimer: number | null = null;
 let blinkPhaseOn = false;
 let blinkEnabled = false;
 let lastBlinkApplied = false;
+
+const MOCK_INTERVAL_MS = 120;
+let mockTimer: number | null = null;
+let mockTick = 0;
 
 const notify = () => {
   listeners.forEach((listener) => listener(state));
@@ -168,6 +183,10 @@ const connect = () => {
     return;
   }
 
+  socket.addEventListener("open", () => {
+    stopMockLoop();
+  });
+
   socket.addEventListener("message", (event) => {
     try {
       const message = JSON.parse(event.data as string) as {
@@ -179,6 +198,18 @@ const connect = () => {
           ...(message.payload as VehicleState),
           ambient: message.payload.ambient ?? rawState.ambient,
         };
+        if (ytmOverride) {
+          rawState = {
+            ...rawState,
+            audio: {
+              ...rawState.audio,
+              nowPlaying: {
+                ...rawState.audio.nowPlaying,
+                ...ytmOverride,
+              },
+            },
+          };
+        }
         deriveState();
         notify();
       }
@@ -194,6 +225,80 @@ const connect = () => {
 
   socket.addEventListener("error", () => {
     // stay idle without mock updates
+  });
+};
+
+const applyYtmNowPlaying = (payload: {
+  title?: string;
+  artist?: string;
+  album?: string;
+  artworkUrl?: string;
+  durationSec?: number;
+  positionSec?: number;
+  isPlaying?: boolean;
+}) => {
+  if (!payload?.title && !payload?.artist) return;
+  ytmOverride = {
+    title: payload.title ?? rawState.audio.nowPlaying.title,
+    artist: payload.artist ?? rawState.audio.nowPlaying.artist,
+    album: payload.album ?? rawState.audio.nowPlaying.album,
+    artworkUrl: payload.artworkUrl ?? rawState.audio.nowPlaying.artworkUrl,
+    durationSec: Number.isFinite(payload.durationSec)
+      ? Number(payload.durationSec)
+      : rawState.audio.nowPlaying.durationSec,
+    positionSec: Number.isFinite(payload.positionSec)
+      ? Number(payload.positionSec)
+      : rawState.audio.nowPlaying.positionSec,
+    isPlaying:
+      typeof payload.isPlaying === "boolean"
+        ? payload.isPlaying
+        : rawState.audio.nowPlaying.isPlaying,
+  };
+  commit({
+    ...rawState,
+    audio: {
+      ...rawState.audio,
+      nowPlaying: {
+        ...rawState.audio.nowPlaying,
+        ...ytmOverride,
+      },
+    },
+  });
+  notify();
+};
+
+const connectYtm = () => {
+  if (ytmSocket && (ytmSocket.readyState === WebSocket.OPEN || ytmSocket.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  const url = ytmUrls[ytmUrlIndex % ytmUrls.length];
+  ytmUrlIndex += 1;
+
+  try {
+    ytmSocket = new WebSocket(url);
+  } catch {
+    ytmSocket = null;
+    setTimeout(connectYtm, 2000);
+    return;
+  }
+
+  ytmSocket.addEventListener("message", (event) => {
+    try {
+      const payload = JSON.parse(event.data as string);
+      applyYtmNowPlaying(payload);
+    } catch {
+      // ignore malformed
+    }
+  });
+
+  ytmSocket.addEventListener("close", () => {
+    ytmSocket = null;
+    setTimeout(connectYtm, 2000);
+  });
+
+  ytmSocket.addEventListener("error", () => {
+    // reconnect on close
   });
 };
 
@@ -344,13 +449,45 @@ const applyCommand = (type: string, payload?: unknown) => {
   }
 };
 
+const startMockLoop = () => {
+  if (mockTimer !== null) return;
+  mockTimer = window.setInterval(() => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      stopMockLoop();
+      return;
+    }
+    mockTick += 0.03;
+    const rpm = 800 + ((Math.sin(mockTick) + 1) / 2) * 7200;
+    const speedKmh = ((Math.sin(mockTick * 0.7 + 1.2) + 1) / 2) * 200;
+    commit({
+      ...rawState,
+      engine: {
+        ...rawState.engine,
+        rpm,
+      },
+      vehicle: {
+        ...rawState.vehicle,
+        speedKmh,
+      },
+    });
+    notify();
+  }, MOCK_INTERVAL_MS);
+};
+
+const stopMockLoop = () => {
+  if (mockTimer === null) return;
+  window.clearInterval(mockTimer);
+  mockTimer = null;
+};
 
 export const useVehicleState = () => {
   const [vehicleState, setVehicleState] = useState(state);
 
   useEffect(() => {
     connect();
+    connectYtm();
     startBlinkLoop();
+    startMockLoop();
     const unsubscribe = subscribe(setVehicleState);
     return () => unsubscribe();
   }, []);

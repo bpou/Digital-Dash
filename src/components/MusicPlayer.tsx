@@ -13,11 +13,13 @@ type NowPlaying = {
 type MusicPlayerProps = {
   nowPlaying: NowPlaying;
   formatDuration: (seconds: number) => string;
+  textSizeBoost?: number;
 };
 
 export default function MusicPlayer({
   nowPlaying,
   formatDuration,
+  textSizeBoost = 0,
 }: MusicPlayerProps) {
   const progressPct = useMemo(() => {
     if (nowPlaying.durationSec <= 0) return 0;
@@ -69,12 +71,23 @@ export default function MusicPlayer({
 
       {/* Track info */}
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-        <p className="text-[15px] font-medium tracking-[0.01em] text-white truncate">
+        <p
+          className="font-medium tracking-[0.01em] text-white truncate"
+          style={{ fontSize: 16 + textSizeBoost }}
+        >
           {nowPlaying.title}
         </p>
-        <p className="mt-1 text-[11px] text-white/45 truncate">{nowPlaying.artist}</p>
+        <p
+          className="mt-1 text-white/45 truncate"
+          style={{ fontSize: 12 + textSizeBoost }}
+        >
+          {nowPlaying.artist}
+        </p>
         {nowPlaying.album && (
-          <p className="mt-1 text-[9px] uppercase tracking-[0.28em] text-white/25 truncate">
+          <p
+            className="mt-1 uppercase tracking-[0.28em] text-white/25 truncate"
+            style={{ fontSize: 10 + textSizeBoost }}
+          >
             {nowPlaying.album}
           </p>
         )}
@@ -92,11 +105,15 @@ export default function MusicPlayer({
           />
         </div>
         <div
-          className="absolute left-0 w-full flex items-center justify-between text-[11px] text-white/45"
+          className="absolute left-0 w-full flex items-center justify-between text-white/45"
           style={{ top: "calc(50% + 10px)" }}
         >
-          <span>{formatDuration(nowPlaying.positionSec)}</span>
-          <span>-{formatDuration(nowPlaying.durationSec - nowPlaying.positionSec)}</span>
+          <span style={{ fontSize: 12 + textSizeBoost }}>
+            {formatDuration(nowPlaying.positionSec)}
+          </span>
+          <span style={{ fontSize: 12 + textSizeBoost }}>
+            -{formatDuration(nowPlaying.durationSec - nowPlaying.positionSec)}
+          </span>
         </div>
       </div>
     </div>

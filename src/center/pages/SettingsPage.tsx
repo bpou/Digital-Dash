@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
 const pageVariants = {
@@ -15,6 +16,61 @@ const ChevronRight = () => (
 );
 
 export default function SettingsPage() {
+  const [showBluetooth, setShowBluetooth] = useState(false);
+  const [btDevices, setBtDevices] = useState<
+    Array<{
+      mac: string;
+      name: string;
+      alias?: string;
+      connected: boolean;
+      paired: boolean;
+      trusted: boolean;
+      blocked: boolean;
+      rssi: number | null;
+    }>
+  >([]);
+  const [btBusyMac, setBtBusyMac] = useState<string | null>(null);
+  const [btError, setBtError] = useState<string | null>(null);
+  const [btScanning, setBtScanning] = useState(false);
+
+  const btBaseUrl = useMemo(() => {
+    const host = window.location.hostname;
+    return `http://${host}:5175`;
+  }, []);
+
+  const fetchDevices = async () => {
+    try {
+      const res = await fetch(`${btBaseUrl}/devices`);
+      if (!res.ok) throw new Error("Failed to load devices");
+      const data = (await res.json()) as { devices: typeof btDevices };
+      setBtDevices(data.devices ?? []);
+      setBtError(null);
+    } catch (err) {
+      setBtError(err instanceof Error ? err.message : "Bluetooth service error");
+    }
+  };
+
+  const btAction = async (path: string, mac?: string) => {
+    try {
+      if (mac) setBtBusyMac(mac);
+      const url = mac ? `${btBaseUrl}${path}?mac=${encodeURIComponent(mac)}` : `${btBaseUrl}${path}`;
+      const res = await fetch(url, { method: "POST" });
+      if (!res.ok) throw new Error("Bluetooth action failed");
+      await fetchDevices();
+    } catch (err) {
+      setBtError(err instanceof Error ? err.message : "Bluetooth action failed");
+    } finally {
+      setBtBusyMac(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!showBluetooth) return;
+    fetchDevices();
+    const interval = setInterval(fetchDevices, 2500);
+    return () => clearInterval(interval);
+  }, [showBluetooth]);
+
   return (
     <motion.div
       className="flex h-full w-full flex-col gap-4 bg-black p-4 text-white overflow-hidden"
@@ -94,27 +150,131 @@ export default function SettingsPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Connectivity</p>
             <div className="mt-4 space-y-3">
               {[
-                { label: "Wi-Fi", value: "Tesla Guest" },
+                { label: "Bluetooth", value: "On · 3 devices" },
                 { label: "Premium Connectivity", value: "Active" },
-              ].map((item) => (
+              ].map((item, index) => (
                 <div key={item.label} className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-white/90">{item.label}</p>
                     <p className="text-xs uppercase tracking-[0.2em] text-white/50">{item.value}</p>
                   </div>
-                  <motion.button
-                    type="button"
-                    className="min-h-[44px] rounded-[10px] bg-white/5 px-3 text-xs uppercase tracking-[0.3em] text-white/70 hover:bg-white/10"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                  >
-                    Manage
-                  </motion.button>
+                  {index === 0 && (
+                    <motion.button
+                      type="button"
+                      onClick={() => setShowBluetooth(true)}
+                      className="min-h-[44px] rounded-[10px] bg-white/5 px-3 text-xs uppercase tracking-[0.3em] text-white/70 hover:bg-white/10"
+                      whileTap={{ scale: 0.95, opacity: 0.8 }}
+                    >
+                      Manage
+                    </motion.button>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
+
+      {showBluetooth && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-[520px] rounded-[20px] border border-white/10 bg-[#0b0f14] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-white/50">Bluetooth devices</p>
+                <p className="mt-2 text-lg font-medium text-white/90">Manage devices</p>
+              </div>
+              <motion.button
+                type="button"
+                onClick={() => setShowBluetooth(false)}
+                className="min-h-[40px] rounded-[10px] bg-white/5 px-3 text-xs uppercase tracking-[0.3em] text-white/70 hover:bg-white/10"
+                whileTap={{ scale: 0.95, opacity: 0.8 }}
+              >
+                Close
+              </motion.button>
+            </div>
+            {btError && (
+              <div className="mt-4 rounded-[12px] border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+                {btError}
+              </div>
+            )}
+            <div className="mt-4 space-y-3">
+              {btDevices.length === 0 ? (
+                <div className="rounded-[12px] bg-white/5 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white/40">
+                  No devices found
+                </div>
+              ) : (
+                btDevices.map((device) => (
+                  <div
+                    key={device.mac}
+                    className="flex items-center justify-between rounded-[12px] bg-white/5 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm text-white/90">{device.name || device.alias || device.mac}</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                        {device.connected ? "Connected" : device.paired ? "Paired" : "Available"}
+                        {device.rssi !== null ? ` · RSSI ${device.rssi}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!device.paired && (
+                        <motion.button
+                          type="button"
+                          disabled={btBusyMac === device.mac}
+                          onClick={() => btAction("/pair", device.mac)}
+                          className="min-h-[36px] rounded-[10px] bg-white/10 px-3 text-[10px] uppercase tracking-[0.3em] text-white/80 hover:bg-white/20 disabled:opacity-50"
+                          whileTap={{ scale: 0.95, opacity: 0.8 }}
+                        >
+                          Pair
+                        </motion.button>
+                      )}
+                      {device.connected ? (
+                        <motion.button
+                          type="button"
+                          disabled={btBusyMac === device.mac}
+                          onClick={() => btAction("/disconnect", device.mac)}
+                          className="min-h-[36px] rounded-[10px] bg-white/10 px-3 text-[10px] uppercase tracking-[0.3em] text-white/80 hover:bg-white/20 disabled:opacity-50"
+                          whileTap={{ scale: 0.95, opacity: 0.8 }}
+                        >
+                          Disconnect
+                        </motion.button>
+                      ) : (
+                        <motion.button
+                          type="button"
+                          disabled={btBusyMac === device.mac}
+                          onClick={() => btAction("/connect", device.mac)}
+                          className="min-h-[36px] rounded-[10px] bg-white/10 px-3 text-[10px] uppercase tracking-[0.3em] text-white/80 hover:bg-white/20 disabled:opacity-50"
+                          whileTap={{ scale: 0.95, opacity: 0.8 }}
+                        >
+                          Connect
+                        </motion.button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-xs uppercase tracking-[0.25em] text-white/40">Search for new device</span>
+              <motion.button
+                type="button"
+                onClick={async () => {
+                  if (btScanning) {
+                    await btAction("/scan/stop");
+                    setBtScanning(false);
+                  } else {
+                    await btAction("/scan/start");
+                    setBtScanning(true);
+                  }
+                }}
+                className="min-h-[44px] rounded-[12px] bg-white/10 px-4 text-xs uppercase tracking-[0.3em] text-white/80 hover:bg-white/20"
+                whileTap={{ scale: 0.95, opacity: 0.8 }}
+              >
+                {btScanning ? "Stop" : "Scan"}
+              </motion.button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

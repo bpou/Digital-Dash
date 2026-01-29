@@ -1,0 +1,10 @@
+{
+  "name": "bluetooth-service",
+  "version": "1.0.0",
+  "description": "HTTP bridge to BlueZ via bluetoothctl",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

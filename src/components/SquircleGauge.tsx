@@ -20,6 +20,9 @@ interface SquircleGaugeProps {
   max: number;
   unit: string;
   tickLabels?: TickLabel[];
+  tickLabelValues?: number[];
+  valueStops?: { value: number; position: number }[];
+  tickLabelFormatter?: (value: number) => string;
   size?: number;
   className?: string;
   direction?: Direction;
@@ -115,6 +118,9 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
   max,
   unit,
   tickLabels = [],
+  tickLabelValues = [],
+  valueStops = [],
+  tickLabelFormatter,
   size = 360,
   className = "",
   direction = "clockwise",
@@ -145,11 +151,51 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
     return Math.max(3, maxChars);
   }, [min, max]);
 
+  const sortedStops = useMemo(() => {
+    if (valueStops.length < 2) return null;
+    return [...valueStops].sort((a, b) => a.value - b.value);
+  }, [valueStops]);
+
+  const getNormalized = useMemo(() => {
+    return (value: number) => {
+      if (max === min) return 0;
+      if (!sortedStops) {
+        return clamp((value - min) / (max - min), 0, 1);
+      }
+
+      const stops = sortedStops;
+      const lastIndex = stops.length - 1;
+
+      if (value <= stops[0].value) {
+        const next = stops[1];
+        const span = next.value - stops[0].value || 1;
+        const t = (value - stops[0].value) / span;
+        return clamp(stops[0].position + t * (next.position - stops[0].position), 0, 1);
+      }
+
+      if (value >= stops[lastIndex].value) {
+        const prev = stops[lastIndex - 1];
+        const span = stops[lastIndex].value - prev.value || 1;
+        const t = (value - prev.value) / span;
+        return clamp(prev.position + t * (stops[lastIndex].position - prev.position), 0, 1);
+      }
+
+      for (let i = 0; i < lastIndex; i += 1) {
+        const a = stops[i];
+        const b = stops[i + 1];
+        if (value >= a.value && value <= b.value) {
+          const span = b.value - a.value || 1;
+          const t = (value - a.value) / span;
+          return clamp(a.position + t * (b.position - a.position), 0, 1);
+        }
+      }
+
+      return clamp((value - min) / (max - min), 0, 1);
+    };
+  }, [sortedStops, min, max]);
+
   // Use the value directly - parent handles smooth interpolation
-  const normalized = useMemo(() => {
-    if (max === min) return 0;
-    return clamp((currentValue - min) / (max - min), 0, 1);
-  }, [currentValue, min, max]);
+  const normalized = useMemo(() => getNormalized(currentValue), [currentValue, getNormalized]);
 
   // Build paths
   const outerPath = useMemo(
@@ -168,7 +214,7 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
     const count = ticks.length > 0 ? ticks.length : tickCount;
     
     for (let i = 0; i < count; i++) {
-      const normalizedPos = i / (count - 1);
+      const normalizedPos = ticks.length > 0 ? getNormalized(ticks[i]) : i / (count - 1);
       const value = ticks.length > 0 ? ticks[i] : min + normalizedPos * (max - min);
       
       const outerPoint = getSquirclePoint(size, 20, squirclePower, normalizedPos, startAngleDeg, sweepAngleDeg, direction);
@@ -187,31 +233,67 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
     }
     
     return marks;
-  }, [size, squirclePower, startAngleDeg, sweepAngleDeg, direction, ticks, tickCount, min, max]);
+  }, [
+    size,
+    squirclePower,
+    startAngleDeg,
+    sweepAngleDeg,
+    direction,
+    ticks,
+    tickCount,
+    min,
+    max,
+    getNormalized,
+  ]);
 
   // Generate tick labels - positioned outside the gauge arc
   const generatedTickLabels = useMemo(() => {
     if (tickLabels.length > 0) return tickLabels;
-    
+    if (tickLabelValues.length > 0) {
+      return tickLabelValues.map((value) => {
+        const normalizedPos = getNormalized(value);
+        const point = getSquirclePoint(size, -18, squirclePower, normalizedPos, startAngleDeg, sweepAngleDeg, direction);
+        return {
+          text: tickLabelFormatter ? tickLabelFormatter(value) : Math.round(value).toString(),
+          x: (point.x / size) * 100,
+          y: (point.y / size) * 100,
+        };
+      });
+    }
+
     const labels: TickLabel[] = [];
     const count = ticks.length > 0 ? ticks.length : tickCount;
     
     // Only show labels for major ticks (every other tick or specific ticks)
     for (let i = 0; i < count; i += 2) {
-      const normalizedPos = i / (count - 1);
+      const normalizedPos = ticks.length > 0 ? getNormalized(ticks[i]) : i / (count - 1);
       const value = ticks.length > 0 ? ticks[i] : min + normalizedPos * (max - min);
       // Position labels further outside the arc
-      const point = getSquirclePoint(size, -8, squirclePower, normalizedPos, startAngleDeg, sweepAngleDeg, direction);
+      const point = getSquirclePoint(size, -18, squirclePower, normalizedPos, startAngleDeg, sweepAngleDeg, direction);
       
       labels.push({
-        text: Math.round(value).toString(),
+        text: tickLabelFormatter ? tickLabelFormatter(value) : Math.round(value).toString(),
         x: (point.x / size) * 100,
         y: (point.y / size) * 100,
       });
     }
     
     return labels;
-  }, [tickLabels, size, squirclePower, startAngleDeg, sweepAngleDeg, direction, ticks, tickCount, min, max]);
+  }, [
+    tickLabels,
+    tickLabelValues,
+    size,
+    squirclePower,
+    startAngleDeg,
+    sweepAngleDeg,
+    direction,
+    ticks,
+    tickCount,
+    min,
+    max,
+    getNormalized,
+    tickLabelFormatter,
+  ]);
 
   // Needle position - uses the animated normalized value to follow the arc
   const needlePoint = useMemo(() => {
@@ -556,7 +638,7 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
             left: `${tick.x}%`,
             top: `${tick.y}%`,
             transform: "translate(-50%, -50%)",
-            fontSize: size * 0.038,
+            fontSize: size * 0.04,
             fontVariantNumeric: "tabular-nums",
             fontFeatureSettings: "'tnum' 1",
             width: "3ch",

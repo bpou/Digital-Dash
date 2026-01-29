@@ -131,7 +131,15 @@ export default function ClusterScreen() {
                 sweepAngleDeg={270}
                 showNeedle={false}
                 accentColor="#0080FF"
-                ticks={[0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000]}
+                ticks={[0, 3000, 5000, 7000]}
+                tickLabelValues={[0, 3000, 5000, 7000]}
+                tickLabelFormatter={(value) => Math.round(value / 1000).toString()}
+                valueStops={[
+                  { value: 0, position: 0 },
+                  { value: 3000, position: 1 / 3 },
+                  { value: 5000, position: 2 / 3 },
+                  { value: 7000, position: 1 },
+                ]}
                 zones={[
                   { min: 0, max: 5000, color: "#0080FF" },
                   { min: 5000, max: 6500, color: "#FFB800" },
@@ -141,20 +149,26 @@ export default function ClusterScreen() {
               />
 
               <div className="flex flex-col items-center gap-5">
-                <div className="flex items-center gap-4 rounded-[26px] border border-white/10 bg-white/5 px-5 py-4">
-                  <div className="flex flex-col items-start">
-                    <span className="text-[11px] uppercase tracking-[0.35em] text-white/45">Fuel</span>
-                    <span className="mt-2 text-[26px] font-semibold text-white">
+                <div className="relative flex items-center gap-5 rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02)_45%,rgba(10,12,16,0.9))] px-6 py-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]">
+                    <div className="absolute -left-8 -top-10 h-[140px] w-[140px] rounded-full bg-[radial-gradient(circle,rgba(110,220,210,0.28),transparent_70%)] blur-2xl" />
+                    <div className="absolute -right-10 -bottom-12 h-[180px] w-[180px] rounded-full bg-[radial-gradient(circle,rgba(60,140,200,0.22),transparent_70%)] blur-3xl" />
+                    <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.08),transparent_40%,rgba(255,255,255,0.04))]" />
+                  </div>
+                  <div className="relative z-10 flex flex-col items-start">
+                    <span className="text-[10px] uppercase tracking-[0.42em] text-white/40">Fuel</span>
+                    <span className="mt-2 text-[28px] font-semibold text-white tracking-tight">
                       {Math.round(data.fuel.percent)}%
                     </span>
                     <span className="text-[12px] text-white/45">{rangeKm} KM range</span>
                   </div>
-                  <div className="relative h-[90px] w-[12px] overflow-hidden rounded-full bg-white/10">
+                  <div className="relative z-10 flex h-[96px] w-[16px] items-center justify-center">
+                    <div className="absolute inset-0 rounded-full bg-white/10 shadow-[inset_0_0_16px_rgba(0,0,0,0.6)]" />
                     <div
-                      className="absolute bottom-0 left-0 w-full rounded-full bg-gradient-to-t from-emerald-400/70 via-emerald-300/50 to-emerald-200/30"
-                      style={{ height: `${Math.max(6, Math.min(100, data.fuel.percent))}%` }}
+                      className="absolute bottom-[6px] left-1/2 w-[8px] -translate-x-1/2 rounded-full bg-gradient-to-t from-emerald-400 via-emerald-300 to-cyan-200 shadow-[0_0_18px_rgba(110,220,210,0.55)]"
+                      style={{ height: `${Math.max(8, Math.min(88, (data.fuel.percent / 100) * 88))}px` }}
                     />
-                    <div className="absolute left-1/2 top-1/2 h-[2px] w-[18px] -translate-x-1/2 -translate-y-1/2 bg-white/25" />
+                    <div className="absolute inset-0 rounded-full ring-1 ring-white/20" />
                   </div>
                 </div>
 
@@ -166,21 +180,21 @@ export default function ClusterScreen() {
                   <div className="flex items-center gap-3 rounded-full border border-white/10 px-4 py-2">
                     <div className="flex h-8 w-8 items-center justify-center">
                       <img
-                        src="/lights/check%20engine/on.png"
+                        src="/lights/check%20engine/off.png"
                         alt="Check engine"
                         className="h-5 w-5 object-contain"
                       />
                     </div>
                     <div className="flex h-8 w-8 items-center justify-center">
                       <img
-                        src="/lights/high%20beam/on.png"
+                        src="/lights/high%20beam/off.png"
                         alt="High beam"
                         className="h-5 w-5 object-contain"
                       />
                     </div>
                     <div className="flex h-8 w-8 items-center justify-center">
                       <img
-                        src="/lights/low%20beam/on.png"
+                        src="/lights/low%20beam/off.png"
                         alt="Low beam"
                         className="h-5 w-5 object-contain"
                       />
@@ -205,7 +219,14 @@ export default function ClusterScreen() {
                 sweepAngleDeg={270}
                 showNeedle={false}
                 accentColor="#0080FF"
-                ticks={[0, 25, 50, 75, 100, 125, 150, 175, 200]}
+                ticks={[20, 70, 100, 150]}
+                tickLabelValues={[20, 70, 100, 150]}
+                valueStops={[
+                  { value: 20, position: 0 },
+                  { value: 70, position: 1 / 3 },
+                  { value: 100, position: 2 / 3 },
+                  { value: 150, position: 1 },
+                ]}
                 zones={[
                   { min: 0, max: 120, color: "#0080FF" },
                   { min: 120, max: 160, color: "#FFB800" },
@@ -216,7 +237,13 @@ export default function ClusterScreen() {
             </div>
 
             <div className="absolute bottom-[26px] left-1/2 -translate-x-1/2">
-              <MusicPlayer nowPlaying={nowPlaying} formatDuration={formatDuration} />
+              <div className="origin-top scale-[0.9]">
+                <MusicPlayer nowPlaying={nowPlaying} formatDuration={formatDuration} textSizeBoost={1} />
+              </div>
+            </div>
+
+            <div className="absolute bottom-[8px] left-1/2 -translate-x-1/2 text-[14px] text-white/25 tracking-[0.18em]">
+              180000km
             </div>
           </div>
         </div>
