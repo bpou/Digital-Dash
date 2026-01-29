@@ -4,9 +4,23 @@ set -euo pipefail
 ROOT_DIR=${1:-/digital-dash}
 SYSTEMD_DIR=/etc/systemd/system
 
+NODE_BIN=$(command -v node || true)
+if [ -z "${NODE_BIN}" ]; then
+  if [ -x /usr/bin/node ]; then
+    NODE_BIN=/usr/bin/node
+  elif [ -x /usr/local/bin/node ]; then
+    NODE_BIN=/usr/local/bin/node
+  else
+    NODE_BIN=/usr/bin/env
+  fi
+fi
+
 sudo cp "${ROOT_DIR}/tools/systemd/digital-dash-ui.service" "${SYSTEMD_DIR}/digital-dash-ui.service"
 sudo cp "${ROOT_DIR}/tools/systemd/digital-dash-vehicle.service" "${SYSTEMD_DIR}/digital-dash-vehicle.service"
 sudo cp "${ROOT_DIR}/tools/systemd/digital-dash-bluetooth.service" "${SYSTEMD_DIR}/digital-dash-bluetooth.service"
+
+sudo sed -i "s|__ROOT_DIR__|${ROOT_DIR}|g" "${SYSTEMD_DIR}/digital-dash-bluetooth.service"
+sudo sed -i "s|__NODE_BIN__|${NODE_BIN}|g" "${SYSTEMD_DIR}/digital-dash-bluetooth.service"
 
 sudo systemctl daemon-reload
 sudo systemctl enable digital-dash-ui.service

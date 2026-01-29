@@ -5,8 +5,8 @@ Wants=network-online.target bluetooth.service
 
 [Service]
 Type=simple
-WorkingDirectory=/digital-dash
-ExecStart=/usr/bin/node server/bluetooth-service/server.js
+WorkingDirectory=__ROOT_DIR__
+ExecStart=__NODE_BIN__ server/bluetooth-service/server.js
 User=admin
 Environment=BLUETOOTHCTL_CMD=/usr/bin/bluetoothctl
 Environment=PACTL_CMD=/usr/bin/pactl
