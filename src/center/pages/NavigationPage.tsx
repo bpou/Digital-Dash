@@ -359,7 +359,7 @@ export default function NavigationPage() {
         </motion.button>
       </div>
 
-      <div className="grid flex-1 grid-cols-[2fr_1fr] gap-4">
+      <div className="grid flex-1 min-h-0 grid-cols-[2fr_1fr] gap-4">
         <div className="relative flex h-full flex-col overflow-hidden rounded-[16px] bg-white/5">
           <div ref={mapContainerRef} className="absolute inset-0" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(20,30,40,0.45),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(16,28,36,0.35),transparent_60%)]" />
@@ -426,12 +426,12 @@ export default function NavigationPage() {
           </div>
         </div>
 
-        <div className="flex h-full flex-col gap-4">
-          <div className="rounded-[16px] bg-white/5 p-4">
+        <div className="flex h-full min-h-0 flex-col gap-4">
+          <div className="flex min-h-0 flex-1 flex-col rounded-[16px] bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">
               {predictions.length > 0 ? "Search results" : "Recent"}
             </p>
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-3 overflow-y-auto pr-1">
               {predictions.length > 0
                 ? predictions.map((item) => (
                     <motion.button
@@ -466,9 +466,9 @@ export default function NavigationPage() {
             </div>
           </div>
 
-          <div className="rounded-[16px] bg-white/5 p-4">
+          <div className="flex min-h-0 flex-1 flex-col rounded-[16px] bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Trip suggestions</p>
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-3 overflow-y-auto pr-1">
               {(suggestions.length > 0 ? suggestions : [
                 { id: "suggestion-1", name: "Supercharger · 4 stalls", address: "2.1 km", location: defaultCenter },
                 { id: "suggestion-2", name: "Coffee stop", address: "1.3 km", location: defaultCenter },
