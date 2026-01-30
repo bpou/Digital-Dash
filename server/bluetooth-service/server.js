@@ -356,7 +356,7 @@ const parseBusctlDict = (raw) => {
 
 const extractOfonoPaths = (raw) => {
   if (!raw) return [];
-  const matches = Array.from(raw.matchAll(/"(\/ofono\/[^"]+)"/g)).map((match) => match[1]);
+  const matches = Array.from(raw.matchAll(/"((?:\/ofono|\/hfp)\/[^"]+)"/g)).map((match) => match[1]);
   return Array.from(new Set(matches));
 };
 

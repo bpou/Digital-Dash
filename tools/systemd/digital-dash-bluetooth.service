@@ -7,7 +7,6 @@ Wants=network-online.target bluetooth.service
 Type=simple
 WorkingDirectory=__ROOT_DIR__
 ExecStart=__NODE_BIN__ server/bluetooth-service/server.js
-User=admin
 Environment=BLUETOOTHCTL_CMD=/usr/bin/bluetoothctl
 Environment=PACTL_CMD=/usr/bin/pactl
 Restart=on-failure
