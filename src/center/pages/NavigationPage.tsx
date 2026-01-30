@@ -48,13 +48,39 @@ const MinusIcon = () => (
   </svg>
 );
 
+type SearchPrediction = {
+  place_id: string;
+  description: string;
+};
+
+type MapPlace = {
+  id: string;
+  name: string;
+  address?: string;
+  location: { lat: number; lng: number };
+};
+
 export default function NavigationPage() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const destinationMarkerRef = useRef<any>(null);
   const trafficRef = useRef<any>(null);
+  const directionsRef = useRef<any>(null);
+  const servicesRef = useRef<{ autocomplete?: any; places?: any; directions?: any }>({});
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [searchValue, setSearchValue] = useState("");
+  const [predictions, setPredictions] = useState<SearchPrediction[]>([]);
+  const [recentPlaces, setRecentPlaces] = useState<MapPlace[]>([
+    { id: "recent-1", name: "Nordic Museum", address: "12 km · 18 min", location: { lat: 59.3296, lng: 18.0837 } },
+    { id: "recent-2", name: "T-Centralen", address: "3 km · 6 min", location: { lat: 59.3316, lng: 18.0629 } },
+    { id: "recent-3", name: "Arlanda Airport", address: "41 km · 32 min", location: { lat: 59.6519, lng: 17.9186 } },
+  ]);
+  const [suggestions, setSuggestions] = useState<MapPlace[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance?: string; duration?: string } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
   const defaultCenter = useMemo(() => ({ lat: 59.3293, lng: 18.0686 }), []);
 
@@ -100,6 +126,23 @@ export default function NavigationPage() {
 
     trafficRef.current = new googleMaps.maps.TrafficLayer();
     trafficRef.current.setMap(mapRef.current);
+
+    servicesRef.current = {
+      autocomplete: new googleMaps.maps.places.AutocompleteService(),
+      places: new googleMaps.maps.places.PlacesService(mapRef.current),
+      directions: new googleMaps.maps.DirectionsService(),
+    };
+
+    directionsRef.current = new googleMaps.maps.DirectionsRenderer({
+      map: mapRef.current,
+      suppressMarkers: false,
+      preserveViewport: false,
+      polylineOptions: {
+        strokeColor: "#7ee3ff",
+        strokeOpacity: 0.9,
+        strokeWeight: 5,
+      },
+    });
   }, [mapReady, defaultCenter]);
 
   useEffect(() => {
@@ -115,11 +158,20 @@ export default function NavigationPage() {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         };
+        setUserLocation(coords);
         mapRef.current.setCenter(coords);
         if (!markerRef.current && googleMaps?.maps) {
           markerRef.current = new googleMaps.maps.Marker({
             position: coords,
             map: mapRef.current,
+            icon: {
+              path: googleMaps.maps.SymbolPath.CIRCLE,
+              scale: 7,
+              fillColor: "#7ee3ff",
+              fillOpacity: 0.9,
+              strokeColor: "#0b1b22",
+              strokeWeight: 2,
+            },
           });
         } else if (markerRef.current) {
           markerRef.current.setPosition(coords);
@@ -138,6 +190,145 @@ export default function NavigationPage() {
     };
   }, [mapReady]);
 
+  useEffect(() => {
+    if (!mapReady) return;
+    if (!servicesRef.current.autocomplete) return;
+    if (!searchValue.trim()) {
+      setPredictions([]);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      servicesRef.current.autocomplete.getPlacePredictions(
+        {
+          input: searchValue,
+          location: userLocation ?? defaultCenter,
+          radius: 50000,
+        },
+        (items: SearchPrediction[] | null, status: string) => {
+          if (status !== "OK" || !items) {
+            setPredictions([]);
+            return;
+          }
+          setPredictions(items.slice(0, 5));
+        }
+      );
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [searchValue, mapReady, userLocation, defaultCenter]);
+
+  useEffect(() => {
+    if (!mapReady || !servicesRef.current.places) return;
+    const location = userLocation ?? defaultCenter;
+    const googleMaps = (window as any).google;
+
+    const fetchSuggestions = (type: string) =>
+      new Promise<MapPlace[]>((resolve) => {
+        servicesRef.current.places.nearbySearch(
+          {
+            location,
+            radius: 6000,
+            type,
+          },
+          (results: any[] | null, status: string) => {
+            if (status !== "OK" || !results) {
+              resolve([]);
+              return;
+            }
+            const mapped = results.slice(0, 2).map((place) => ({
+              id: place.place_id,
+              name: place.name,
+              address: place.vicinity,
+              location: {
+                lat: place.geometry?.location?.lat?.() ?? location.lat,
+                lng: place.geometry?.location?.lng?.() ?? location.lng,
+              },
+            }));
+            resolve(mapped);
+          }
+        );
+      });
+
+    Promise.all([fetchSuggestions("charging_station"), fetchSuggestions("cafe")])
+      .then((groups) => {
+        setSuggestions(groups.flat());
+      })
+      .catch(() => {
+        setSuggestions([]);
+      });
+  }, [mapReady, userLocation, defaultCenter]);
+
+  const selectPlace = (place: MapPlace) => {
+    setSelectedPlace(place);
+    setRouteInfo(null);
+    if (mapRef.current) {
+      mapRef.current.setCenter(place.location);
+      mapRef.current.setZoom(13);
+    }
+    const googleMaps = (window as any).google;
+    if (googleMaps?.maps && mapRef.current) {
+      if (!destinationMarkerRef.current) {
+        destinationMarkerRef.current = new googleMaps.maps.Marker({
+          position: place.location,
+          map: mapRef.current,
+        });
+      } else {
+        destinationMarkerRef.current.setPosition(place.location);
+      }
+    }
+    setRecentPlaces((prev) => {
+      const next = [place, ...prev.filter((item) => item.id !== place.id)].slice(0, 3);
+      return next;
+    });
+    setSearchValue(place.name);
+    setPredictions([]);
+  };
+
+  const selectPrediction = (prediction: SearchPrediction) => {
+    if (!servicesRef.current.places) return;
+    servicesRef.current.places.getDetails(
+      {
+        placeId: prediction.place_id,
+        fields: ["name", "geometry", "formatted_address"],
+      },
+      (place: any, status: string) => {
+        if (status !== "OK" || !place?.geometry?.location) return;
+        const result: MapPlace = {
+          id: prediction.place_id,
+          name: place.name ?? prediction.description,
+          address: place.formatted_address,
+          location: {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          },
+        };
+        selectPlace(result);
+      }
+    );
+  };
+
+  const startNavigation = () => {
+    if (!selectedPlace || !userLocation || !servicesRef.current.directions) return;
+    const googleMaps = (window as any).google;
+    servicesRef.current.directions.route(
+      {
+        origin: userLocation,
+        destination: selectedPlace.location,
+        travelMode: googleMaps.maps.TravelMode.DRIVING,
+      },
+      (result: any, status: string) => {
+        if (status !== "OK" || !result) return;
+        directionsRef.current?.setDirections(result);
+        const leg = result.routes?.[0]?.legs?.[0];
+        setRouteInfo({
+          distance: leg?.distance?.text,
+          duration: leg?.duration?.text,
+        });
+      }
+    );
+  };
+
   return (
       <motion.div
         className="flex h-full w-full flex-col gap-4 bg-black p-4 text-white overflow-hidden"
@@ -148,16 +339,22 @@ export default function NavigationPage() {
       transition={pageTransition}
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-11 flex-1 items-center gap-3 rounded-[12px] bg-white/5 px-4 text-white/70">
+        <div className="relative flex h-11 flex-1 items-center gap-3 rounded-[12px] bg-white/5 px-4 text-white/70">
           <SearchIcon />
-          <span className="text-sm uppercase tracking-[0.2em] text-white/60">Search destination</span>
+          <input
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
+            placeholder="Search destination"
+            className="w-full bg-transparent text-sm uppercase tracking-[0.2em] text-white/80 placeholder:text-white/40 focus:outline-none"
+          />
         </div>
         <motion.button
           type="button"
           className="h-11 rounded-[10px] bg-white/5 px-4 text-xs uppercase tracking-[0.3em] text-white/70 hover:bg-white/10"
           whileTap={{ scale: 0.95, opacity: 0.8 }}
+          onClick={startNavigation}
         >
-          Routes
+          Start
         </motion.button>
       </div>
 
@@ -175,8 +372,13 @@ export default function NavigationPage() {
             <div className="flex items-center justify-between px-6 pt-5">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">Map view</p>
-                <p className="mt-2 text-lg font-medium text-white/90">Stockholm Center</p>
-                <p className="text-sm text-white/50">Live traffic · 2 min delay</p>
+                <p className="mt-2 text-lg font-medium text-white/90">
+                  {selectedPlace?.name ?? "Stockholm Center"}
+                </p>
+                <p className="text-sm text-white/50">
+                  Live traffic
+                  {routeInfo?.duration ? ` · ${routeInfo.duration}` : ""}
+                </p>
               </div>
               <div className="flex flex-col gap-2">
                 <motion.button
@@ -225,45 +427,61 @@ export default function NavigationPage() {
 
         <div className="flex h-full flex-col gap-4">
           <div className="rounded-[16px] bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/60">Recent</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+              {predictions.length > 0 ? "Search results" : "Recent"}
+            </p>
             <div className="mt-4 space-y-3">
-              {[
-                { title: "Nordic Museum", meta: "12 km · 18 min" },
-                { title: "T-Centralen", meta: "3 km · 6 min" },
-                { title: "Arlanda Airport", meta: "41 km · 32 min" },
-              ].map((item) => (
-                <motion.button
-                  key={item.title}
-                  type="button"
-                  className="flex min-h-[44px] w-full items-center gap-3 rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
-                  whileTap={{ scale: 0.95, opacity: 0.8 }}
-                >
-                  <RecentPinIcon />
-                  <div>
-                    <p className="text-sm text-white/90">{item.title}</p>
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">{item.meta}</p>
-                  </div>
-                </motion.button>
-              ))}
+              {predictions.length > 0
+                ? predictions.map((item) => (
+                    <motion.button
+                      key={item.place_id}
+                      type="button"
+                      className="flex min-h-[44px] w-full items-center gap-3 rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
+                      whileTap={{ scale: 0.95, opacity: 0.8 }}
+                      onClick={() => selectPrediction(item)}
+                    >
+                      <SearchIcon />
+                      <div>
+                        <p className="text-sm text-white/90">{item.description}</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-white/50">Tap to view</p>
+                      </div>
+                    </motion.button>
+                  ))
+                : recentPlaces.map((item) => (
+                    <motion.button
+                      key={item.id}
+                      type="button"
+                      className="flex min-h-[44px] w-full items-center gap-3 rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
+                      whileTap={{ scale: 0.95, opacity: 0.8 }}
+                      onClick={() => selectPlace(item)}
+                    >
+                      <RecentPinIcon />
+                      <div>
+                        <p className="text-sm text-white/90">{item.name}</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-white/50">{item.address ?? ""}</p>
+                      </div>
+                    </motion.button>
+                  ))}
             </div>
           </div>
 
           <div className="rounded-[16px] bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Trip suggestions</p>
             <div className="mt-4 space-y-3">
-              {[
-                { title: "Supercharger · 4 stalls", meta: "2.1 km" },
-                { title: "Coffee stop", meta: "1.3 km" },
-              ].map((item) => (
+              {(suggestions.length > 0 ? suggestions : [
+                { id: "suggestion-1", name: "Supercharger · 4 stalls", address: "2.1 km", location: defaultCenter },
+                { id: "suggestion-2", name: "Coffee stop", address: "1.3 km", location: defaultCenter },
+              ]).map((item) => (
                 <motion.button
-                  key={item.title}
+                  key={item.id}
                   type="button"
                   className="flex min-h-[44px] w-full items-center justify-between rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={() => selectPlace(item as MapPlace)}
                 >
                   <div>
-                    <p className="text-sm text-white/90">{item.title}</p>
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">{item.meta}</p>
+                    <p className="text-sm text-white/90">{item.name}</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">{item.address ?? ""}</p>
                   </div>
                   <span className="text-xs uppercase tracking-[0.3em] text-white/50">Go</span>
                 </motion.button>
