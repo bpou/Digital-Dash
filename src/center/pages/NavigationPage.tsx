@@ -1,3 +1,4 @@
+import mapboxgl from "mapbox-gl";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -48,11 +49,6 @@ const MinusIcon = () => (
   </svg>
 );
 
-type SearchPrediction = {
-  place_id: string;
-  description: string;
-};
-
 type MapPlace = {
   id: string;
   name: string;
@@ -67,20 +63,44 @@ type RouteStep = {
   endLocation: { lat: number; lng: number };
 };
 
-const stripHtml = (value: string) => value.replace(/<[^>]*>/g, "");
+const formatDistance = (meters: number) => {
+  if (!Number.isFinite(meters)) return "";
+  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
+  return `${Math.round(meters)} m`;
+};
+
+const formatDuration = (seconds: number) => {
+  if (!Number.isFinite(seconds)) return "";
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.round((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  }
+  return `${Math.max(1, Math.round(seconds / 60))} min`;
+};
+
+const distanceMeters = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const earthRadius = 6371000;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const c = 2 * Math.asin(Math.sqrt(sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng));
+  return earthRadius * c;
+};
 
 export default function NavigationPage() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-  const destinationMarkerRef = useRef<any>(null);
-  const trafficRef = useRef<any>(null);
-  const directionsRef = useRef<any>(null);
-  const servicesRef = useRef<{ autocomplete?: any; places?: any; directions?: any }>({});
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
-  const [predictions, setPredictions] = useState<SearchPrediction[]>([]);
+  const [predictions, setPredictions] = useState<MapPlace[]>([]);
   const [recentPlaces, setRecentPlaces] = useState<MapPlace[]>([
     { id: "recent-1", name: "Nordic Museum", address: "12 km · 18 min", location: { lat: 59.3296, lng: 18.0837 } },
     { id: "recent-2", name: "T-Centralen", address: "3 km · 6 min", location: { lat: 59.3316, lng: 18.0629 } },
@@ -91,104 +111,88 @@ export default function NavigationPage() {
   const [routeInfo, setRouteInfo] = useState<{ distance?: string; duration?: string } | null>(null);
   const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [routePath, setRoutePath] = useState<any[]>([]);
+  const [routePath, setRoutePath] = useState<[number, number][]>([]);
   const [routeDestination, setRouteDestination] = useState<MapPlace | null>(null);
   const [lastRerouteAt, setLastRerouteAt] = useState(0);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+  const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
   const defaultCenter = useMemo(() => ({ lat: 59.3293, lng: 18.0686 }), []);
 
-  useEffect(() => {
-    if (!apiKey) {
-      setMapError("Missing Google Maps API key");
+  const updateRouteLine = (coordinates: [number, number][]) => {
+    if (!mapRef.current || !mapReady) return;
+    const map = mapRef.current;
+    const data = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "LineString",
+        coordinates,
+      },
+    } as const;
+
+    const source = map.getSource("route") as mapboxgl.GeoJSONSource | undefined;
+    if (source) {
+      source.setData(data);
       return;
     }
-    if (!mapContainerRef.current) return;
-    if ((window as any).google?.maps) {
-      setMapReady(true);
-      return;
-    }
 
-    const existing = document.querySelector("script[data-google-maps='true']");
-    if (existing) {
-      existing.addEventListener("load", () => setMapReady(true));
-      existing.addEventListener("error", () => setMapError("Failed to load Google Maps"));
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
-    script.async = true;
-    script.defer = true;
-    script.dataset.googleMaps = "true";
-    script.onload = () => setMapReady(true);
-    script.onerror = () => setMapError("Failed to load Google Maps");
-    document.head.appendChild(script);
-  }, [apiKey]);
-
-  useEffect(() => {
-    if (!mapReady || mapRef.current || !mapContainerRef.current) return;
-    const googleMaps = (window as any).google;
-    if (!googleMaps?.maps) return;
-
-    mapRef.current = new googleMaps.maps.Map(mapContainerRef.current, {
-      center: defaultCenter,
-      zoom: 12,
-      disableDefaultUI: true,
-      gestureHandling: "greedy",
-    });
-
-    trafficRef.current = new googleMaps.maps.TrafficLayer();
-    trafficRef.current.setMap(mapRef.current);
-
-    servicesRef.current = {
-      autocomplete: new googleMaps.maps.places.AutocompleteService(),
-      places: new googleMaps.maps.places.PlacesService(mapRef.current),
-      directions: new googleMaps.maps.DirectionsService(),
-    };
-
-    directionsRef.current = new googleMaps.maps.DirectionsRenderer({
-      map: mapRef.current,
-      suppressMarkers: false,
-      preserveViewport: false,
-      polylineOptions: {
-        strokeColor: "#7ee3ff",
-        strokeOpacity: 0.9,
-        strokeWeight: 5,
+    map.addSource("route", { type: "geojson", data });
+    map.addLayer({
+      id: "route-line",
+      type: "line",
+      source: "route",
+      paint: {
+        "line-color": "#7ee3ff",
+        "line-width": 5,
+        "line-opacity": 0.9,
       },
     });
-  }, [mapReady, defaultCenter]);
+  };
 
   useEffect(() => {
-    if (!mapReady || !mapRef.current) return;
+    if (!mapboxToken) {
+      setMapError("Missing Mapbox token");
+      return;
+    }
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    mapboxgl.accessToken = mapboxToken;
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: "mapbox://styles/mapbox/navigation-night-v1",
+      center: [defaultCenter.lng, defaultCenter.lat],
+      zoom: 12,
+      pitch: 0,
+      bearing: 0,
+      attributionControl: false,
+    });
+
+    mapRef.current = map;
+    map.on("load", () => {
+      setMapReady(true);
+    });
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [mapboxToken, defaultCenter]);
+
+  useEffect(() => {
     if (!navigator.geolocation) return;
-
-    const googleMaps = (window as any).google;
-    let watchId = -1;
-
-    watchId = navigator.geolocation.watchPosition(
+    const watchId = navigator.geolocation.watchPosition(
       (position) => {
-        const coords = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
+        const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
         setUserLocation(coords);
-        mapRef.current.setCenter(coords);
-        if (!markerRef.current && googleMaps?.maps) {
-          markerRef.current = new googleMaps.maps.Marker({
-            position: coords,
-            map: mapRef.current,
-            icon: {
-              path: googleMaps.maps.SymbolPath.CIRCLE,
-              scale: 7,
-              fillColor: "#7ee3ff",
-              fillOpacity: 0.9,
-              strokeColor: "#0b1b22",
-              strokeWeight: 2,
-            },
-          });
+        if (mapRef.current) {
+          mapRef.current.setCenter([coords.lng, coords.lat]);
+        }
+        if (mapRef.current && !markerRef.current) {
+          markerRef.current = new mapboxgl.Marker({ color: "#7ee3ff" })
+            .setLngLat([coords.lng, coords.lat])
+            .addTo(mapRef.current);
         } else if (markerRef.current) {
-          markerRef.current.setPosition(coords);
+          markerRef.current.setLngLat([coords.lng, coords.lat]);
         }
       },
       () => {
@@ -197,27 +201,16 @@ export default function NavigationPage() {
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
 
-    return () => {
-      if (watchId !== -1) {
-        navigator.geolocation.clearWatch(watchId);
-      }
-    };
-  }, [mapReady]);
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   useEffect(() => {
     if (!userLocation || !routeDestination) return;
-    const googleMaps = (window as any).google;
-    if (!googleMaps?.maps?.geometry?.spherical) return;
 
     if (routeSteps.length > 0) {
       const currentStep = routeSteps[currentStepIndex];
       if (currentStep) {
-        const currentLatLng = new googleMaps.maps.LatLng(userLocation.lat, userLocation.lng);
-        const stepLatLng = new googleMaps.maps.LatLng(currentStep.endLocation.lat, currentStep.endLocation.lng);
-        const distanceToEnd = googleMaps.maps.geometry.spherical.computeDistanceBetween(
-          currentLatLng,
-          stepLatLng
-        );
+        const distanceToEnd = distanceMeters(userLocation, currentStep.endLocation);
         if (distanceToEnd < 25 && currentStepIndex < routeSteps.length - 1) {
           setCurrentStepIndex((index) => Math.min(index + 1, routeSteps.length - 1));
         }
@@ -225,10 +218,9 @@ export default function NavigationPage() {
     }
 
     if (routePath.length > 0) {
-      const currentLatLng = new googleMaps.maps.LatLng(userLocation.lat, userLocation.lng);
       let minDistance = Number.POSITIVE_INFINITY;
-      routePath.forEach((point: any) => {
-        const distance = googleMaps.maps.geometry.spherical.computeDistanceBetween(currentLatLng, point);
+      routePath.forEach(([lng, lat]) => {
+        const distance = distanceMeters(userLocation, { lat, lng });
         if (distance < minDistance) {
           minDistance = distance;
         }
@@ -246,99 +238,70 @@ export default function NavigationPage() {
   const nextStep = routeSteps[currentStepIndex + 1];
 
   useEffect(() => {
-    if (!mapReady) return;
-    if (!servicesRef.current.autocomplete) return;
+    if (!mapboxToken) return;
     if (!searchValue.trim()) {
       setPredictions([]);
       return;
     }
-
-    const timer = window.setTimeout(() => {
-      servicesRef.current.autocomplete.getPlacePredictions(
-        {
-          input: searchValue,
-          location: userLocation ?? defaultCenter,
-          radius: 50000,
-        },
-        (items: SearchPrediction[] | null, status: string) => {
-          if (status === "REQUEST_DENIED") {
-            setMapError("Places API not enabled or key restriction blocked");
-          }
-          if (status !== "OK" || !items) {
-            setPredictions([]);
-            return;
-          }
-          setPredictions(items.slice(0, 5));
-        }
-      );
+    const timer = window.setTimeout(async () => {
+      try {
+        const proximity = userLocation ? `${userLocation.lng},${userLocation.lat}` : `${defaultCenter.lng},${defaultCenter.lat}`;
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchValue)}.json?access_token=${mapboxToken}&autocomplete=true&limit=5&proximity=${proximity}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Mapbox geocoding failed");
+        const data = await res.json();
+        const mapped = (data.features ?? []).map((feature: any) => ({
+          id: feature.id,
+          name: feature.text,
+          address: feature.place_name,
+          location: { lat: feature.center[1], lng: feature.center[0] },
+        }));
+        setPredictions(mapped);
+      } catch {
+        setPredictions([]);
+        setMapError("Mapbox search failed");
+      }
     }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [searchValue, mapReady, userLocation, defaultCenter]);
+  }, [searchValue, mapboxToken, userLocation, defaultCenter]);
 
   useEffect(() => {
-    if (!mapReady || !servicesRef.current.places) return;
+    if (!mapboxToken) return;
     const location = userLocation ?? defaultCenter;
-    const googleMaps = (window as any).google;
 
-    const fetchSuggestions = (type: string) =>
-      new Promise<MapPlace[]>((resolve) => {
-        servicesRef.current.places.nearbySearch(
-          {
-            location,
-            radius: 6000,
-            type,
-          },
-          (results: any[] | null, status: string) => {
-            if (status !== "OK" || !results) {
-              resolve([]);
-              return;
-            }
-            const mapped = results.slice(0, 2).map((place) => ({
-              id: place.place_id,
-              name: place.name,
-              address: place.vicinity,
-              location: {
-                lat: place.geometry?.location?.lat?.() ?? location.lat,
-                lng: place.geometry?.location?.lng?.() ?? location.lng,
-              },
-            }));
-            resolve(mapped);
-          }
-        );
-      });
+    const fetchSuggestions = async (query: string) => {
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&limit=2&proximity=${location.lng},${location.lat}`;
+      const res = await fetch(url);
+      if (!res.ok) return [] as MapPlace[];
+      const data = await res.json();
+      return (data.features ?? []).map((feature: any) => ({
+        id: feature.id,
+        name: feature.text,
+        address: feature.place_name,
+        location: { lat: feature.center[1], lng: feature.center[0] },
+      }));
+    };
 
-    Promise.all([fetchSuggestions("charging_station"), fetchSuggestions("cafe")])
-      .then((groups) => {
-        setSuggestions(groups.flat());
-      })
-      .catch(() => {
-        setSuggestions([]);
-      });
-  }, [mapReady, userLocation, defaultCenter]);
+    Promise.all([fetchSuggestions("charging station"), fetchSuggestions("coffee")])
+      .then((groups) => setSuggestions(groups.flat()))
+      .catch(() => setSuggestions([]));
+  }, [mapboxToken, userLocation, defaultCenter]);
 
   const selectPlace = (place: MapPlace, startRoute = false) => {
     setSelectedPlace(place);
     setRouteInfo(null);
     if (mapRef.current) {
-      mapRef.current.setCenter(place.location);
-      mapRef.current.setZoom(13);
+      mapRef.current.flyTo({ center: [place.location.lng, place.location.lat], zoom: 13 });
     }
-    const googleMaps = (window as any).google;
-    if (googleMaps?.maps && mapRef.current) {
-      if (!destinationMarkerRef.current) {
-        destinationMarkerRef.current = new googleMaps.maps.Marker({
-          position: place.location,
-          map: mapRef.current,
-        });
-      } else {
-        destinationMarkerRef.current.setPosition(place.location);
-      }
+    if (mapRef.current && !destinationMarkerRef.current) {
+      destinationMarkerRef.current = new mapboxgl.Marker({ color: "#f3a0b5" })
+        .setLngLat([place.location.lng, place.location.lat])
+        .addTo(mapRef.current);
+    } else if (destinationMarkerRef.current) {
+      destinationMarkerRef.current.setLngLat([place.location.lng, place.location.lat]);
     }
-    setRecentPlaces((prev) => {
-      const next = [place, ...prev.filter((item) => item.id !== place.id)].slice(0, 3);
-      return next;
-    });
+    setRecentPlaces((prev) => [place, ...prev.filter((item) => item.id !== place.id)].slice(0, 3));
     setSearchValue(place.name);
     setPredictions([]);
     if (startRoute) {
@@ -346,72 +309,53 @@ export default function NavigationPage() {
     }
   };
 
-  const selectPrediction = (prediction: SearchPrediction) => {
-    if (!servicesRef.current.places) return;
-    servicesRef.current.places.getDetails(
-      {
-        placeId: prediction.place_id,
-        fields: ["name", "geometry", "formatted_address"],
-      },
-      (place: any, status: string) => {
-        if (status !== "OK" || !place?.geometry?.location) return;
-        const result: MapPlace = {
-          id: prediction.place_id,
-          name: place.name ?? prediction.description,
-          address: place.formatted_address,
-          location: {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
-          },
-        };
-        selectPlace(result, true);
-      }
-    );
+  const startNavigation = async (destination?: MapPlace) => {
+    const target = destination ?? selectedPlace;
+    if (!target || !mapboxToken) return;
+    const origin = userLocation ?? defaultCenter;
+    setRouteDestination(target);
+    try {
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${target.location.lng},${target.location.lat}?geometries=geojson&steps=true&access_token=${mapboxToken}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Mapbox directions failed");
+      const data = await res.json();
+      const route = data.routes?.[0];
+      if (!route) throw new Error("No route available");
+
+      const coordinates = route.geometry?.coordinates ?? [];
+      updateRouteLine(coordinates);
+      setRoutePath(coordinates);
+      setRouteInfo({
+        distance: formatDistance(route.distance ?? 0),
+        duration: formatDuration(route.duration ?? 0),
+      });
+      const steps: RouteStep[] = (route.legs?.[0]?.steps ?? []).map((step: any) => ({
+        instruction: step.maneuver?.instruction ?? "",
+        distance: formatDistance(step.distance ?? 0),
+        duration: formatDuration(step.duration ?? 0),
+        endLocation: { lat: step.maneuver?.location?.[1] ?? target.location.lat, lng: step.maneuver?.location?.[0] ?? target.location.lng },
+      }));
+      setRouteSteps(steps);
+      setCurrentStepIndex(0);
+    } catch {
+      setMapError("Mapbox directions failed");
+    }
   };
 
-  const startNavigation = (destination?: MapPlace) => {
-    const target = destination ?? selectedPlace;
-    if (!target || !servicesRef.current.directions) return;
-    const googleMaps = (window as any).google;
-    const center = mapRef.current?.getCenter?.();
-    const origin = userLocation ?? (center ? { lat: center.lat(), lng: center.lng() } : defaultCenter);
-    setRouteDestination(target);
-    servicesRef.current.directions.route(
-      {
-        origin,
-        destination: target.location,
-        travelMode: googleMaps.maps.TravelMode.DRIVING,
-      },
-      (result: any, status: string) => {
-        if (status !== "OK" || !result) {
-          setMapError("Directions API request failed");
-          return;
-        }
-        directionsRef.current?.setDirections(result);
-        const leg = result.routes?.[0]?.legs?.[0];
-        const steps: RouteStep[] = (leg?.steps ?? []).map((step: any) => ({
-          instruction: stripHtml(step.instructions ?? ""),
-          distance: step.distance?.text,
-          duration: step.duration?.text,
-          endLocation: {
-            lat: step.end_location?.lat?.() ?? target.location.lat,
-            lng: step.end_location?.lng?.() ?? target.location.lng,
-          },
-        }));
-        setRouteSteps(steps);
-        setCurrentStepIndex(0);
-        setRoutePath(result.routes?.[0]?.overview_path ?? []);
-        setRouteInfo({
-          distance: leg?.distance?.text,
-          duration: leg?.duration?.text,
-        });
-      }
-    );
+  const handleZoom = (delta: number) => {
+    if (!mapRef.current) return;
+    mapRef.current.zoomTo(mapRef.current.getZoom() + delta, { duration: 250 });
+  };
+
+  const handleRecenter = () => {
+    if (!mapRef.current) return;
+    const center = userLocation ?? defaultCenter;
+    mapRef.current.flyTo({ center: [center.lng, center.lat], zoom: 13 });
   };
 
   return (
-      <motion.div
-        className="flex h-full w-full flex-col gap-4 bg-black p-4 text-white overflow-hidden"
+    <motion.div
+      className="flex h-full w-full flex-col gap-4 bg-black p-4 text-white overflow-hidden"
       variants={pageVariants}
       initial="initial"
       animate="animate"
@@ -452,9 +396,7 @@ export default function NavigationPage() {
             <div className="flex items-center justify-between px-6 pt-5">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">Map view</p>
-                <p className="mt-2 text-lg font-medium text-white/90">
-                  {selectedPlace?.name ?? "Stockholm Center"}
-                </p>
+                <p className="mt-2 text-lg font-medium text-white/90">{selectedPlace?.name ?? "Stockholm Center"}</p>
                 <p className="text-sm text-white/50">
                   Live traffic
                   {routeInfo?.duration ? ` · ${routeInfo.duration}` : ""}
@@ -466,6 +408,7 @@ export default function NavigationPage() {
                   type="button"
                   className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-white/5 text-white/70 hover:bg-white/10"
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={handleRecenter}
                 >
                   <CompassIcon />
                 </motion.button>
@@ -473,6 +416,7 @@ export default function NavigationPage() {
                   type="button"
                   className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-white/5 text-white/70 hover:bg-white/10"
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={() => handleZoom(1)}
                 >
                   <PlusIcon />
                 </motion.button>
@@ -480,6 +424,7 @@ export default function NavigationPage() {
                   type="button"
                   className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-white/5 text-white/70 hover:bg-white/10"
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={() => handleZoom(-1)}
                 >
                   <MinusIcon />
                 </motion.button>
@@ -495,9 +440,7 @@ export default function NavigationPage() {
                       {currentStep.distance} · {currentStep.duration}
                     </p>
                     {nextStep && (
-                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/40">
-                        Next: {nextStep.instruction}
-                      </p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/40">Next: {nextStep.instruction}</p>
                     )}
                   </div>
                 ) : (
@@ -519,16 +462,16 @@ export default function NavigationPage() {
               {predictions.length > 0
                 ? predictions.map((item) => (
                     <motion.button
-                      key={item.place_id}
+                      key={item.id}
                       type="button"
                       className="flex min-h-[44px] w-full items-center gap-3 rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
                       whileTap={{ scale: 0.95, opacity: 0.8 }}
-                      onClick={() => selectPrediction(item)}
+                      onClick={() => selectPlace(item, true)}
                     >
                       <SearchIcon />
                       <div>
-                        <p className="text-sm text-white/90">{item.description}</p>
-                        <p className="text-xs uppercase tracking-[0.2em] text-white/50">Tap to view</p>
+                        <p className="text-sm text-white/90">{item.name}</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-white/50">{item.address ?? ""}</p>
                       </div>
                     </motion.button>
                   ))
@@ -553,16 +496,19 @@ export default function NavigationPage() {
           <div className="flex min-h-0 flex-1 flex-col rounded-[16px] bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Trip suggestions</p>
             <div className="mt-4 space-y-3 overflow-y-auto pr-1">
-              {(suggestions.length > 0 ? suggestions : [
-                { id: "suggestion-1", name: "Supercharger · 4 stalls", address: "2.1 km", location: defaultCenter },
-                { id: "suggestion-2", name: "Coffee stop", address: "1.3 km", location: defaultCenter },
-              ]).map((item) => (
+              {(suggestions.length > 0
+                ? suggestions
+                : [
+                    { id: "suggestion-1", name: "Supercharger · 4 stalls", address: "2.1 km", location: defaultCenter },
+                    { id: "suggestion-2", name: "Coffee stop", address: "1.3 km", location: defaultCenter },
+                  ]
+              ).map((item) => (
                 <motion.button
                   key={item.id}
                   type="button"
                   className="flex min-h-[44px] w-full items-center justify-between rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
-                  onClick={() => selectPlace(item as MapPlace, true)}
+                  onClick={() => selectPlace(item, true)}
                 >
                   <div>
                     <p className="text-sm text-white/90">{item.name}</p>
