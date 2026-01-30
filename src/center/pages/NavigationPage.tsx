@@ -60,6 +60,15 @@ type MapPlace = {
   location: { lat: number; lng: number };
 };
 
+type RouteStep = {
+  instruction: string;
+  distance?: string;
+  duration?: string;
+  endLocation: { lat: number; lng: number };
+};
+
+const stripHtml = (value: string) => value.replace(/<[^>]*>/g, "");
+
 export default function NavigationPage() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -80,6 +89,11 @@ export default function NavigationPage() {
   const [suggestions, setSuggestions] = useState<MapPlace[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null);
   const [routeInfo, setRouteInfo] = useState<{ distance?: string; duration?: string } | null>(null);
+  const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [routePath, setRoutePath] = useState<any[]>([]);
+  const [routeDestination, setRouteDestination] = useState<MapPlace | null>(null);
+  const [lastRerouteAt, setLastRerouteAt] = useState(0);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
   const defaultCenter = useMemo(() => ({ lat: 59.3293, lng: 18.0686 }), []);
@@ -103,7 +117,7 @@ export default function NavigationPage() {
     }
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
     script.async = true;
     script.defer = true;
     script.dataset.googleMaps = "true";
@@ -191,6 +205,47 @@ export default function NavigationPage() {
   }, [mapReady]);
 
   useEffect(() => {
+    if (!userLocation || !routeDestination) return;
+    const googleMaps = (window as any).google;
+    if (!googleMaps?.maps?.geometry?.spherical) return;
+
+    if (routeSteps.length > 0) {
+      const currentStep = routeSteps[currentStepIndex];
+      if (currentStep) {
+        const currentLatLng = new googleMaps.maps.LatLng(userLocation.lat, userLocation.lng);
+        const stepLatLng = new googleMaps.maps.LatLng(currentStep.endLocation.lat, currentStep.endLocation.lng);
+        const distanceToEnd = googleMaps.maps.geometry.spherical.computeDistanceBetween(
+          currentLatLng,
+          stepLatLng
+        );
+        if (distanceToEnd < 25 && currentStepIndex < routeSteps.length - 1) {
+          setCurrentStepIndex((index) => Math.min(index + 1, routeSteps.length - 1));
+        }
+      }
+    }
+
+    if (routePath.length > 0) {
+      const currentLatLng = new googleMaps.maps.LatLng(userLocation.lat, userLocation.lng);
+      let minDistance = Number.POSITIVE_INFINITY;
+      routePath.forEach((point: any) => {
+        const distance = googleMaps.maps.geometry.spherical.computeDistanceBetween(currentLatLng, point);
+        if (distance < minDistance) {
+          minDistance = distance;
+        }
+      });
+
+      const now = Date.now();
+      if (minDistance > 50 && now - lastRerouteAt > 15000) {
+        setLastRerouteAt(now);
+        startNavigation(routeDestination);
+      }
+    }
+  }, [userLocation, routeDestination, routeSteps, currentStepIndex, routePath, lastRerouteAt]);
+
+  const currentStep = routeSteps[currentStepIndex];
+  const nextStep = routeSteps[currentStepIndex + 1];
+
+  useEffect(() => {
     if (!mapReady) return;
     if (!servicesRef.current.autocomplete) return;
     if (!searchValue.trim()) {
@@ -206,6 +261,9 @@ export default function NavigationPage() {
           radius: 50000,
         },
         (items: SearchPrediction[] | null, status: string) => {
+          if (status === "REQUEST_DENIED") {
+            setMapError("Places API not enabled or key restriction blocked");
+          }
           if (status !== "OK" || !items) {
             setPredictions([]);
             return;
@@ -317,6 +375,7 @@ export default function NavigationPage() {
     const googleMaps = (window as any).google;
     const center = mapRef.current?.getCenter?.();
     const origin = userLocation ?? (center ? { lat: center.lat(), lng: center.lng() } : defaultCenter);
+    setRouteDestination(target);
     servicesRef.current.directions.route(
       {
         origin,
@@ -324,9 +383,24 @@ export default function NavigationPage() {
         travelMode: googleMaps.maps.TravelMode.DRIVING,
       },
       (result: any, status: string) => {
-        if (status !== "OK" || !result) return;
+        if (status !== "OK" || !result) {
+          setMapError("Directions API request failed");
+          return;
+        }
         directionsRef.current?.setDirections(result);
         const leg = result.routes?.[0]?.legs?.[0];
+        const steps: RouteStep[] = (leg?.steps ?? []).map((step: any) => ({
+          instruction: stripHtml(step.instructions ?? ""),
+          distance: step.distance?.text,
+          duration: step.duration?.text,
+          endLocation: {
+            lat: step.end_location?.lat?.() ?? target.location.lat,
+            lng: step.end_location?.lng?.() ?? target.location.lng,
+          },
+        }));
+        setRouteSteps(steps);
+        setCurrentStepIndex(0);
+        setRoutePath(result.routes?.[0]?.overview_path ?? []);
         setRouteInfo({
           distance: leg?.distance?.text,
           duration: leg?.duration?.text,
@@ -384,6 +458,7 @@ export default function NavigationPage() {
                 <p className="text-sm text-white/50">
                   Live traffic
                   {routeInfo?.duration ? ` · ${routeInfo.duration}` : ""}
+                  {routeInfo?.distance ? ` · ${routeInfo.distance}` : ""}
                 </p>
               </div>
               <div className="flex flex-col gap-2">
@@ -411,21 +486,25 @@ export default function NavigationPage() {
               </div>
             </div>
             <div className="mt-auto px-6 pb-6">
-              <div className="flex gap-3">
-                {[
-                  { label: "Home", sub: "22 min" },
-                  { label: "Work", sub: "38 min" },
-                ].map((item) => (
-                  <motion.button
-                    key={item.label}
-                    type="button"
-                    className="flex min-h-[44px] flex-1 items-center justify-between rounded-[12px] bg-white/5 px-4 py-3 text-left hover:bg-white/10"
-                    whileTap={{ scale: 0.95, opacity: 0.8 }}
-                  >
-                    <span className="text-sm font-medium text-white/90">{item.label}</span>
-                    <span className="text-xs uppercase tracking-[0.2em] text-white/50">{item.sub}</span>
-                  </motion.button>
-                ))}
+              <div className="rounded-[16px] border border-white/10 bg-black/60 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-white/50">Navigation</p>
+                {currentStep ? (
+                  <div className="mt-2">
+                    <p className="text-base font-medium text-white/90">{currentStep.instruction}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/50">
+                      {currentStep.distance} · {currentStep.duration}
+                    </p>
+                    {nextStep && (
+                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/40">
+                        Next: {nextStep.instruction}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/40">
+                    Select a destination to start navigation
+                  </p>
+                )}
               </div>
             </div>
           </div>
