@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -48,6 +49,95 @@ const MinusIcon = () => (
 );
 
 export default function NavigationPage() {
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const trafficRef = useRef<any>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+  const defaultCenter = useMemo(() => ({ lat: 59.3293, lng: 18.0686 }), []);
+
+  useEffect(() => {
+    if (!apiKey) {
+      setMapError("Missing Google Maps API key");
+      return;
+    }
+    if (!mapContainerRef.current) return;
+    if ((window as any).google?.maps) {
+      setMapReady(true);
+      return;
+    }
+
+    const existing = document.querySelector("script[data-google-maps='true']");
+    if (existing) {
+      existing.addEventListener("load", () => setMapReady(true));
+      existing.addEventListener("error", () => setMapError("Failed to load Google Maps"));
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleMaps = "true";
+    script.onload = () => setMapReady(true);
+    script.onerror = () => setMapError("Failed to load Google Maps");
+    document.head.appendChild(script);
+  }, [apiKey]);
+
+  useEffect(() => {
+    if (!mapReady || mapRef.current || !mapContainerRef.current) return;
+    const googleMaps = (window as any).google;
+    if (!googleMaps?.maps) return;
+
+    mapRef.current = new googleMaps.maps.Map(mapContainerRef.current, {
+      center: defaultCenter,
+      zoom: 12,
+      disableDefaultUI: true,
+      gestureHandling: "greedy",
+    });
+
+    trafficRef.current = new googleMaps.maps.TrafficLayer();
+    trafficRef.current.setMap(mapRef.current);
+  }, [mapReady, defaultCenter]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    if (!navigator.geolocation) return;
+
+    const googleMaps = (window as any).google;
+    let watchId = -1;
+
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const coords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        mapRef.current.setCenter(coords);
+        if (!markerRef.current && googleMaps?.maps) {
+          markerRef.current = new googleMaps.maps.Marker({
+            position: coords,
+            map: mapRef.current,
+          });
+        } else if (markerRef.current) {
+          markerRef.current.setPosition(coords);
+        }
+      },
+      () => {
+        // keep default center if geolocation fails
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+
+    return () => {
+      if (watchId !== -1) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [mapReady]);
+
   return (
       <motion.div
         className="flex h-full w-full flex-col gap-4 bg-black p-4 text-white overflow-hidden"
@@ -73,8 +163,14 @@ export default function NavigationPage() {
 
       <div className="grid flex-1 grid-cols-[2fr_1fr] gap-4">
         <div className="relative flex h-full flex-col overflow-hidden rounded-[16px] bg-white/5">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.25),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.18),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:36px_36px] opacity-40" />
+          <div ref={mapContainerRef} className="absolute inset-0" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(20,30,40,0.45),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(16,28,36,0.35),transparent_60%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:36px_36px] opacity-30" />
+          {!mapReady && (
+            <div className="absolute inset-0 flex items-center justify-center text-xs uppercase tracking-[0.3em] text-white/50">
+              {mapError ?? "Loading map"}
+            </div>
+          )}
           <div className="relative flex h-full flex-col">
             <div className="flex items-center justify-between px-6 pt-5">
               <div>
