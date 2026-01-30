@@ -393,11 +393,14 @@ export default function PhonePage() {
     setContactNumber("");
   };
 
+  const normalizePhone = (value?: string) =>
+    (value || "").replace(/[\s\-()]/g, "").replace(/^\+/, "");
+
   const getContactName = (number?: string, fallback?: string) => {
-    if (!number) return fallback || "Unknown";
-    const normalized = number.replace(/\s+/g, "");
-    const match = contacts.find((contact) => contact.number.replace(/\s+/g, "") === normalized);
-    return match?.name || fallback || number;
+    if (!number && !fallback) return "Unknown";
+    const normalized = normalizePhone(number || fallback || "");
+    const match = contacts.find((contact) => normalizePhone(contact.number) === normalized);
+    return match?.name || fallback || number || "Unknown";
   };
 
   const acceptIncomingCall = async () => {
