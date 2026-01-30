@@ -215,7 +215,12 @@ export default function PhonePage() {
     setRecentCalls((prev) => [entry, ...prev].slice(0, 10));
   };
 
-  const endCall = (declined = false) => {
+  const endCall = async (declined = false) => {
+    try {
+      await fetch(`${btBaseUrl}/call/hangup`, { method: "POST" });
+    } catch {
+      // ignore hangup failures
+    }
     if (activeCall) {
       if (activeCall.direction === "outgoing") {
         pushRecentCall({
@@ -244,8 +249,13 @@ export default function PhonePage() {
     setCallStartedAt(null);
   };
 
-  const startOutgoingCall = (number: string, name?: string) => {
+  const startOutgoingCall = async (number: string, name?: string) => {
     if (!btDevice || !number) return;
+    try {
+      await fetch(`${btBaseUrl}/call/dial?number=${encodeURIComponent(number)}`, { method: "POST" });
+    } catch {
+      // ignore dial failures
+    }
     setActiveCall({
       name: name || number,
       number,
@@ -255,8 +265,13 @@ export default function PhonePage() {
     beginCallState("outgoing");
   };
 
-  const acceptIncomingCall = () => {
+  const acceptIncomingCall = async () => {
     if (callState !== "incoming") return;
+    try {
+      await fetch(`${btBaseUrl}/call/answer`, { method: "POST" });
+    } catch {
+      // ignore answer failures
+    }
     setCallState("active");
     setCallStartedAt(Date.now());
   };

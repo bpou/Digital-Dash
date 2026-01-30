@@ -354,6 +354,56 @@ const parseBusctlDict = (raw) => {
   };
 };
 
+const extractOfonoPaths = (raw) => {
+  if (!raw) return [];
+  const matches = Array.from(raw.matchAll(/"(\/ofono\/[^"]+)"/g)).map((match) => match[1]);
+  return Array.from(new Set(matches));
+};
+
+const getOfonoModemPath = async () => {
+  const raw = await runBusctl(["call", "org.ofono", "/", "org.ofono.Manager", "GetModems"]);
+  const paths = extractOfonoPaths(raw);
+  return paths[0] || "";
+};
+
+const getOfonoCallPaths = async (modemPath) => {
+  if (!modemPath) return [];
+  const raw = await runBusctl(["call", "org.ofono", modemPath, "org.ofono.VoiceCallManager", "GetCalls"]);
+  return extractOfonoPaths(raw).filter((path) => path.includes("voicecall"));
+};
+
+const dialOfono = async (number) => {
+  if (!number) throw new Error("Missing number");
+  const modemPath = await getOfonoModemPath();
+  if (!modemPath) throw new Error("No Ofono modem available");
+  await runBusctl([
+    "call",
+    "org.ofono",
+    modemPath,
+    "org.ofono.VoiceCallManager",
+    "Dial",
+    "ss",
+    number,
+    "default",
+  ]);
+};
+
+const answerOfono = async () => {
+  const modemPath = await getOfonoModemPath();
+  if (!modemPath) throw new Error("No Ofono modem available");
+  const calls = await getOfonoCallPaths(modemPath);
+  if (!calls.length) throw new Error("No call to answer");
+  await runBusctl(["call", "org.ofono", calls[0], "org.ofono.VoiceCall", "Answer"]);
+};
+
+const hangupOfono = async () => {
+  const modemPath = await getOfonoModemPath();
+  if (!modemPath) throw new Error("No Ofono modem available");
+  const calls = await getOfonoCallPaths(modemPath);
+  if (!calls.length) throw new Error("No call to hang up");
+  await runBusctl(["call", "org.ofono", calls[0], "org.ofono.VoiceCall", "Hangup"]);
+};
+
 const bluezBus = systemBus();
 const logObex = (...args) => {
   console.log("[Bluetooth][OBEX]", ...args);
@@ -1093,6 +1143,29 @@ const server = http.createServer(async (req, res) => {
           json(res, 400, { error: "Unknown action" });
           return;
       }
+      json(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/call/dial") {
+      const number = url.searchParams.get("number");
+      if (!number) {
+        json(res, 400, { error: "Missing number" });
+        return;
+      }
+      await dialOfono(number);
+      json(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/call/answer") {
+      await answerOfono();
+      json(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/call/hangup") {
+      await hangupOfono();
       json(res, 200, { ok: true });
       return;
     }
