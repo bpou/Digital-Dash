@@ -235,7 +235,7 @@ export default function PhonePage() {
           }
         }
         const number = payload.call.number || payload.call.name || "Unknown";
-        const name = payload.call.name || payload.call.number || "Unknown";
+        const name = getContactName(payload.call.number, payload.call.name);
         const direction = payload.call.direction === "incoming" ? "incoming" : "outgoing";
         setActiveCall({ name, number, direction });
       } catch {
@@ -381,7 +381,7 @@ export default function PhonePage() {
 
   const addContact = () => {
     const name = contactName.trim();
-    const number = contactNumber.trim();
+    const number = contactNumber.trim() || dialNumber.trim();
     if (!name || !number) return;
     const entry: Contact = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
@@ -391,6 +391,13 @@ export default function PhonePage() {
     setContacts((prev) => [entry, ...prev].slice(0, 30));
     setContactName("");
     setContactNumber("");
+  };
+
+  const getContactName = (number?: string, fallback?: string) => {
+    if (!number) return fallback || "Unknown";
+    const normalized = number.replace(/\s+/g, "");
+    const match = contacts.find((contact) => contact.number.replace(/\s+/g, "") === normalized);
+    return match?.name || fallback || number;
   };
 
   const acceptIncomingCall = async () => {
@@ -575,7 +582,7 @@ export default function PhonePage() {
               <input
                 value={contactNumber}
                 onChange={(event) => setContactNumber(event.target.value)}
-                placeholder="Number"
+                placeholder={dialNumber ? `Number (${dialNumber})` : "Number"}
                 className="h-10 flex-1 rounded-[10px] bg-white/10 px-3 text-sm text-white/80 placeholder:text-white/40"
               />
               <motion.button
