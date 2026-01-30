@@ -259,7 +259,7 @@ export default function NavigationPage() {
       });
   }, [mapReady, userLocation, defaultCenter]);
 
-  const selectPlace = (place: MapPlace) => {
+  const selectPlace = (place: MapPlace, startRoute = false) => {
     setSelectedPlace(place);
     setRouteInfo(null);
     if (mapRef.current) {
@@ -283,6 +283,9 @@ export default function NavigationPage() {
     });
     setSearchValue(place.name);
     setPredictions([]);
+    if (startRoute) {
+      startNavigation(place);
+    }
   };
 
   const selectPrediction = (prediction: SearchPrediction) => {
@@ -303,18 +306,20 @@ export default function NavigationPage() {
             lng: place.geometry.location.lng(),
           },
         };
-        selectPlace(result);
+        selectPlace(result, true);
       }
     );
   };
 
   const startNavigation = (destination?: MapPlace) => {
     const target = destination ?? selectedPlace;
-    if (!target || !userLocation || !servicesRef.current.directions) return;
+    if (!target || !servicesRef.current.directions) return;
     const googleMaps = (window as any).google;
+    const center = mapRef.current?.getCenter?.();
+    const origin = userLocation ?? (center ? { lat: center.lat(), lng: center.lng() } : defaultCenter);
     servicesRef.current.directions.route(
       {
-        origin: userLocation,
+        origin,
         destination: target.location,
         travelMode: googleMaps.maps.TravelMode.DRIVING,
       },
@@ -351,7 +356,7 @@ export default function NavigationPage() {
         </div>
         <motion.button
           type="button"
-          className={`h-11 rounded-[10px] px-4 text-xs uppercase tracking-[0.3em] ${selectedPlace && userLocation ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-white/5 text-white/30"}`}
+          className={`h-11 rounded-[10px] px-4 text-xs uppercase tracking-[0.3em] ${selectedPlace ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-white/5 text-white/30"}`}
           whileTap={{ scale: 0.95, opacity: 0.8 }}
           onClick={() => startNavigation()}
         >
@@ -454,7 +459,7 @@ export default function NavigationPage() {
                       type="button"
                       className="flex min-h-[44px] w-full items-center gap-3 rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
                       whileTap={{ scale: 0.95, opacity: 0.8 }}
-                      onClick={() => selectPlace(item)}
+                      onClick={() => selectPlace(item, true)}
                     >
                       <RecentPinIcon />
                       <div>
@@ -478,7 +483,7 @@ export default function NavigationPage() {
                   type="button"
                   className="flex min-h-[44px] w-full items-center justify-between rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
-                  onClick={() => startNavigation(item as MapPlace)}
+                  onClick={() => selectPlace(item as MapPlace, true)}
                 >
                   <div>
                     <p className="text-sm text-white/90">{item.name}</p>
