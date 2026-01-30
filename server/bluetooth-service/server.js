@@ -381,6 +381,49 @@ const getOfonoCallPaths = async (modemPath) => {
   return extractOfonoPaths(raw).filter((path) => path.includes("voicecall"));
 };
 
+const parseOfonoCalls = (raw) => {
+  const tokens = tokenizeBusctl(raw ?? "");
+  const calls = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i];
+    if (token && (token.startsWith("/hfp/") || token.startsWith("/ofono/"))) {
+      const path = token;
+      const props = {};
+      i += 1;
+      while (i + 2 < tokens.length) {
+        const key = tokens[i];
+        const type = tokens[i + 1];
+        const value = tokens[i + 2];
+        if (key && (key.startsWith("/hfp/") || key.startsWith("/ofono/"))) {
+          break;
+        }
+        if (!key || !type) {
+          i += 1;
+          continue;
+        }
+        if (type === "as") {
+          const count = Number(tokens[i + 2]);
+          const values = [];
+          i += 3;
+          const total = Number.isFinite(count) ? count : 0;
+          for (let j = 0; j < total && i < tokens.length; j += 1, i += 1) {
+            values.push(tokens[i]);
+          }
+          props[key] = values;
+          continue;
+        }
+        props[key] = value;
+        i += 3;
+      }
+      calls.push({ path, props });
+      continue;
+    }
+    i += 1;
+  }
+  return calls;
+};
+
 const normalizeOfonoCallState = (state, direction) => {
   const s = normalizeBusctlValue(state).toLowerCase();
   const dir = normalizeBusctlValue(direction).toLowerCase();
@@ -398,50 +441,34 @@ const getOfonoCallStatus = async () => {
   if (!modemPath) {
     return { modemPath: "", call: null, callStartEpochMs: null };
   }
-  const calls = await getOfonoCallPaths(modemPath);
-  if (!calls.length) {
+  const rawCalls = await runBusctl(["call", "org.ofono", modemPath, "org.ofono.VoiceCallManager", "GetCalls"]);
+  const parsedCalls = parseOfonoCalls(rawCalls).filter((call) => call.path.includes("voicecall"));
+  if (!parsedCalls.length) {
     return { modemPath, call: null, callStartEpochMs: null };
   }
-  const callPath = calls[0];
-  const [callPropsRaw, callManagerRaw] = await Promise.all([
-    runBusctl(["introspect", "org.ofono", callPath, "org.ofono.VoiceCall"]).catch(() => ""),
-    runBusctl(["introspect", "org.ofono", modemPath, "org.ofono.VoiceCallManager"]).catch(() => ""),
-  ]);
-  const [stateRaw, lineRaw, nameRaw, dirRaw] = await Promise.all([
-    runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "State"]).catch(() => ""),
-    runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "LineIdentification"]).catch(() => ""),
-    runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "Name"]).catch(() => ""),
-    runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "Direction"]).catch(() => ""),
-  ]);
-  const state = parseBusctlPropertyString(stateRaw);
-  const number = parseBusctlPropertyString(lineRaw);
-  const name = parseBusctlPropertyString(nameRaw);
-  const direction = parseBusctlPropertyString(dirRaw);
+  const activeCall = parsedCalls[0];
+  const props = activeCall.props ?? {};
+  const state = normalizeBusctlValue(props.State);
+  const number = normalizeBusctlValue(props.LineIdentification);
+  const name = normalizeBusctlValue(props.Name);
+  const direction = normalizeBusctlValue(props.Direction);
   const normalizedState = normalizeOfonoCallState(state, direction);
   if (normalizedState === "idle") {
     return { modemPath, call: null, callStartEpochMs: null };
   }
   let callStartEpochMs = null;
-  if (callManagerRaw.includes("CallStartTime")) {
-    callStartEpochMs = await ensureOfonoCallStart(modemPath, callPath);
-  }
-  if (!callStartEpochMs && callPropsRaw.includes("StartTime")) {
-    try {
-      const raw = await runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "StartTime"]);
-      const value = parseBusctlPropertyString(raw);
-      const epochMs = Number(value);
-      if (Number.isFinite(epochMs) && epochMs > 0) {
-        callStartEpochMs = epochMs;
-      }
-    } catch {
-      // ignore
-    }
+  const callStart = normalizeBusctlValue(props.CallStartTime) || normalizeBusctlValue(props.StartTime);
+  const epochMs = Number(callStart);
+  if (Number.isFinite(epochMs) && epochMs > 0) {
+    callStartEpochMs = epochMs;
+  } else {
+    callStartEpochMs = await ensureOfonoCallStart(modemPath, activeCall.path);
   }
   return {
     modemPath,
     callStartEpochMs,
     call: {
-      path: callPath,
+      path: activeCall.path,
       state: normalizedState,
       rawState: state,
       direction,
