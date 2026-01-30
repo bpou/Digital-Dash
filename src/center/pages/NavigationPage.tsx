@@ -288,7 +288,24 @@ export default function NavigationPage() {
       .catch(() => setSuggestions([]));
   }, [mapboxToken, userLocation, defaultCenter]);
 
-  const selectPlace = (place: MapPlace, startRoute = false) => {
+  const geocodeQuery = async (query: string): Promise<MapPlace | null> => {
+    if (!mapboxToken) return null;
+    const proximity = userLocation ? `${userLocation.lng},${userLocation.lat}` : `${defaultCenter.lng},${defaultCenter.lat}`;
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxToken}&limit=1&proximity=${proximity}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const feature = data.features?.[0];
+    if (!feature) return null;
+    return {
+      id: feature.id,
+      name: feature.text,
+      address: feature.place_name,
+      location: { lat: feature.center[1], lng: feature.center[0] },
+    };
+  };
+
+  const applyDestination = (place: MapPlace) => {
     setSelectedPlace(place);
     setRouteInfo(null);
     if (mapRef.current) {
@@ -304,14 +321,29 @@ export default function NavigationPage() {
     setRecentPlaces((prev) => [place, ...prev.filter((item) => item.id !== place.id)].slice(0, 3));
     setSearchValue(place.name);
     setPredictions([]);
+  };
+
+  const selectPlace = (place: MapPlace, startRoute = false) => {
+    applyDestination(place);
     if (startRoute) {
       startNavigation(place);
     }
   };
 
   const startNavigation = async (destination?: MapPlace) => {
-    const target = destination ?? selectedPlace;
-    if (!target || !mapboxToken) return;
+    if (!mapboxToken) return;
+    let target = destination ?? selectedPlace;
+    if (!target && searchValue.trim()) {
+      const resolved = await geocodeQuery(searchValue.trim());
+      if (resolved) {
+        applyDestination(resolved);
+        target = resolved;
+      }
+    }
+    if (!target) {
+      setMapError("Select a destination");
+      return;
+    }
     const origin = userLocation ?? defaultCenter;
     setRouteDestination(target);
     try {
@@ -384,7 +416,7 @@ export default function NavigationPage() {
 
       <div className="grid flex-1 min-h-0 grid-cols-[2fr_1fr] gap-4">
         <div className="relative flex h-full flex-col overflow-hidden rounded-[16px] bg-white/5">
-          <div ref={mapContainerRef} className="absolute inset-0" />
+          <div ref={mapContainerRef} className="absolute inset-0 overflow-hidden rounded-[16px]" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(20,30,40,0.45),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(16,28,36,0.35),transparent_60%)]" />
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:36px_36px] opacity-30" />
           {!mapReady && (
