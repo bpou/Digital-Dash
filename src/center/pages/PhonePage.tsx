@@ -13,6 +13,7 @@ const pageTransition = { duration: 0.2, ease: "easeOut" };
 
 const MAX_DIAL_LENGTH = 20;
 const RECENT_CALLS_KEY = "tesla-dash:recent-calls";
+const CONTACTS_KEY = "tesla-dash:contacts";
 
 const PhoneIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
@@ -61,6 +62,12 @@ type RecentCall = {
   number: string;
   type: "incoming" | "outgoing" | "missed";
   timestamp: number;
+};
+
+type Contact = {
+  id: string;
+  name: string;
+  number: string;
 };
 
 type ActiveCall = {
@@ -152,6 +159,18 @@ export default function PhonePage() {
       return buildSeedCalls();
     }
   });
+  const [contacts, setContacts] = useState<Contact[]>(() => {
+    try {
+      const raw = localStorage.getItem(CONTACTS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as Contact[];
+      return parsed ?? [];
+    } catch {
+      return [];
+    }
+  });
+  const [contactName, setContactName] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [callState, setCallState] = useState<CallState>("idle");
   const [callStateSince, setCallStateSince] = useState<number | null>(null);
   const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
@@ -238,6 +257,14 @@ export default function PhonePage() {
       // ignore persistence failures
     }
   }, [recentCalls]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+    } catch {
+      // ignore persistence failures
+    }
+  }, [contacts]);
 
   useEffect(() => {
     if (callState === "idle") {
@@ -350,6 +377,20 @@ export default function PhonePage() {
     });
     setMuted(false);
     beginCallState("outgoing");
+  };
+
+  const addContact = () => {
+    const name = contactName.trim();
+    const number = contactNumber.trim();
+    if (!name || !number) return;
+    const entry: Contact = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+      name,
+      number,
+    };
+    setContacts((prev) => [entry, ...prev].slice(0, 30));
+    setContactName("");
+    setContactNumber("");
   };
 
   const acceptIncomingCall = async () => {
@@ -521,6 +562,56 @@ export default function PhonePage() {
               </div>
             </div>
           </motion.div>
+
+          <div className="rounded-[16px] bg-white/5 p-5">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/60">Contacts</p>
+            <div className="mt-4 flex items-center gap-2">
+              <input
+                value={contactName}
+                onChange={(event) => setContactName(event.target.value)}
+                placeholder="Name"
+                className="h-10 flex-1 rounded-[10px] bg-white/10 px-3 text-sm text-white/80 placeholder:text-white/40"
+              />
+              <input
+                value={contactNumber}
+                onChange={(event) => setContactNumber(event.target.value)}
+                placeholder="Number"
+                className="h-10 flex-1 rounded-[10px] bg-white/10 px-3 text-sm text-white/80 placeholder:text-white/40"
+              />
+              <motion.button
+                type="button"
+                onClick={addContact}
+                className="h-10 rounded-[10px] bg-white/10 px-4 text-xs uppercase tracking-[0.3em] text-white/70 hover:bg-white/20"
+                whileTap={{ scale: 0.95, opacity: 0.85 }}
+              >
+                Add
+              </motion.button>
+            </div>
+            {contacts.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {contacts.map((contact) => (
+                  <motion.button
+                    key={contact.id}
+                    type="button"
+                    className="flex min-h-[44px] w-full items-center justify-between rounded-[12px] bg-white/5 px-4 py-2 text-left hover:bg-white/10"
+                    whileTap={{ scale: 0.96, opacity: 0.85 }}
+                    onClick={() => {
+                      setDialNumber(contact.number);
+                      if (btDevice) {
+                        startOutgoingCall(contact.number, contact.name);
+                      }
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm text-white/90">{contact.name}</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-white/50">{contact.number}</p>
+                    </div>
+                    <span className="text-xs uppercase tracking-[0.3em] text-white/50">Call</span>
+                  </motion.button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="rounded-[16px] bg-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Recent calls</p>
