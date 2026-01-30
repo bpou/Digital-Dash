@@ -396,13 +396,17 @@ const normalizeOfonoCallState = (state, direction) => {
 const getOfonoCallStatus = async () => {
   const modemPath = await getOfonoModemPath();
   if (!modemPath) {
-    return { modemPath: "", call: null };
+    return { modemPath: "", call: null, callStartEpochMs: null };
   }
   const calls = await getOfonoCallPaths(modemPath);
   if (!calls.length) {
-    return { modemPath, call: null };
+    return { modemPath, call: null, callStartEpochMs: null };
   }
   const callPath = calls[0];
+  const [callPropsRaw, callManagerRaw] = await Promise.all([
+    runBusctl(["introspect", "org.ofono", callPath, "org.ofono.VoiceCall"]).catch(() => ""),
+    runBusctl(["introspect", "org.ofono", modemPath, "org.ofono.VoiceCallManager"]).catch(() => ""),
+  ]);
   const [stateRaw, lineRaw, nameRaw, dirRaw] = await Promise.all([
     runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "State"]).catch(() => ""),
     runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "LineIdentification"]).catch(() => ""),
@@ -415,10 +419,27 @@ const getOfonoCallStatus = async () => {
   const direction = parseBusctlPropertyString(dirRaw);
   const normalizedState = normalizeOfonoCallState(state, direction);
   if (normalizedState === "idle") {
-    return { modemPath, call: null };
+    return { modemPath, call: null, callStartEpochMs: null };
+  }
+  let callStartEpochMs = null;
+  if (callManagerRaw.includes("CallStartTime")) {
+    callStartEpochMs = await ensureOfonoCallStart(modemPath, callPath);
+  }
+  if (!callStartEpochMs && callPropsRaw.includes("StartTime")) {
+    try {
+      const raw = await runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "StartTime"]);
+      const value = parseBusctlPropertyString(raw);
+      const epochMs = Number(value);
+      if (Number.isFinite(epochMs) && epochMs > 0) {
+        callStartEpochMs = epochMs;
+      }
+    } catch {
+      // ignore
+    }
   }
   return {
     modemPath,
+    callStartEpochMs,
     call: {
       path: callPath,
       state: normalizedState,
@@ -732,6 +753,34 @@ const withTimeout = async (promise, timeoutMs, label) => {
     return null;
   }
   return result;
+};
+
+const ofonoCallStartCache = new Map();
+
+const ensureOfonoCallStart = async (modemPath, callPath) => {
+  if (!modemPath || !callPath) return null;
+  const cacheKey = callPath;
+  if (ofonoCallStartCache.has(cacheKey)) {
+    return ofonoCallStartCache.get(cacheKey);
+  }
+  try {
+    const raw = await runBusctl([
+      "get-property",
+      "org.ofono",
+      modemPath,
+      "org.ofono.VoiceCallManager",
+      "CallStartTime",
+    ]);
+    const value = parseBusctlPropertyString(raw);
+    const epochMs = Number(value);
+    if (Number.isFinite(epochMs) && epochMs > 0) {
+      ofonoCallStartCache.set(cacheKey, epochMs);
+      return epochMs;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
 };
 
 const downloadCoverArt = async (session, handle) => {

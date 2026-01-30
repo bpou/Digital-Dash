@@ -71,6 +71,7 @@ type ActiveCall = {
 
 type CallStatusPayload = {
   ok?: boolean;
+  callStartEpochMs?: number | null;
   call?: {
     state?: string;
     rawState?: string;
@@ -198,14 +199,16 @@ export default function PhonePage() {
           return;
         }
         const nextState = (payload.call.state ?? "").toLowerCase();
-        if (nextState && nextState !== callState) {
+        const callStartEpochMs = payload.callStartEpochMs ?? null;
+        if (nextState) {
           if (nextState === "active") {
             setCallState("active");
-            setCallStartedAt(Date.now());
-            setCallStateSince(Date.now());
+            setCallStartedAt(callStartEpochMs ?? Date.now());
+            setCallStateSince(callStartEpochMs ?? Date.now());
           } else if (nextState === "incoming") {
             setCallState("incoming");
             setCallStateSince(Date.now());
+            setCallStartedAt(null);
           } else if (nextState === "outgoing") {
             setCallState("outgoing");
             setCallStateSince(Date.now());
