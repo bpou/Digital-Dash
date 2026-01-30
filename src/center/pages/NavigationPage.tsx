@@ -1,6 +1,7 @@
 import mapboxgl from "mapbox-gl";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useGpsPosition } from "../hooks/useGpsPosition";
 
 /**
  * Real turn-by-turn (web) using:
@@ -233,6 +234,7 @@ export default function NavigationPage() {
   const [followMode, setFollowMode] = useState(true);
   const [lastRerouteAt, setLastRerouteAt] = useState(0);
   const [lastSpokenStepIndex, setLastSpokenStepIndex] = useState<number | null>(null);
+  const gpsPosition = useGpsPosition();
 
   const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
   const defaultCenter = useMemo(() => ({ lat: 59.3293, lng: 18.0686 }), []);
@@ -293,6 +295,16 @@ export default function NavigationPage() {
     });
   };
 
+  const enableMapInteractions = (map: mapboxgl.Map) => {
+    map.dragPan.enable();
+    map.scrollZoom.enable();
+    map.doubleClickZoom.enable();
+    map.boxZoom.enable();
+    map.keyboard?.enable();
+    map.dragRotate?.enable();
+    map.touchZoomRotate?.enable();
+  };
+
   // Init map
   useEffect(() => {
     if (!mapboxToken) {
@@ -313,7 +325,10 @@ export default function NavigationPage() {
     });
 
     mapRef.current = map;
-    map.on("load", () => setMapReady(true));
+    map.on("load", () => {
+      setMapReady(true);
+      enableMapInteractions(map);
+    });
 
     // If user drags map, disable follow mode
     const stopFollow = () => setFollowMode(false);
@@ -328,41 +343,26 @@ export default function NavigationPage() {
     };
   }, [mapboxToken, defaultCenter]);
 
-  // GPS live updates
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    const map = mapRef.current;
+    if (!gpsPosition?.location || !mapReady || !map) return;
+    const coords = gpsPosition.location;
+    setUserLocation(coords);
+    setUserHeading(gpsPosition.heading ?? null);
+    setUserSpeedMps(gpsPosition.speedMps ?? null);
 
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserLocation(coords);
+    if (!userMarkerRef.current) {
+      userMarkerRef.current = new mapboxgl.Marker({ color: "#7ee3ff" })
+        .setLngLat([coords.lng, coords.lat])
+        .addTo(map);
+    } else {
+      userMarkerRef.current.setLngLat([coords.lng, coords.lat]);
+    }
 
-        const heading = Number.isFinite(pos.coords.heading) ? (pos.coords.heading as number) : null;
-        const speed = Number.isFinite(pos.coords.speed) ? (pos.coords.speed as number) : null;
-        setUserHeading(heading);
-        setUserSpeedMps(speed);
-
-        // marker
-        if (mapRef.current && !userMarkerRef.current) {
-          userMarkerRef.current = new mapboxgl.Marker({ color: "#7ee3ff" })
-            .setLngLat([coords.lng, coords.lat])
-            .addTo(mapRef.current);
-        } else if (userMarkerRef.current) {
-          userMarkerRef.current.setLngLat([coords.lng, coords.lat]);
-        }
-
-        if (followMode && mapRef.current) {
-          setCameraFollow(coords, heading);
-        }
-      },
-      () => {
-        // keep default if fail
-      },
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [followMode]);
+    if (followMode) {
+      setCameraFollow(coords, gpsPosition.heading ?? null);
+    }
+  }, [gpsPosition, followMode, mapReady]);
 
   // Search (geocoding)
   useEffect(() => {

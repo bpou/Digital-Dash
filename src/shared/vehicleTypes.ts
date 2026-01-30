@@ -53,4 +53,11 @@ export type VehicleState = {
     color: string;
     brightness: number;
   };
+  gps?: {
+    lat: number;
+    lng: number;
+    heading?: number | null;
+    speedKmh?: number | null;
+    speedMps?: number | null;
+  };
 };

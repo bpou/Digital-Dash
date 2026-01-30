@@ -77,6 +77,13 @@ let rawState: VehicleState = {
     color: "#7EE3FF",
     brightness: 65,
   },
+  gps: {
+    lat: 59.3293,
+    lng: 18.0686,
+    heading: 0,
+    speedKmh: 0,
+    speedMps: 0,
+  },
 };
 
 let state: VehicleState = rawState;

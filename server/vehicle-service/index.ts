@@ -14,6 +14,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_PATH = path.join(__dirname, "state.json");
 
+const defaultGps: VehicleState["gps"] = {
+  lat: 59.3293,
+  lng: 18.0686,
+  heading: 0,
+  speedKmh: 0,
+  speedMps: 0,
+};
+
 const defaultState: VehicleState = {
   turn: { mode: "off", left: false, right: false },
   engine: { rpm: 0 },
@@ -43,6 +51,7 @@ const defaultState: VehicleState = {
     color: "#7EE3FF",
     brightness: 65,
   },
+  gps: defaultGps,
 };
 
 let state: VehicleState = { ...defaultState };
@@ -255,10 +264,181 @@ const parseNumber = (payload: string) => {
   return Number.isFinite(value) ? value : 0;
 };
 
-const parseBoolean = (payload: string) => payload === "1" || payload.toLowerCase() === "true";
+const parseFloatValue = (value: unknown): number | null => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    if (!normalized) return null;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const ensureSpeedFields = (gps: VehicleState["gps"]): VehicleState["gps"] => {
+  const next: VehicleState["gps"] = { ...gps };
+  const hasSpeedMps = typeof next.speedMps === "number" && Number.isFinite(next.speedMps);
+  const hasSpeedKmh = typeof next.speedKmh === "number" && Number.isFinite(next.speedKmh);
+  if (!hasSpeedMps && hasSpeedKmh) {
+    next.speedMps = next.speedKmh! / 3.6;
+  }
+  if (!hasSpeedKmh && hasSpeedMps) {
+    next.speedKmh = next.speedMps! * 3.6;
+  }
+  return next;
+};
+
+const applyGpsUpdate = (next: Partial<VehicleState["gps"]>) => {
+  const current = state.gps ?? defaultGps;
+  const merged = ensureSpeedFields({ ...current, ...next });
+  state = { ...state, gps: merged };
+  scheduleBroadcast();
+};
+
+const parseGpsPayload = (raw: string): Partial<VehicleState["gps"]> | null => {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const findValue = (obj: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const value = parseFloatValue(obj[key]);
+      if (value != null) return value;
+    }
+    return null;
+  };
+
+  const tryJson = (): Partial<VehicleState["gps"]> | null => {
+    if (!trimmed.startsWith("{")) return null;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed !== "object" || parsed === null) return null;
+      const record = parsed as Record<string, unknown>;
+      const lat = findValue(record, ["lat", "latitude", "lat_deg", "latitude_deg"]);
+      const lng = findValue(record, ["lng", "lon", "longitude", "lng_deg", "longitude_deg"]);
+      if (lat == null || lng == null) return null;
+      const heading = findValue(record, ["heading", "bearing", "track", "course"]);
+      const speedMps =
+        findValue(record, ["speedMps", "speed_mps", "speed_ms", "speed_m_s"]) ??
+        findValue(record, ["speed", "velocity", "speedMs"]);
+      const speedKmh =
+        findValue(record, ["speedKmh", "speed_kmh", "speed_km_h", "speedkmh"]) ??
+        (speedMps != null ? speedMps * 3.6 : null);
+      return { lat, lng, heading, speedMps: speedMps ?? null, speedKmh: speedKmh ?? null };
+    } catch {
+      return null;
+    }
+  };
+
+  const tryNumbers = (): Partial<VehicleState["gps"]> | null => {
+    const tokens = trimmed.split(/[,\s;|]+/);
+    const numbers: number[] = [];
+    for (const token of tokens) {
+      let candidate = token.trim();
+      if (!candidate) continue;
+      if (candidate.includes("=")) {
+        candidate = candidate.split("=").slice(1).join("=");
+      }
+      if (candidate.includes(":")) {
+        candidate = candidate.split(":").slice(1).join(":");
+      }
+      if (candidate.startsWith("$")) {
+        candidate = candidate.slice(1);
+      }
+      const value = parseFloatValue(candidate);
+      if (value != null) {
+        numbers.push(value);
+      }
+    }
+    if (numbers.length < 2) return null;
+    const result: Partial<VehicleState["gps"]> = {
+      lat: numbers[0],
+      lng: numbers[1],
+    };
+    if (numbers.length > 2) {
+      result.heading = numbers[2];
+    }
+    if (numbers.length > 3) {
+      result.speedMps = numbers[3];
+    }
+    return result;
+  };
+
+  return tryJson() ?? tryNumbers();
+};
+
+const handleGpsSubtopic = (topic: string, payload: string): boolean => {
+  const suffix = topic.split("/").pop()?.toLowerCase();
+  if (!suffix) return false;
+  const value = parseFloatValue(payload);
+  if (value == null) return false;
+  const partial: Partial<VehicleState["gps"]> = {};
+  switch (suffix) {
+    case "lat":
+    case "latitude":
+    case "lat_deg":
+    case "latitude_deg":
+    case "latdeg":
+      partial.lat = value;
+      break;
+    case "lng":
+    case "lon":
+    case "long":
+    case "longitude":
+    case "lng_deg":
+    case "longitude_deg":
+      partial.lng = value;
+      break;
+    case "heading":
+    case "bearing":
+    case "track":
+    case "course":
+      partial.heading = value;
+      break;
+    case "speed":
+    case "speed_mps":
+    case "speed_ms":
+    case "speed_m_s":
+    case "speedms":
+      partial.speedMps = value;
+      break;
+    case "speed_kmh":
+    case "speed_km_h":
+    case "speed_kmh_raw":
+    case "speedkmh":
+      partial.speedKmh = value;
+      break;
+    default:
+      break;
+  }
+  if (!Object.keys(partial).length) return false;
+  applyGpsUpdate(partial);
+  return true;
+};
+
+const handleGpsTopic = (topic: string, payload: string): boolean => {
+  const bases = ["car/state/gps", "car/state/location"];
+  if (bases.includes(topic)) {
+    const parsed = parseGpsPayload(payload);
+    if (!parsed) return false;
+    applyGpsUpdate(parsed);
+    return true;
+  }
+  for (const base of bases) {
+    if (topic.startsWith(`${base}/`)) {
+      return handleGpsSubtopic(topic, payload);
+    }
+  }
+  return false;
+};
 
 mqttClient.on("message", (topic, raw) => {
   const payload = raw.toString();
+
+  if (handleGpsTopic(topic, payload)) {
+    return;
+  }
 
   if (topic.startsWith("car/event/")) {
     logEvent(topic, payload);
