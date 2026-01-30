@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { hexToRgba } from "../../utils/color";
+import { useVehicleState } from "../../vehicle/vehicleClient";
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -121,6 +123,10 @@ const buildSeedCalls = (): RecentCall[] => {
 };
 
 export default function PhonePage() {
+  const { ambient } = useVehicleState();
+  const ambientColor = ambient?.color ?? "#7EE3FF";
+  const ambientBrightness = ambient?.brightness ?? 65;
+  const ambientStrength = ambientBrightness / 100;
   const [btDevice, setBtDevice] = useState<BtDevice | null>(null);
   const [btError, setBtError] = useState<string | null>(null);
   const [dialNumber, setDialNumber] = useState("");
@@ -356,7 +362,60 @@ export default function PhonePage() {
     >
       <div className="grid flex-1 grid-cols-[1.2fr_1fr] gap-4">
         <div className="flex h-full flex-col gap-4">
-          <div className="rounded-[16px] bg-white/5 p-5">
+          <motion.div
+            className="relative overflow-hidden rounded-[16px] bg-white/5 p-5"
+            animate={
+              callState === "active"
+                ? {
+                    boxShadow: `0 0 24px ${hexToRgba(ambientColor, 0.35)}, 0 0 60px ${hexToRgba(
+                      ambientColor,
+                      0.28
+                    )}, inset 0 0 0 1px ${hexToRgba(ambientColor, 0.2)}`,
+                    borderColor: hexToRgba(ambientColor, 0.35),
+                  }
+                : {
+                    boxShadow: "0 0 0 rgba(0,0,0,0)",
+                    borderColor: "rgba(255,255,255,0.05)",
+                  }
+            }
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <div className="pointer-events-none absolute inset-0">
+              <motion.div
+                className="absolute -left-8 -top-10 h-36 w-36 rounded-full blur-3xl"
+                style={{ background: hexToRgba(ambientColor, 0.6) }}
+                animate={
+                  callState === "active"
+                    ? { opacity: 0.45 * ambientStrength, scale: [1, 1.25, 1] }
+                    : { opacity: 0, scale: 0.9 }
+                }
+                transition={{ duration: 2.6, ease: "easeInOut", repeat: callState === "active" ? Infinity : 0 }}
+              />
+              <motion.div
+                className="absolute -right-6 top-10 h-40 w-40 rounded-full blur-[42px]"
+                style={{ background: hexToRgba(ambientColor, 0.5) }}
+                animate={
+                  callState === "active"
+                    ? { opacity: 0.38 * ambientStrength, scale: [1.05, 1.35, 1.05] }
+                    : { opacity: 0, scale: 0.95 }
+                }
+                transition={{ duration: 3.2, ease: "easeInOut", repeat: callState === "active" ? Infinity : 0 }}
+              />
+              <motion.div
+                className="absolute inset-0"
+                style={{
+                  background: `radial-gradient(circle at 20% 20%, ${hexToRgba(
+                    ambientColor,
+                    0.35
+                  )}, transparent 55%), radial-gradient(circle at 80% 30%, ${hexToRgba(
+                    ambientColor,
+                    0.28
+                  )}, transparent 60%)`,
+                }}
+                animate={callState === "active" ? { opacity: 0.55 * ambientStrength } : { opacity: 0 }}
+                transition={{ duration: 0.9, ease: "easeOut" }}
+              />
+            </div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Call status</p>
             <div className="mt-4 flex items-center justify-between">
               <div>
@@ -389,7 +448,7 @@ export default function PhonePage() {
                 </motion.button>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           <div className="rounded-[16px] bg-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Recent calls</p>
