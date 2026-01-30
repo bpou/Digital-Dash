@@ -308,13 +308,14 @@ export default function NavigationPage() {
     );
   };
 
-  const startNavigation = () => {
-    if (!selectedPlace || !userLocation || !servicesRef.current.directions) return;
+  const startNavigation = (destination?: MapPlace) => {
+    const target = destination ?? selectedPlace;
+    if (!target || !userLocation || !servicesRef.current.directions) return;
     const googleMaps = (window as any).google;
     servicesRef.current.directions.route(
       {
         origin: userLocation,
-        destination: selectedPlace.location,
+        destination: target.location,
         travelMode: googleMaps.maps.TravelMode.DRIVING,
       },
       (result: any, status: string) => {
@@ -350,9 +351,9 @@ export default function NavigationPage() {
         </div>
         <motion.button
           type="button"
-          className="h-11 rounded-[10px] bg-white/5 px-4 text-xs uppercase tracking-[0.3em] text-white/70 hover:bg-white/10"
+          className={`h-11 rounded-[10px] px-4 text-xs uppercase tracking-[0.3em] ${selectedPlace && userLocation ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-white/5 text-white/30"}`}
           whileTap={{ scale: 0.95, opacity: 0.8 }}
-          onClick={startNavigation}
+          onClick={() => startNavigation()}
         >
           Start
         </motion.button>
@@ -477,7 +478,7 @@ export default function NavigationPage() {
                   type="button"
                   className="flex min-h-[44px] w-full items-center justify-between rounded-[12px] bg-white/5 px-3 py-2 text-left hover:bg-white/10"
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
-                  onClick={() => selectPlace(item as MapPlace)}
+                  onClick={() => startNavigation(item as MapPlace)}
                 >
                   <div>
                     <p className="text-sm text-white/90">{item.name}</p>
