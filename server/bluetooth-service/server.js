@@ -458,10 +458,19 @@ const getOfonoCallStatus = async () => {
   }
   let callStartEpochMs = null;
   const callStart = normalizeBusctlValue(props.CallStartTime) || normalizeBusctlValue(props.StartTime);
-  const epochMs = Number(callStart);
-  if (Number.isFinite(epochMs) && epochMs > 0) {
-    callStartEpochMs = epochMs;
-  } else {
+  if (callStart) {
+    const parsed = Date.parse(callStart);
+    if (Number.isFinite(parsed)) {
+      callStartEpochMs = parsed;
+    }
+  }
+  if (!callStartEpochMs) {
+    const epochMs = Number(callStart);
+    if (Number.isFinite(epochMs) && epochMs > 0) {
+      callStartEpochMs = epochMs;
+    }
+  }
+  if (!callStartEpochMs) {
     callStartEpochMs = await ensureOfonoCallStart(modemPath, activeCall.path);
   }
   return {
