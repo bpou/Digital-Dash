@@ -69,6 +69,17 @@ type ActiveCall = {
   direction: "incoming" | "outgoing";
 };
 
+type CallStatusPayload = {
+  ok?: boolean;
+  call?: {
+    state?: string;
+    rawState?: string;
+    direction?: string;
+    number?: string;
+    name?: string;
+  } | null;
+};
+
 const formatDuration = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.floor(totalSeconds % 60);
@@ -172,6 +183,49 @@ export default function PhonePage() {
     const interval = window.setInterval(fetchDevices, 4000);
     return () => window.clearInterval(interval);
   }, [btBaseUrl]);
+
+  useEffect(() => {
+    let timer: number | null = null;
+    const pollCallStatus = async () => {
+      try {
+        const res = await fetch(`${btBaseUrl}/call/status`);
+        if (!res.ok) return;
+        const payload = (await res.json()) as CallStatusPayload;
+        if (!payload?.call) {
+          if (callState !== "idle") {
+            endCall(false);
+          }
+          return;
+        }
+        const nextState = (payload.call.state ?? "").toLowerCase();
+        if (nextState && nextState !== callState) {
+          if (nextState === "active") {
+            setCallState("active");
+            setCallStartedAt(Date.now());
+            setCallStateSince(Date.now());
+          } else if (nextState === "incoming") {
+            setCallState("incoming");
+            setCallStateSince(Date.now());
+          } else if (nextState === "outgoing") {
+            setCallState("outgoing");
+            setCallStateSince(Date.now());
+          }
+        }
+        const number = payload.call.number || payload.call.name || "Unknown";
+        const name = payload.call.name || payload.call.number || "Unknown";
+        const direction = payload.call.direction === "incoming" ? "incoming" : "outgoing";
+        setActiveCall({ name, number, direction });
+      } catch {
+        // ignore poll failures
+      }
+    };
+
+    pollCallStatus();
+    timer = window.setInterval(pollCallStatus, 1500);
+    return () => {
+      if (timer !== null) window.clearInterval(timer);
+    };
+  }, [btBaseUrl, callState]);
 
   useEffect(() => {
     try {

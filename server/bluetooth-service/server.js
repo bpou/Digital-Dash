@@ -354,6 +354,15 @@ const parseBusctlDict = (raw) => {
   };
 };
 
+const parseBusctlPropertyString = (raw) => {
+  const tokens = tokenizeBusctl(raw ?? "");
+  if (!tokens.length) return "";
+  if (tokens.length >= 2 && tokens[0].length <= 2) {
+    return normalizeBusctlValue(tokens[1]);
+  }
+  return normalizeBusctlValue(tokens[0]);
+};
+
 const extractOfonoPaths = (raw) => {
   if (!raw) return [];
   const matches = Array.from(raw.matchAll(/"((?:\/ofono|\/hfp)\/[^"]+)"/g)).map((match) => match[1]);
@@ -370,6 +379,55 @@ const getOfonoCallPaths = async (modemPath) => {
   if (!modemPath) return [];
   const raw = await runBusctl(["call", "org.ofono", modemPath, "org.ofono.VoiceCallManager", "GetCalls"]);
   return extractOfonoPaths(raw).filter((path) => path.includes("voicecall"));
+};
+
+const normalizeOfonoCallState = (state, direction) => {
+  const s = normalizeBusctlValue(state).toLowerCase();
+  const dir = normalizeBusctlValue(direction).toLowerCase();
+  if (s === "incoming") return "incoming";
+  if (s === "dialing" || s === "alerting") return "outgoing";
+  if (s === "active" || s === "held") return "active";
+  if (s === "disconnected") return "idle";
+  if (dir === "incoming") return "incoming";
+  if (dir === "outgoing") return "outgoing";
+  return s || "active";
+};
+
+const getOfonoCallStatus = async () => {
+  const modemPath = await getOfonoModemPath();
+  if (!modemPath) {
+    return { modemPath: "", call: null };
+  }
+  const calls = await getOfonoCallPaths(modemPath);
+  if (!calls.length) {
+    return { modemPath, call: null };
+  }
+  const callPath = calls[0];
+  const [stateRaw, lineRaw, nameRaw, dirRaw] = await Promise.all([
+    runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "State"]).catch(() => ""),
+    runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "LineIdentification"]).catch(() => ""),
+    runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "Name"]).catch(() => ""),
+    runBusctl(["get-property", "org.ofono", callPath, "org.ofono.VoiceCall", "Direction"]).catch(() => ""),
+  ]);
+  const state = parseBusctlPropertyString(stateRaw);
+  const number = parseBusctlPropertyString(lineRaw);
+  const name = parseBusctlPropertyString(nameRaw);
+  const direction = parseBusctlPropertyString(dirRaw);
+  const normalizedState = normalizeOfonoCallState(state, direction);
+  if (normalizedState === "idle") {
+    return { modemPath, call: null };
+  }
+  return {
+    modemPath,
+    call: {
+      path: callPath,
+      state: normalizedState,
+      rawState: state,
+      direction,
+      number,
+      name,
+    },
+  };
 };
 
 const dialOfono = async (number) => {
@@ -1167,6 +1225,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/call/hangup") {
       await hangupOfono();
       json(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/call/status") {
+      const status = await getOfonoCallStatus();
+      json(res, 200, { ok: true, ...status });
       return;
     }
 
