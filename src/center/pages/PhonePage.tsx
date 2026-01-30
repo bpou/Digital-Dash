@@ -140,6 +140,7 @@ export default function PhonePage() {
   const [callElapsed, setCallElapsed] = useState(0);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [muted, setMuted] = useState(false);
+  const [callError, setCallError] = useState<string | null>(null);
 
   const btBaseUrl = useMemo(() => {
     const host = window.location.hostname;
@@ -217,9 +218,16 @@ export default function PhonePage() {
 
   const endCall = async (declined = false) => {
     try {
-      await fetch(`${btBaseUrl}/call/hangup`, { method: "POST" });
+      const res = await fetch(`${btBaseUrl}/call/hangup`, { method: "POST" });
+      if (!res.ok) {
+        const payload = (await res.json()) as { error?: string };
+        setCallError(payload.error || "Hangup failed");
+        return;
+      }
+      setCallError(null);
     } catch {
-      // ignore hangup failures
+      setCallError("Hangup failed");
+      return;
     }
     if (activeCall) {
       if (activeCall.direction === "outgoing") {
@@ -252,9 +260,16 @@ export default function PhonePage() {
   const startOutgoingCall = async (number: string, name?: string) => {
     if (!btDevice || !number) return;
     try {
-      await fetch(`${btBaseUrl}/call/dial?number=${encodeURIComponent(number)}`, { method: "POST" });
+      const res = await fetch(`${btBaseUrl}/call/dial?number=${encodeURIComponent(number)}`, { method: "POST" });
+      if (!res.ok) {
+        const payload = (await res.json()) as { error?: string };
+        setCallError(payload.error || "Dial failed");
+        return;
+      }
+      setCallError(null);
     } catch {
-      // ignore dial failures
+      setCallError("Dial failed");
+      return;
     }
     setActiveCall({
       name: name || number,
@@ -268,9 +283,16 @@ export default function PhonePage() {
   const acceptIncomingCall = async () => {
     if (callState !== "incoming") return;
     try {
-      await fetch(`${btBaseUrl}/call/answer`, { method: "POST" });
+      const res = await fetch(`${btBaseUrl}/call/answer`, { method: "POST" });
+      if (!res.ok) {
+        const payload = (await res.json()) as { error?: string };
+        setCallError(payload.error || "Answer failed");
+        return;
+      }
+      setCallError(null);
     } catch {
-      // ignore answer failures
+      setCallError("Answer failed");
+      return;
     }
     setCallState("active");
     setCallStartedAt(Date.now());
@@ -313,6 +335,7 @@ export default function PhonePage() {
     if (callState === "active") {
       return `Active · ${formatDuration(callElapsed)}`;
     }
+    if (callError) return `Call failed · ${callError}`;
     if (btDevice) return "Bluetooth ready";
     return btError ? "Bluetooth offline" : "Bluetooth idle";
   })();

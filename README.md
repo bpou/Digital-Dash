@@ -71,3 +71,99 @@ export default defineConfig([
   },
 ])
 ```
+
+## Bluetooth phone calling (HFP via oFono)
+
+The Phone tab can place/answer/hang up calls over Bluetooth when the `bluetooth-service` can access an oFono modem. This requires oFono to be installed, configured, and paired to your phone with the Hands-Free profile (HFP).
+
+### 1) Install oFono and BlueZ extras
+
+On Debian/Ubuntu/Raspberry Pi OS:
+
+```bash
+sudo apt update
+sudo apt install -y ofono bluez bluez-tools
+```
+
+`ofono-phonesim` is optional and not available on all distros; it is only needed for testing without a real phone.
+
+### 2) Configure BlueZ for HFP
+
+Edit `[/etc/bluetooth/main.conf](/etc/bluetooth/main.conf)` and ensure HFP is enabled:
+
+```ini
+[General]
+Enable=Source,Sink,Media,Socket
+Class=0x200414
+```
+
+Restart BlueZ:
+
+```bash
+sudo systemctl restart bluetooth
+```
+
+### 3) Configure oFono to use BlueZ
+
+Create or edit `[/etc/ofono/main.conf](/etc/ofono/main.conf)`:
+
+```ini
+[General]
+UseBlueZ=1
+UseHfp=1
+```
+
+Restart oFono:
+
+```bash
+sudo systemctl restart ofono
+```
+
+### 4) Pair phone with HFP profile
+
+Ensure your phone supports HFP and allow “phone calls” during pairing. Pair using the Settings tab in the UI. The oFono modem should appear as a BlueZ modem once connected.
+
+### 5) Verify oFono sees the modem
+
+Run:
+
+```bash
+sudo busctl --system call org.ofono / org.ofono.Manager GetModems
+```
+
+You should see an `/ofono/<modem>` path in the output. If not, re-pair the phone and confirm HFP permissions.
+
+If you see `Call failed: Access denied`, allow the service user to call oFono over D-Bus. Create a polkit rule:
+
+```bash
+sudo tee /etc/polkit-1/rules.d/60-digital-dash-ofono.rules <<'EOF'
+polkit.addRule(function(action, subject) {
+  if (action.id == "org.ofono.Manager" || action.id == "org.ofono.VoiceCallManager" || action.id == "org.ofono.VoiceCall") {
+    if (subject.user == "admin") {
+      return polkit.Result.YES;
+    }
+  }
+});
+EOF
+```
+
+Then restart polkit and oFono:
+
+```bash
+sudo systemctl restart polkit
+sudo systemctl restart ofono
+```
+
+### 6) Call actions from the UI
+
+The Phone tab issues these backend endpoints:
+
+- `POST /call/dial?number=...`
+- `POST /call/answer`
+- `POST /call/hangup`
+
+These map to oFono voice call operations in [`server/bluetooth-service/server.js`](server/bluetooth-service/server.js:308). If calls still don’t start, check the bluetooth service logs:
+
+```bash
+sudo journalctl -u digital-dash-bluetooth.service -f
+```
