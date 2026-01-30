@@ -133,12 +133,12 @@ sudo busctl --system call org.ofono / org.ofono.Manager GetModems
 
 You should see an `/ofono/<modem>` path in the output. If not, re-pair the phone and confirm HFP permissions.
 
-If you see `Call failed: Access denied`, allow the service user to call oFono over D-Bus. Create a polkit rule:
+If you see `Call failed: Access denied`, allow the service user to call oFono over D-Bus. Replace any existing rule with this broader one:
 
 ```bash
 sudo tee /etc/polkit-1/rules.d/60-digital-dash-ofono.rules <<'EOF'
 polkit.addRule(function(action, subject) {
-  if (action.id == "org.ofono.Manager" || action.id == "org.ofono.VoiceCallManager" || action.id == "org.ofono.VoiceCall") {
+  if (action.id.indexOf("org.ofono.") === 0) {
     if (subject.user == "admin") {
       return polkit.Result.YES;
     }
