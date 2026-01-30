@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
 const pageVariants = {
@@ -8,17 +9,8 @@ const pageVariants = {
 
 const pageTransition = { duration: 0.2, ease: "easeOut" };
 
-const BluetoothIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white/70">
-    <path
-      d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+const MAX_DIAL_LENGTH = 20;
+const RECENT_CALLS_KEY = "tesla-dash:recent-calls";
 
 const PhoneIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
@@ -32,18 +24,289 @@ const PhoneIcon = () => (
   </svg>
 );
 
-const KeypadButton = ({ label, sub }: { label: string; sub?: string }) => (
+const KeypadButton = ({
+  label,
+  sub,
+  onPress,
+}: {
+  label: string;
+  sub?: string;
+  onPress: (value: string) => void;
+}) => (
   <motion.button
     type="button"
     className="flex min-h-[56px] flex-col items-center justify-center rounded-[12px] bg-white/5 text-lg text-white/90 hover:bg-white/10"
     whileTap={{ scale: 0.95, opacity: 0.8 }}
+    onClick={() => onPress(label)}
   >
     <span className="text-[20px] font-medium">{label}</span>
     {sub && <span className="text-[10px] uppercase tracking-[0.25em] text-white/50">{sub}</span>}
   </motion.button>
 );
 
+type BtDevice = {
+  mac: string;
+  name: string;
+  alias?: string;
+  connected: boolean;
+};
+
+type CallState = "idle" | "incoming" | "outgoing" | "active";
+
+type RecentCall = {
+  id: string;
+  name: string;
+  number: string;
+  type: "incoming" | "outgoing" | "missed";
+  timestamp: number;
+};
+
+type ActiveCall = {
+  name: string;
+  number: string;
+  direction: "incoming" | "outgoing";
+};
+
+const formatDuration = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+};
+
+const formatDateLabel = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const today = now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === today) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString(undefined, { weekday: "short" });
+};
+
+const formatTimeLabel = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
+const formatCallMeta = (call: RecentCall) => {
+  const day = formatDateLabel(call.timestamp);
+  if (call.type === "missed") return `${day} · Missed`;
+  return `${day} · ${formatTimeLabel(call.timestamp)}`;
+};
+
+const buildSeedCalls = (): RecentCall[] => {
+  const now = Date.now();
+  return [
+    {
+      id: "seed-1",
+      name: "Jordan Lee",
+      number: "+46 70 123 45 67",
+      type: "outgoing",
+      timestamp: now - 1000 * 60 * 45,
+    },
+    {
+      id: "seed-2",
+      name: "Emily Park",
+      number: "+46 73 555 11 22",
+      type: "missed",
+      timestamp: now - 1000 * 60 * 60 * 20,
+    },
+    {
+      id: "seed-3",
+      name: "Service Center",
+      number: "+46 8 555 00 00",
+      type: "incoming",
+      timestamp: now - 1000 * 60 * 60 * 72,
+    },
+  ];
+};
+
 export default function PhonePage() {
+  const [btDevice, setBtDevice] = useState<BtDevice | null>(null);
+  const [btError, setBtError] = useState<string | null>(null);
+  const [dialNumber, setDialNumber] = useState("");
+  const [recentCalls, setRecentCalls] = useState<RecentCall[]>(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_CALLS_KEY);
+      if (!raw) return buildSeedCalls();
+      const parsed = JSON.parse(raw) as RecentCall[];
+      return parsed.length ? parsed : buildSeedCalls();
+    } catch {
+      return buildSeedCalls();
+    }
+  });
+  const [callState, setCallState] = useState<CallState>("idle");
+  const [callStateSince, setCallStateSince] = useState<number | null>(null);
+  const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
+  const [callElapsed, setCallElapsed] = useState(0);
+  const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [muted, setMuted] = useState(false);
+
+  const btBaseUrl = useMemo(() => {
+    const host = window.location.hostname;
+    return `http://${host}:5175`;
+  }, []);
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const res = await fetch(`${btBaseUrl}/devices`);
+        if (!res.ok) throw new Error("Bluetooth service unavailable");
+        const data = (await res.json()) as { devices?: BtDevice[] };
+        const connected = (data.devices ?? []).find((device) => device.connected) ?? null;
+        setBtDevice(connected);
+        setBtError(null);
+      } catch (err) {
+        setBtDevice(null);
+        setBtError(err instanceof Error ? err.message : "Bluetooth service unavailable");
+      }
+    };
+
+    fetchDevices();
+    const interval = window.setInterval(fetchDevices, 4000);
+    return () => window.clearInterval(interval);
+  }, [btBaseUrl]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(RECENT_CALLS_KEY, JSON.stringify(recentCalls));
+    } catch {
+      // ignore persistence failures
+    }
+  }, [recentCalls]);
+
+  useEffect(() => {
+    if (callState === "idle") {
+      setCallElapsed(0);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      const base = callState === "active" ? callStartedAt : callStateSince;
+      if (!base) return;
+      setCallElapsed(Math.max(0, Math.floor((Date.now() - base) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [callState, callStartedAt, callStateSince]);
+
+  useEffect(() => {
+    if (callState !== "outgoing") return;
+    const timer = window.setTimeout(() => {
+      setCallState("active");
+      setCallStartedAt(Date.now());
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [callState]);
+
+  const beginCallState = (state: CallState) => {
+    setCallState(state);
+    setCallStateSince(Date.now());
+    if (state === "active") {
+      setCallStartedAt(Date.now());
+    } else {
+      setCallStartedAt(null);
+    }
+  };
+
+  const pushRecentCall = (next: Omit<RecentCall, "id" | "timestamp">) => {
+    const entry: RecentCall = {
+      ...next,
+      id: `${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
+      timestamp: Date.now(),
+    };
+    setRecentCalls((prev) => [entry, ...prev].slice(0, 10));
+  };
+
+  const endCall = (declined = false) => {
+    if (activeCall) {
+      if (activeCall.direction === "outgoing") {
+        pushRecentCall({
+          name: activeCall.name,
+          number: activeCall.number,
+          type: "outgoing",
+        });
+      } else if (declined || callState === "incoming") {
+        pushRecentCall({
+          name: activeCall.name,
+          number: activeCall.number,
+          type: "missed",
+        });
+      } else {
+        pushRecentCall({
+          name: activeCall.name,
+          number: activeCall.number,
+          type: "incoming",
+        });
+      }
+    }
+    setActiveCall(null);
+    setMuted(false);
+    setCallState("idle");
+    setCallStateSince(null);
+    setCallStartedAt(null);
+  };
+
+  const startOutgoingCall = (number: string, name?: string) => {
+    if (!btDevice || !number) return;
+    setActiveCall({
+      name: name || number,
+      number,
+      direction: "outgoing",
+    });
+    setMuted(false);
+    beginCallState("outgoing");
+  };
+
+  const acceptIncomingCall = () => {
+    if (callState !== "incoming") return;
+    setCallState("active");
+    setCallStartedAt(Date.now());
+  };
+
+  const dialPressed = (value: string) => {
+    setDialNumber((prev) => (prev.length < MAX_DIAL_LENGTH ? `${prev}${value}` : prev));
+  };
+
+  const backspaceDial = () => {
+    setDialNumber((prev) => prev.slice(0, -1));
+  };
+
+  const clearDial = () => {
+    setDialNumber("");
+  };
+
+  const callTitle = (() => {
+    if (!btDevice) return "No phone connected";
+    if (callState === "incoming") return "Incoming call";
+    if (callState === "outgoing") return "Calling";
+    if (callState === "active") return "On call";
+    return "Ready to call";
+  })();
+
+  const callSubtitle = (() => {
+    if (activeCall) {
+      return activeCall.name === activeCall.number
+        ? activeCall.number
+        : `${activeCall.name} · ${activeCall.number}`;
+    }
+    if (btDevice) return `Connected to ${btDevice.name || btDevice.alias || btDevice.mac}`;
+    return "Connect a phone in Settings";
+  })();
+
+  const callMeta = (() => {
+    if (callState === "incoming" || callState === "outgoing") {
+      return `Ringing · ${formatDuration(callElapsed)}`;
+    }
+    if (callState === "active") {
+      return `Active · ${formatDuration(callElapsed)}`;
+    }
+    if (btDevice) return "Bluetooth ready";
+    return btError ? "Bluetooth offline" : "Bluetooth idle";
+  })();
+
+  const canAccept = callState === "incoming";
+  const canEnd = callState === "incoming" || callState === "outgoing" || callState === "active";
+  const canPlaceCall = Boolean(btDevice && dialNumber);
+  const canMute = callState === "active";
+
   return (
     <motion.div
       className="flex h-full w-full flex-col gap-4 bg-black p-4 text-white overflow-hidden"
@@ -59,71 +322,58 @@ export default function PhonePage() {
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Call status</p>
             <div className="mt-4 flex items-center justify-between">
               <div>
-                <p className="text-lg font-medium text-white/90">Incoming call</p>
-                <p className="text-sm text-white/60">Alex Morgan · Mobile</p>
-                <p className="mt-2 text-xs uppercase tracking-[0.25em] text-white/50">Ringing · 00:07</p>
+                <p className="text-lg font-medium text-white/90">{callTitle}</p>
+                <p className="text-sm text-white/60">{callSubtitle}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.25em] text-white/50">{callMeta}</p>
               </div>
               <div className="flex items-center gap-3">
                 <motion.button
                   type="button"
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/80 text-white"
+                  className={`flex h-12 w-12 items-center justify-center rounded-full text-white transition ${
+                    canAccept ? "bg-emerald-500/80" : "bg-white/10 text-white/40"
+                  }`}
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={acceptIncomingCall}
+                  disabled={!canAccept}
                 >
                   <PhoneIcon />
                 </motion.button>
                 <motion.button
                   type="button"
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/80 text-white"
+                  className={`flex h-12 w-12 items-center justify-center rounded-full text-white transition ${
+                    canEnd ? "bg-red-500/80" : "bg-white/10 text-white/40"
+                  }`}
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={() => endCall(true)}
+                  disabled={!canEnd}
                 >
                   <PhoneIcon />
                 </motion.button>
               </div>
-            </div>
-          </div>
-
-          <div className="rounded-[16px] bg-white/5 p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Bluetooth</p>
-              <span className="text-xs uppercase tracking-[0.2em] text-emerald-400">Connected</span>
-            </div>
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-white/10">
-                  <BluetoothIcon />
-                </div>
-                <div>
-                  <p className="text-sm text-white/90">iPhone 15 Pro</p>
-                  <p className="text-xs uppercase tracking-[0.2em] text-white/50">Battery 86%</p>
-                </div>
-              </div>
-              <motion.button
-                type="button"
-                className="min-h-[44px] rounded-[10px] bg-white/5 px-4 text-xs uppercase tracking-[0.3em] text-white/70 hover:bg-white/10"
-                whileTap={{ scale: 0.95, opacity: 0.8 }}
-              >
-                Devices
-              </motion.button>
             </div>
           </div>
 
           <div className="rounded-[16px] bg-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Recent calls</p>
             <div className="mt-4 space-y-3">
-              {[
-                { name: "Jordan Lee", meta: "Today · 09:12" },
-                { name: "Emily Park", meta: "Yesterday · Missed" },
-                { name: "Service Center", meta: "Mon · 14:43" },
-              ].map((item) => (
+              {recentCalls.map((item) => (
                 <motion.button
                   key={item.name}
                   type="button"
                   className="flex min-h-[44px] w-full items-center justify-between rounded-[12px] bg-white/5 px-4 py-2 text-left hover:bg-white/10"
                   whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={() => {
+                    setDialNumber(item.number);
+                    if (btDevice) {
+                      startOutgoingCall(item.number, item.name);
+                    }
+                  }}
                 >
                   <div>
                     <p className="text-sm text-white/90">{item.name}</p>
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">{item.meta}</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                      {formatCallMeta(item)}
+                    </p>
                   </div>
                   <span className="text-xs uppercase tracking-[0.3em] text-white/50">Call</span>
                 </motion.button>
@@ -135,36 +385,69 @@ export default function PhonePage() {
         <div className="flex h-full flex-col gap-4">
           <div className="rounded-[16px] bg-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Keypad</p>
+            <div className="mt-4 flex items-center justify-between rounded-[12px] bg-white/5 px-4 py-2">
+              <div className="text-lg font-medium text-white/90">
+                {dialNumber || "Enter number"}
+              </div>
+              <div className="flex items-center gap-2">
+                <motion.button
+                  type="button"
+                  className="rounded-[8px] bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-white/70"
+                  whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={backspaceDial}
+                  disabled={!dialNumber}
+                >
+                  Delete
+                </motion.button>
+                <motion.button
+                  type="button"
+                  className="rounded-[8px] bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-white/70"
+                  whileTap={{ scale: 0.95, opacity: 0.8 }}
+                  onClick={clearDial}
+                  disabled={!dialNumber}
+                >
+                  Clear
+                </motion.button>
+              </div>
+            </div>
             <div className="mt-4 grid grid-cols-3 gap-3">
-              <KeypadButton label="1" sub="" />
-              <KeypadButton label="2" sub="ABC" />
-              <KeypadButton label="3" sub="DEF" />
-              <KeypadButton label="4" sub="GHI" />
-              <KeypadButton label="5" sub="JKL" />
-              <KeypadButton label="6" sub="MNO" />
-              <KeypadButton label="7" sub="PQRS" />
-              <KeypadButton label="8" sub="TUV" />
-              <KeypadButton label="9" sub="WXYZ" />
-              <KeypadButton label="*" sub="" />
-              <KeypadButton label="0" sub="+" />
-              <KeypadButton label="#" sub="" />
+              <KeypadButton label="1" sub="" onPress={dialPressed} />
+              <KeypadButton label="2" sub="ABC" onPress={dialPressed} />
+              <KeypadButton label="3" sub="DEF" onPress={dialPressed} />
+              <KeypadButton label="4" sub="GHI" onPress={dialPressed} />
+              <KeypadButton label="5" sub="JKL" onPress={dialPressed} />
+              <KeypadButton label="6" sub="MNO" onPress={dialPressed} />
+              <KeypadButton label="7" sub="PQRS" onPress={dialPressed} />
+              <KeypadButton label="8" sub="TUV" onPress={dialPressed} />
+              <KeypadButton label="9" sub="WXYZ" onPress={dialPressed} />
+              <KeypadButton label="*" sub="" onPress={dialPressed} />
+              <KeypadButton label="0" sub="+" onPress={dialPressed} />
+              <KeypadButton label="#" sub="" onPress={dialPressed} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <motion.button
               type="button"
-              className="flex min-h-[52px] items-center justify-center rounded-[12px] bg-emerald-500/80 text-sm uppercase tracking-[0.3em] text-white"
+              className={`flex min-h-[52px] items-center justify-center rounded-[12px] text-sm uppercase tracking-[0.3em] text-white transition ${
+                canPlaceCall ? "bg-emerald-500/80" : "bg-white/10 text-white/40"
+              }`}
               whileTap={{ scale: 0.95, opacity: 0.8 }}
+              onClick={() => startOutgoingCall(dialNumber)}
+              disabled={!canPlaceCall}
             >
               Call
             </motion.button>
             <motion.button
               type="button"
-              className="flex min-h-[52px] items-center justify-center rounded-[12px] bg-white/5 text-sm uppercase tracking-[0.3em] text-white/70 hover:bg-white/10"
+              className={`flex min-h-[52px] items-center justify-center rounded-[12px] text-sm uppercase tracking-[0.3em] transition ${
+                canMute ? "bg-white/5 text-white/70 hover:bg-white/10" : "bg-white/10 text-white/40"
+              }`}
               whileTap={{ scale: 0.95, opacity: 0.8 }}
+              onClick={() => setMuted((prev) => !prev)}
+              disabled={!canMute}
             >
-              Mute
+              {muted ? "Muted" : "Mute"}
             </motion.button>
           </div>
         </div>
