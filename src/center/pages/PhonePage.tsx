@@ -53,7 +53,7 @@ type BtDevice = {
   connected: boolean;
 };
 
-type CallState = "idle" | "incoming" | "outgoing" | "active";
+type CallState = "idle" | "incoming" | "outgoing" | "active" | "ended";
 
 type RecentCall = {
   id: string;
@@ -192,8 +192,8 @@ export default function PhonePage() {
         if (!res.ok) return;
         const payload = (await res.json()) as CallStatusPayload;
         if (!payload?.call) {
-          if (callState !== "idle") {
-            endCall(false);
+          if (callState !== "idle" && callState !== "ended") {
+            markCallEnded();
           }
           return;
         }
@@ -209,6 +209,7 @@ export default function PhonePage() {
           } else if (nextState === "outgoing") {
             setCallState("outgoing");
             setCallStateSince(Date.now());
+            setCallStartedAt(null);
           }
         }
         const number = payload.call.number || payload.call.name || "Unknown";
@@ -249,11 +250,13 @@ export default function PhonePage() {
   }, [callState, callStartedAt, callStateSince]);
 
   useEffect(() => {
-    if (callState !== "outgoing") return;
+    if (callState !== "ended") return;
     const timer = window.setTimeout(() => {
-      setCallState("active");
-      setCallStartedAt(Date.now());
-    }, 1800);
+      setCallState("idle");
+      setCallStateSince(null);
+      setCallStartedAt(null);
+      setCallElapsed(0);
+    }, 2500);
     return () => window.clearTimeout(timer);
   }, [callState]);
 
@@ -274,6 +277,13 @@ export default function PhonePage() {
       timestamp: Date.now(),
     };
     setRecentCalls((prev) => [entry, ...prev].slice(0, 10));
+  };
+
+  const markCallEnded = () => {
+    setActiveCall(null);
+    setMuted(false);
+    setCallState("ended");
+    setCallStateSince(Date.now());
   };
 
   const endCall = async (declined = false) => {
@@ -312,9 +322,8 @@ export default function PhonePage() {
     }
     setActiveCall(null);
     setMuted(false);
-    setCallState("idle");
-    setCallStateSince(null);
-    setCallStartedAt(null);
+    setCallState("ended");
+    setCallStateSince(Date.now());
   };
 
   const startOutgoingCall = async (number: string, name?: string) => {
@@ -389,11 +398,17 @@ export default function PhonePage() {
   })();
 
   const callMeta = (() => {
-    if (callState === "incoming" || callState === "outgoing") {
-      return `Ringing · ${formatDuration(callElapsed)}`;
+    if (callState === "incoming") {
+      return `Incoming · ${formatDuration(callElapsed)}`;
+    }
+    if (callState === "outgoing") {
+      return `Dialing · ${formatDuration(callElapsed)}`;
     }
     if (callState === "active") {
       return `Active · ${formatDuration(callElapsed)}`;
+    }
+    if (callState === "ended") {
+      return "Call ended";
     }
     if (callError) return `Call failed · ${callError}`;
     if (btDevice) return "Bluetooth ready";
