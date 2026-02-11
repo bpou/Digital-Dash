@@ -78,7 +78,7 @@ void setup() {
   Serial.println("ESP32 CAN comm test (TWAI)");
   Serial.println("Pins: TX=GPIO21 RX=GPIO22");
   Serial.println("Light: GPIO2 (ON when CAN 0x321 payload 01)");
-  Serial.println("Start in listen-only, then transmit test frames");
+  Serial.println("Listen-only CAN RX (no transmit)");
 
   installAndStart(kTimingTable[timingIndex]);
 }
@@ -107,48 +107,6 @@ void loop() {
   }
 
   uint32_t now = millis();
-
-  // Switch from listen-only to normal mode after window
-  if (listenOnly && (now - listenStartMs >= LISTEN_ONLY_WINDOW_MS)) {
-    twai_stop();
-    twai_driver_uninstall();
-
-    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CAN_TX, CAN_RX, TWAI_MODE_NORMAL);
-    twai_timing_config_t t_config = kTimingTable[timingIndex];
-    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
-
-    if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK && twai_start() == ESP_OK) {
-      listenOnly = false;
-      Serial.print("SWITCHED to NORMAL @ ");
-      Serial.println(kTimingNames[timingIndex]);
-    } else {
-      Serial.println("Failed to switch to NORMAL, retrying");
-      twai_driver_uninstall();
-      installAndStart(kTimingTable[timingIndex]);
-    }
-  }
-
-  // Transmit test frame in normal mode
-  if (!listenOnly && (now - lastTxMs >= TEST_INTERVAL_MS)) {
-    lastTxMs = now;
-    twai_message_t txMsg = {};
-    txMsg.identifier = TEST_ID;
-    txMsg.data_length_code = 8;
-    txMsg.data[0] = 0xCA;
-    txMsg.data[1] = 0xC0;
-    txMsg.data[2] = (uint8_t)(now & 0xFF);
-    txMsg.data[3] = (uint8_t)((now >> 8) & 0xFF);
-    txMsg.data[4] = (uint8_t)((now >> 16) & 0xFF);
-    txMsg.data[5] = (uint8_t)((now >> 24) & 0xFF);
-    txMsg.data[6] = 0x55;
-    txMsg.data[7] = 0xAA;
-
-    if (twai_transmit(&txMsg, pdMS_TO_TICKS(10)) == ESP_OK) {
-      Serial.println("TX OK");
-    } else {
-      Serial.println("TX FAIL");
-    }
-  }
 
   // If no RX for a while, cycle bitrate
   if (now - lastRateSwitchMs >= RATE_SCAN_INTERVAL_MS) {
