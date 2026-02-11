@@ -63,6 +63,25 @@ export default function CarPage() {
             ),
           },
           {
+            label: "Lights",
+            on: car.lights,
+            cmd: "car/toggleLights",
+            glow: "glow-blue",
+            icon: (
+              <svg viewBox="0 0 24 24" fill="none" className="control-icon h-6 w-6">
+                <path
+                  d="M6 9h6a5 5 0 0 1 0 10H6z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+                <path d="M6 12H4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M6 15H4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M6 18H4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            ),
+          },
+          {
             label: "Hazards",
             on: hazardPulse,
             cmd: "car/toggleHazards",

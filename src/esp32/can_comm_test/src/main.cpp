@@ -5,6 +5,13 @@
 constexpr gpio_num_t CAN_TX = GPIO_NUM_21; // CANTX
 constexpr gpio_num_t CAN_RX = GPIO_NUM_22; // CANRX
 
+// LED output (use GPIO2 / onboard LED on most dev boards)
+constexpr uint8_t PIN_LIGHT_OUT = 2;
+
+// CAN IDs
+constexpr uint32_t TEST_ID = 0x123;
+constexpr uint32_t LIGHT_ID = 0x321; // 1 byte payload: 01=on, 00=off
+
 // Trial bitrates (auto-cycling if no frames seen)
 static const twai_timing_config_t kTimingTable[] = {
   TWAI_TIMING_CONFIG_500KBITS(),
@@ -15,7 +22,6 @@ static const char* kTimingNames[] = {"500k", "250k", "125k"};
 static const size_t kTimingCount = sizeof(kTimingTable) / sizeof(kTimingTable[0]);
 
 // Test frame
-constexpr uint32_t TEST_ID = 0x123;
 constexpr uint32_t TEST_INTERVAL_MS = 500;
 constexpr uint32_t LISTEN_ONLY_WINDOW_MS = 5000;
 constexpr uint32_t RATE_SCAN_INTERVAL_MS = 15000;
@@ -66,8 +72,12 @@ void setup() {
   Serial.begin(115200);
   delay(300);
 
+  pinMode(PIN_LIGHT_OUT, OUTPUT);
+  digitalWrite(PIN_LIGHT_OUT, LOW);
+
   Serial.println("ESP32 CAN comm test (TWAI)");
   Serial.println("Pins: TX=GPIO21 RX=GPIO22");
+  Serial.println("Light: GPIO2 (ON when CAN 0x321 payload 01)");
   Serial.println("Start in listen-only, then transmit test frames");
 
   installAndStart(kTimingTable[timingIndex]);
@@ -78,6 +88,11 @@ void loop() {
   twai_message_t rxMsg;
   if (twai_receive(&rxMsg, pdMS_TO_TICKS(10)) == ESP_OK) {
     lastRxMs = millis();
+    if (rxMsg.identifier == LIGHT_ID && rxMsg.data_length_code >= 1) {
+      const bool lightOn = rxMsg.data[0] == 0x01;
+      digitalWrite(PIN_LIGHT_OUT, lightOn ? HIGH : LOW);
+    }
+
     Serial.print("RX ID=0x");
     Serial.print(rxMsg.identifier, HEX);
     Serial.print(" DLC=");

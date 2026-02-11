@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import mqtt from "mqtt";
+import { exec } from "child_process";
 import { fileURLToPath } from "url";
 import { WebSocketServer } from "ws";
 import type { VehicleState } from "../../src/shared/vehicleTypes";
@@ -10,6 +11,8 @@ const WS_PORT = Number(process.env.VEHICLE_WS_PORT ?? 8765);
 const EVENT_LOG_SIZE = 100;
 const BLINK_ON_MS = 330;
 const BLINK_OFF_MS = 330;
+const CAN_IFACE = process.env.CAN_IFACE ?? "can0";
+const CAN_LIGHT_ID = process.env.CAN_LIGHT_ID ?? "321";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_PATH = path.join(__dirname, "state.json");
@@ -138,6 +141,16 @@ const publishTurnPulse = (leftOn: boolean, rightOn: boolean, pulseOn: boolean) =
   mqttClient.publish("car/state/turn/pulse", pulseOn ? "1" : "0", { retain: true });
 };
 
+const sendCanLight = (on: boolean) => {
+  const payload = on ? "01" : "00";
+  const cmd = `cansend ${CAN_IFACE} ${CAN_LIGHT_ID}#${payload}`;
+  exec(cmd, (err) => {
+    if (err) {
+      console.warn(`CAN send failed: ${cmd}`, err.message);
+    }
+  });
+};
+
 const applyBlinkOutputs = (nextPhaseOn: boolean) => {
   const leftOn = blinkMode === "left" || blinkMode === "hazard" ? nextPhaseOn : false;
   const rightOn = blinkMode === "right" || blinkMode === "hazard" ? nextPhaseOn : false;
@@ -220,11 +233,14 @@ wss.on("connection", (socket) => {
         case "turn/set":
           mqttClient.publish("car/cmd/turn/set", JSON.stringify(message.payload ?? {}));
           return;
-        case "car/toggleLights":
-          state = { ...state, car: { ...state.car, lights: !state.car.lights } };
+        case "car/toggleLights": {
+          const lightsOn = !state.car.lights;
+          state = { ...state, car: { ...state.car, lights: lightsOn } };
           scheduleBroadcast();
+          sendCanLight(lightsOn);
           mqttClient.publish("car/cmd/car", JSON.stringify({ action: message.type }));
           return;
+        }
         case "car/toggleHazards": {
           const hazardsOn = !state.car.hazards;
           state = { ...state, car: { ...state.car, hazards: hazardsOn } };
