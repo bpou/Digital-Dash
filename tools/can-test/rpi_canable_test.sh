@@ -19,7 +19,8 @@ setup_iface() {
   local bitrate="$1"
   echo "Setting ${IFACE} bitrate=${bitrate}..."
   sudo ip link set "${IFACE}" down || true
-  sudo ip link set "${IFACE}" type can bitrate "${bitrate}" restart-ms 100
+  # slcan does not support restart-ms
+  sudo ip link set "${IFACE}" type can bitrate "${bitrate}"
   sudo ip link set "${IFACE}" up
   ip -details link show "${IFACE}"
 }
