@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/digital-dash
-ExecStart=/usr/bin/npm run dev -- --host
+WorkingDirectory=__ROOT_DIR__
+ExecStart=__NPM_BIN__ run dev -- --host
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=development

@@ -2,6 +2,29 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Raspberry Pi Boot To Cluster
+
+To make a Raspberry Pi boot, start the app services, auto-login to the desktop, and open the cluster in Chromium kiosk mode, run this on the Pi:
+
+```bash
+cd /digital-dash
+sudo bash tools/systemd/install.sh /digital-dash <pi-username>
+sudo reboot
+```
+
+Passing the Pi desktop username as the second argument installs the systemd services, installs the required npm dependencies, disables desktop screen blanking, enables desktop auto-login, and adds a labwc autostart entry that opens:
+
+```text
+http://127.0.0.1:5173/cluster
+```
+
+Notes:
+
+- This kiosk flow targets current Raspberry Pi OS Desktop with Wayland/labwc.
+- On Raspberry Pi 4 and 5, the physical `HDMI1` port is named `HDMI-A-2` by Raspberry Pi OS.
+- If your repo lives somewhere other than `/digital-dash`, pass that path as the first argument; the installer rewrites the service files to match the real location.
+- The browser autostart script lives at `tools/kiosk/launch-cluster-kiosk.sh`, and the kiosk installer lives at `tools/kiosk/install-cluster-kiosk.sh`.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh

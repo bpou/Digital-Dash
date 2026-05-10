@@ -2,8 +2,8 @@
 #include <driver/twai.h>
 
 // ESP32 CAN (TWAI) pins
-constexpr gpio_num_t CAN_TX = GPIO_NUM_21; // CANTX
-constexpr gpio_num_t CAN_RX = GPIO_NUM_22; // CANRX
+constexpr gpio_num_t CAN_TX = GPIO_NUM_26; // CANTX
+constexpr gpio_num_t CAN_RX = GPIO_NUM_27; // CANRX
 
 // LED output (use GPIO2 / onboard LED on most dev boards)
 constexpr uint8_t PIN_LIGHT_OUT = 2;
@@ -12,24 +12,14 @@ constexpr uint8_t PIN_LIGHT_OUT = 2;
 constexpr uint32_t TEST_ID = 0x123;
 constexpr uint32_t LIGHT_ID = 0x321; // 1 byte payload: 01=on, 00=off
 
-// Trial bitrates (auto-cycling if no frames seen)
-static const twai_timing_config_t kTimingTable[] = {
-  TWAI_TIMING_CONFIG_500KBITS(),
-  TWAI_TIMING_CONFIG_250KBITS(),
-  TWAI_TIMING_CONFIG_125KBITS()
-};
-static const char* kTimingNames[] = {"500k", "250k", "125k"};
+// Fixed bitrate for this test (500 kbps)
+static const twai_timing_config_t kTimingTable[] = {TWAI_TIMING_CONFIG_500KBITS()};
+static const char* kTimingNames[] = {"500k"};
 static const size_t kTimingCount = sizeof(kTimingTable) / sizeof(kTimingTable[0]);
 
 // Test frame
-constexpr uint32_t TEST_INTERVAL_MS = 500;
-constexpr uint32_t LISTEN_ONLY_WINDOW_MS = 5000;
-constexpr uint32_t RATE_SCAN_INTERVAL_MS = 15000;
-
 size_t timingIndex = 0;
-uint32_t lastTxMs = 0;
 uint32_t lastRxMs = 0;
-uint32_t lastRateSwitchMs = 0;
 uint32_t listenStartMs = 0;
 bool listenOnly = true;
 
@@ -50,7 +40,6 @@ bool installAndStart(const twai_timing_config_t& timing) {
 
   listenOnly = true;
   listenStartMs = millis();
-  lastRateSwitchMs = millis();
   lastRxMs = 0;
   Serial.print("TWAI started in LISTEN_ONLY @ ");
   Serial.println(kTimingNames[timingIndex]);
@@ -106,14 +95,4 @@ void loop() {
     Serial.println();
   }
 
-  uint32_t now = millis();
-
-  // If no RX for a while, cycle bitrate
-  if (now - lastRateSwitchMs >= RATE_SCAN_INTERVAL_MS) {
-    lastRateSwitchMs = now;
-    size_t nextIndex = (timingIndex + 1) % kTimingCount;
-    Serial.print("No RX, trying bitrate ");
-    Serial.println(kTimingNames[nextIndex]);
-    switchToTiming(nextIndex);
-  }
 }
