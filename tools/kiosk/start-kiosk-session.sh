@@ -57,6 +57,7 @@ while true; do
     --no-first-run \
     --noerrdialogs \
     --disable-infobars \
+    --default-background-color=000000ff \
     --enable-features=UseOzonePlatform,OverlayScrollbar \
     "${START_PAGE}"
   echo "Chromium exited; restarting in 1s"

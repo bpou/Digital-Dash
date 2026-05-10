@@ -75,5 +75,6 @@ exec "${BROWSER_BIN}" \
   --no-first-run \
   --noerrdialogs \
   --disable-infobars \
+  --default-background-color=000000ff \
   --enable-features=UseOzonePlatform,OverlayScrollbar \
   "${START_PAGE}"
