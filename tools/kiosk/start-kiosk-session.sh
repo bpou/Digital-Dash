@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR=${1:-/digital-dash}
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
+KIOSK_HOLD_SECONDS=${DIGITAL_DASH_KIOSK_HOLD_SECONDS:-1.2}
 USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
@@ -15,6 +16,7 @@ exec >> "${LOG_FILE}" 2>&1
 echo "[$(date -Iseconds)] Starting Digital Dash kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
+echo "KIOSK_HOLD_SECONDS=${KIOSK_HOLD_SECONDS}"
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/${USER_ID}" ]; then
   export XDG_RUNTIME_DIR="/run/user/${USER_ID}"
@@ -68,10 +70,13 @@ if [ -t 1 ]; then
   fi
 fi
 
+sleep "${KIOSK_HOLD_SECONDS}"
+
 while true; do
   cage -d -s -- "${BROWSER_BIN}" \
     --ozone-platform=wayland \
     --kiosk \
+    --app="${START_PAGE}" \
     --start-maximized \
     --no-first-run \
     --noerrdialogs \
