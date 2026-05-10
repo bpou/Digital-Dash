@@ -15,7 +15,19 @@ exec >> "${LOG_FILE}" 2>&1
 echo "[$(date -Iseconds)] Starting Digital Dash kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
+
+if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/${USER_ID}" ]; then
+  export XDG_RUNTIME_DIR="/run/user/${USER_ID}"
+fi
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "${XDG_RUNTIME_DIR}/bus" ]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+fi
+
+export XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-wayland}
+
 echo "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset}"
+echo "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-unset}"
 
 find_browser() {
   local candidate

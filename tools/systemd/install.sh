@@ -90,7 +90,7 @@ fi
 
 echo "Installed and started: digital-dash-ui.service, digital-dash-vehicle.service, digital-dash-bluetooth.service"
 if [ -n "${KIOSK_USER}" ]; then
-  echo "Cluster kiosk autostart installed for desktop user: ${KIOSK_USER}"
+  echo "Cluster kiosk boot installed for user: ${KIOSK_USER}"
 fi
 echo "If Bluetooth audio uses a user session (PipeWire/PulseAudio), enable lingering for the service user so audio is available on boot:"
 echo "  sudo loginctl enable-linger admin"
