@@ -63,10 +63,6 @@ if [ -f "${ROOT_DIR}/tools/hotspot/start-hotspot.sh" ]; then
   run_root chmod +x "${ROOT_DIR}/tools/hotspot/start-hotspot.sh"
 fi
 
-if [ -f "${ROOT_DIR}/tools/kiosk/launch-cluster-kiosk.sh" ]; then
-  run_root chmod +x "${ROOT_DIR}/tools/kiosk/launch-cluster-kiosk.sh"
-fi
-
 if [ -f "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" ]; then
   run_root chmod +x "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh"
 fi
@@ -104,5 +100,6 @@ echo "Installed and started: digital-dash-ui.service, digital-dash-vehicle.servi
 if [ -n "${KIOSK_USER}" ]; then
   echo "Cluster kiosk boot installed for user: ${KIOSK_USER}"
 fi
+LINGER_USER=${KIOSK_USER:-<pi-user>}
 echo "If Bluetooth audio uses a user session (PipeWire/PulseAudio), enable lingering for the service user so audio is available on boot:"
-echo "  sudo loginctl enable-linger admin"
+echo "  sudo loginctl enable-linger ${LINGER_USER}"

@@ -300,13 +300,6 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
     return getSquirclePoint(size, 24, squirclePower, normalized, startAngleDeg, sweepAngleDeg, direction);
   }, [size, squirclePower, normalized, startAngleDeg, sweepAngleDeg, direction]);
 
-  // Needle angle for rotation (in degrees)
-  const needleAngleDeg = useMemo(() => {
-    const dir = direction === "clockwise" ? 1 : -1;
-    return startAngleDeg + dir * normalized * sweepAngleDeg;
-  }, [normalized, startAngleDeg, sweepAngleDeg, direction]);
-  void needleAngleDeg;
-
   // Calculate zone colors for current value
   const currentZoneColor = useMemo(() => {
     if (zones.length === 0) return accentColor;
@@ -320,7 +313,6 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
   }, [zones, currentValue, accentColor]);
 
   // Arc dimensions
-  const trackWidth = Math.max(6, size * 0.018);
   const activeWidth = Math.max(14, size * 0.038);
   const glowWidth = activeWidth + size * 0.02;
 
@@ -334,20 +326,6 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
     strokeDashoffset: "0",
     pathLength: 1,
   };
-  const endCapPos = fillLength;
-  const showEndCap = normalized > 0.001;
-  const glowCapRadius = glowWidth / 2;
-  const activeCapRadius = activeWidth / 2;
-  const coreCapRadius = Math.max(3, activeWidth * 0.25) / 2;
-  const arcStartPoint = useMemo(
-    () => getSquirclePoint(size, 16, squirclePower, 0, startAngleDeg, sweepAngleDeg, direction),
-    [size, squirclePower, startAngleDeg, sweepAngleDeg, direction]
-  );
-  const arcEndPoint = useMemo(
-    () => getSquirclePoint(size, 16, squirclePower, endCapPos, startAngleDeg, sweepAngleDeg, direction),
-    [size, squirclePower, endCapPos, startAngleDeg, sweepAngleDeg, direction]
-  );
-  void [trackWidth, showEndCap, glowCapRadius, activeCapRadius, coreCapRadius, arcStartPoint, arcEndPoint];
 
   return (
     <div 

@@ -1,137 +1,99 @@
-# React + TypeScript + Vite
+# Digital Dash
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Digital instrument cluster and center-screen UI intended to run locally on a Raspberry Pi.
 
-## Raspberry Pi Boot To Cluster
+## Local Development
 
-The Pi path is no longer based on Vite dev mode or desktop autostart.
-
-`tools/systemd/install.sh` now:
-
-- installs npm dependencies
-- builds the production UI bundle into `dist/`
-- serves the UI from a small local Node static server on `:5173`
-- enables the vehicle and Bluetooth services
-- optionally installs the kiosk boot path for a Pi user
-
-`tools/kiosk/install-cluster-kiosk.sh` now:
-
-- sets up `tty1` autologin for the chosen user
-- prefers `cog` on DRM/KMS when available
-- falls back to Chromium on `labwc` when `cog` is unavailable
-- keeps the Raspberry Pi boot splash enabled
-
-To install everything on the Pi:
+Install dependencies:
 
 ```bash
-cd /digital-dash
-sudo bash tools/systemd/install.sh /digital-dash <pi-username>
-sudo reboot
+npm install
+(cd server/bluetooth-service && npm install)
 ```
 
-After reboot the cluster target is:
+Run the three local processes:
+
+```bash
+# UI (Vite dev server)
+npm run dev -- --host
+
+# vehicle websocket / MQTT bridge
+npm run vehicle-service
+
+# bluetooth bridge
+node server/bluetooth-service/server.js
+```
+
+Cluster route:
 
 ```text
 http://127.0.0.1:5173/cluster
 ```
 
-Notes:
+## Raspberry Pi Install
 
-- `DIGITAL_DASH_KIOSK_RUNTIME=auto` is the default. It will try `cog` first, then fall back to Chromium.
-- The UI service is production-mode now, not `npm run dev`.
-- The Chromium fallback launcher lives in `tools/kiosk/start-kiosk-session.sh`.
-- The Pi installer rewrites the systemd service files to the real repo path you pass in.
-- On Raspberry Pi 4 and 5, the physical `HDMI1` port is named `HDMI-A-2` by Raspberry Pi OS.
-- If you want a custom full-screen image during the earliest boot phase, Raspberry Pi officially supports that with `rpi-splash-screen-support` and `configure-splash`.
+The Pi install path is production-oriented. It builds the UI into `dist/`, serves it locally from a small Node static server, enables the backend services, and can optionally install the kiosk boot path for a user.
 
-Currently, two official plugins are available:
+From the repo root on the Pi:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+sudo bash tools/systemd/install.sh "$PWD" <pi-username>
+sudo reboot
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+What this installer does:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- installs npm dependencies
+- builds the production UI bundle
+- enables and restarts `digital-dash-ui.service`
+- enables and restarts `digital-dash-vehicle.service`
+- enables and restarts `digital-dash-bluetooth.service`
+- optionally installs the `tty1` kiosk boot flow for the chosen user
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Relevant files:
 
-## Bluetooth phone calling (HFP via oFono)
+- `tools/systemd/install.sh`
+- `tools/systemd/digital-dash-ui.service`
+- `tools/systemd/digital-dash-vehicle.service`
+- `tools/systemd/digital-dash-bluetooth.service`
+- `tools/kiosk/install-cluster-kiosk.sh`
+- `tools/kiosk/start-kiosk-session.sh`
+- `tools/ui-server/server.js`
 
-The Phone tab can place/answer/hang up calls over Bluetooth when the `bluetooth-service` can access an oFono modem. This requires oFono to be installed, configured, and paired to your phone with the Hands-Free profile (HFP).
+## Kiosk Boot Notes
 
-### 1) Install oFono and BlueZ extras
+The current kiosk path is:
 
-On Debian/Ubuntu/Raspberry Pi OS:
+- `tty1` autologin for the selected user
+- direct kiosk launch from the login shell
+- `labwc` Wayland session
+- fullscreen Chromium booting into the cluster flow
+
+Current splash assets:
+
+- early boot splash can be handled by Raspberry Pi OS / Plymouth
+- the in-browser branded splash uses `public/Das Rolf.png`
+
+On Raspberry Pi 4/5, the physical `HDMI1` connector is typically exposed by Raspberry Pi OS as `HDMI-A-2`.
+
+## Bluetooth Phone Calling (HFP via oFono)
+
+The Phone tab can place, answer, and hang up calls over Bluetooth when the `bluetooth-service` can access an oFono modem. This requires oFono to be installed, configured, and paired to your phone with the Hands-Free profile (HFP).
+
+### 1. Install oFono and BlueZ extras
+
+On Debian, Ubuntu, or Raspberry Pi OS:
 
 ```bash
 sudo apt update
 sudo apt install -y ofono bluez bluez-tools
 ```
 
-`ofono-phonesim` is optional and not available on all distros; it is only needed for testing without a real phone.
+`ofono-phonesim` is optional and only useful for testing without a real phone.
 
-### 2) Configure BlueZ for HFP
+### 2. Configure BlueZ for HFP
 
-Edit `[/etc/bluetooth/main.conf](/etc/bluetooth/main.conf)` and ensure HFP is enabled:
+Edit [`/etc/bluetooth/main.conf`](/etc/bluetooth/main.conf) and ensure HFP-related profiles are enabled:
 
 ```ini
 [General]
@@ -145,9 +107,9 @@ Restart BlueZ:
 sudo systemctl restart bluetooth
 ```
 
-### 3) Configure oFono to use BlueZ
+### 3. Configure oFono to use BlueZ
 
-Create or edit `[/etc/ofono/main.conf](/etc/ofono/main.conf)`:
+Create or edit [`/etc/ofono/main.conf`](/etc/ofono/main.conf):
 
 ```ini
 [General]
@@ -161,13 +123,11 @@ Restart oFono:
 sudo systemctl restart ofono
 ```
 
-### 4) Pair phone with HFP profile
+### 4. Pair the phone with HFP enabled
 
-Ensure your phone supports HFP and allow “phone calls” during pairing. Pair using the Settings tab in the UI. The oFono modem should appear as a BlueZ modem once connected.
+Ensure your phone supports HFP and allow phone calls during pairing. Pair using the Settings tab in the UI. The oFono modem should appear as a BlueZ modem once connected.
 
-### 5) Verify oFono sees the modem
-
-Run:
+### 5. Verify oFono sees the modem
 
 ```bash
 sudo busctl --system call org.ofono / org.ofono.Manager GetModems
@@ -175,14 +135,14 @@ sudo busctl --system call org.ofono / org.ofono.Manager GetModems
 
 You should see an `/ofono/<modem>` path in the output. If not, re-pair the phone and confirm HFP permissions.
 
-If you see `Call failed: Access denied`, allow the service user to call oFono over D-Bus. Install polkit first if needed (package names vary by distro):
+If you see `Call failed: Access denied`, allow the service user to call oFono over D-Bus. Install polkit first if needed:
 
 ```bash
 sudo apt install -y polkitd pkexec
 sudo systemctl restart polkit
 ```
 
-Then replace any existing rule with this broader one:
+Then install a permissive oFono rule for the service user:
 
 ```bash
 sudo tee /etc/polkit-1/rules.d/60-digital-dash-ofono.rules <<'EOF'
@@ -196,23 +156,27 @@ polkit.addRule(function(action, subject) {
 EOF
 ```
 
-Then restart polkit and oFono:
+Restart polkit and oFono:
 
 ```bash
 sudo systemctl restart polkit
 sudo systemctl restart ofono
 ```
 
-### 6) Call actions from the UI
+### 6. Call actions from the UI
 
-The Phone tab issues these backend endpoints:
+The Phone tab uses these backend endpoints:
 
 - `POST /call/dial?number=...`
 - `POST /call/answer`
 - `POST /call/hangup`
 
-These map to oFono voice call operations in [`server/bluetooth-service/server.js`](server/bluetooth-service/server.js:308). If calls still don’t start, check the bluetooth service logs:
+These map to oFono voice call operations in [server/bluetooth-service/server.js](/server/bluetooth-service/server.js:308).
+
+Useful logs:
 
 ```bash
+sudo journalctl -u digital-dash-ui.service -f
+sudo journalctl -u digital-dash-vehicle.service -f
 sudo journalctl -u digital-dash-bluetooth.service -f
 ```

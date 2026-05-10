@@ -26,26 +26,9 @@
   }
 
   .font-mono-values {
-    font-family:
-      ui-monospace,
-      SFMono-Regular,
-      Menlo,
-      Monaco,
-      Consolas,
-      "Liberation Mono",
-      "Courier New",
-      monospace;
-  }
-
-  .font-quadaptor-values {
-    font-family: "Quadaptor", "Jurist Dire", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  }
-
-  .font-mono-values {
     font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
       "Liberation Mono", "Courier New", monospace;
   }
-
 }
 
 @keyframes cluster-float {

@@ -139,7 +139,6 @@ const bearingDegrees = (a: { lat: number; lng: number }, b: { lat: number; lng: 
   const θ = Math.atan2(y, x);
   return ((θ * 180) / Math.PI + 360) % 360;
 };
-void bearingDegrees;
 
 /**
  * Fast-ish "off-route" distance by checking nearest distance to line segments.
@@ -285,7 +284,7 @@ export default function NavigationPage() {
     if (!map) return;
 
     // More "nav feel"
-    const bearing = heading ?? map.getBearing();
+    const bearing = heading ?? (selectedPlace ? bearingDegrees(loc, selectedPlace.location) : map.getBearing());
     map.easeTo({
       center: [loc.lng, loc.lat],
       zoom: Math.max(map.getZoom(), 15),
@@ -583,7 +582,9 @@ export default function NavigationPage() {
     // Voice callouts thresholds
     const announceFar = 220; // meters
     const announceNear = 60; // meters
-    void [distToManeuver, dynamicArrive, announceFar, announceNear];
+    if (distToManeuver > announceFar || dynamicArrive >= announceNear || announceFar <= announceNear) {
+      return;
+    }
 
     // Speak callout for current step once as you get close-ish
     if (lastSpokenStepIndex !== currentStepIndex) {

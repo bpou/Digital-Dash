@@ -117,7 +117,7 @@ export default function ClusterScreen() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#07090c] text-white" style={{backgroundColor: '#07090c'}}>
+    <div className="min-h-screen bg-[#07090c] text-white">
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div
