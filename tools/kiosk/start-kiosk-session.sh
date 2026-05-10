@@ -4,13 +4,13 @@ set -euo pipefail
 ROOT_DIR=${1:-/digital-dash}
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
 KIOSK_HOLD_SECONDS=${DIGITAL_DASH_KIOSK_HOLD_SECONDS:-0.4}
+SPLASH_MAX_WAIT_SECONDS=${DIGITAL_DASH_SPLASH_MAX_WAIT_SECONDS:-20}
 GTK_THEME_NAME=${DIGITAL_DASH_GTK_THEME:-Adwaita:dark}
 USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
 LOG_FILE="${LOG_DIR}/digital-dash-kiosk-session.log"
 SPLASH_IMAGE_PATH="${ROOT_DIR}/public/Das Rolf.png"
-SYSTEM_READY_MARKER_FILE=/run/digital-dash/cluster-ready
 
 mkdir -p "${LOG_DIR}"
 exec >> "${LOG_FILE}" 2>&1
@@ -19,6 +19,7 @@ echo "[$(date -Iseconds)] Starting Digital Dash kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
 echo "KIOSK_HOLD_SECONDS=${KIOSK_HOLD_SECONDS}"
+echo "SPLASH_MAX_WAIT_SECONDS=${SPLASH_MAX_WAIT_SECONDS}"
 echo "GTK_THEME_NAME=${GTK_THEME_NAME}"
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/${USER_ID}" ]; then
@@ -52,6 +53,12 @@ if [ -z "${BROWSER_BIN}" ]; then
   exit 1
 fi
 
+SWAYLOCK_BIN=$(command -v swaylock || true)
+if [ -z "${SWAYLOCK_BIN}" ]; then
+  echo "swaylock not found." >&2
+  exit 1
+fi
+
 if ! command -v labwc >/dev/null 2>&1; then
   echo "labwc not found." >&2
   exit 1
@@ -68,7 +75,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 echo "BROWSER_BIN=${BROWSER_BIN}"
-echo "SYSTEM_READY_MARKER_FILE=${SYSTEM_READY_MARKER_FILE}"
+echo "SWAYLOCK_BIN=${SWAYLOCK_BIN}"
 
 cd "${ROOT_DIR}"
 
@@ -85,10 +92,11 @@ LABWC_CONFIG_DIR="${XDG_RUNTIME_DIR}/digital-dash-labwc"
 LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
 LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
 LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
+READY_MARKER_FILE="${LABWC_CONFIG_DIR}/cluster-ready"
 RUNTIME_SPLASH_FILE="${LABWC_CONFIG_DIR}/splash-runtime.html"
 
 mkdir -p "${LABWC_CONFIG_DIR}"
-rm -f "${SYSTEM_READY_MARKER_FILE}" 2>/dev/null || true
+rm -f "${READY_MARKER_FILE}"
 
 READY_PORT=$((38000 + (USER_ID % 1000)))
 READY_SIGNAL_URL="http://127.0.0.1:${READY_PORT}/ready"
@@ -211,8 +219,41 @@ const server = http.createServer((req, res) => {
 });
 server.listen(port, "127.0.0.1");
 setTimeout(() => server.close(() => process.exit(0)), 30000);
-' "${READY_PORT}" "${SYSTEM_READY_MARKER_FILE}" &
+' "${READY_PORT}" "${READY_MARKER_FILE}" &
 READY_SERVER_PID=\$!
+
+SWAYLOCK_READY_FIFO="${LABWC_CONFIG_DIR}/swaylock-ready.fifo"
+rm -f "\${SWAYLOCK_READY_FIFO}"
+mkfifo "\${SWAYLOCK_READY_FIFO}"
+
+if command -v timeout >/dev/null 2>&1; then
+  timeout 5 head -c 1 < "\${SWAYLOCK_READY_FIFO}" >/dev/null &
+else
+  head -c 1 < "\${SWAYLOCK_READY_FIFO}" >/dev/null &
+fi
+SWAYLOCK_READY_PID=\$!
+
+if [ -f "${SPLASH_IMAGE_PATH}" ]; then
+  "${SWAYLOCK_BIN}" \
+    --color 000000 \
+    --image "${SPLASH_IMAGE_PATH}" \
+    --scaling fill \
+    --no-unlock-indicator \
+    --ready-fd 3 \
+    3>"\${SWAYLOCK_READY_FIFO}" &
+else
+  "${SWAYLOCK_BIN}" \
+    --color 000000 \
+    --no-unlock-indicator \
+    --ready-fd 3 \
+    3>"\${SWAYLOCK_READY_FIFO}" &
+fi
+SPLASH_PID=\$!
+
+if ! wait "\${SWAYLOCK_READY_PID}"; then
+  echo "swaylock readiness timed out; continuing"
+fi
+rm -f "\${SWAYLOCK_READY_FIFO}"
 
 "${BROWSER_BIN}" \
   --ozone-platform=wayland \
@@ -227,8 +268,19 @@ READY_SERVER_PID=\$!
   --enable-features=UseOzonePlatform,OverlayScrollbar &
 CHROMIUM_PID=\$!
 
+for _ in \$(seq 1 $((SPLASH_MAX_WAIT_SECONDS * 10))); do
+  if [ -f "${READY_MARKER_FILE}" ]; then
+    break
+  fi
+  sleep 0.1
+done
+
+if [ -n "\${SPLASH_PID}" ] && kill -0 "\${SPLASH_PID}" 2>/dev/null; then
+  kill "\${SPLASH_PID}" || true
+fi
+
 if kill -0 "\${READY_SERVER_PID}" 2>/dev/null; then
-  wait "\${READY_SERVER_PID}" || true
+  kill "\${READY_SERVER_PID}" || true
 fi
 
 wait "\${CHROMIUM_PID}"

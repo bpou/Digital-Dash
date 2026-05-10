@@ -9,10 +9,6 @@ GETTY_OVERRIDE_FILE=${GETTY_OVERRIDE_DIR}/digital-dash-autologin.conf
 CMDLINE_FILE=/boot/firmware/cmdline.txt
 PLYMOUTH_QUIT_OVERRIDE_DIR=/etc/systemd/system/plymouth-quit.service.d
 PLYMOUTH_QUIT_OVERRIDE_FILE=${PLYMOUTH_QUIT_OVERRIDE_DIR}/override.conf
-PLYMOUTH_QUIT_WAIT_OVERRIDE_DIR=/etc/systemd/system/plymouth-quit-wait.service.d
-PLYMOUTH_QUIT_WAIT_OVERRIDE_FILE=${PLYMOUTH_QUIT_WAIT_OVERRIDE_DIR}/override.conf
-TMPFILES_FILE=/etc/tmpfiles.d/digital-dash.conf
-PLYMOUTH_HANDOFF_SERVICE_FILE=/etc/systemd/system/digital-dash-plymouth-handoff.service
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run this installer with sudo." >&2
@@ -43,13 +39,11 @@ PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
 LOGIN_HELPER_TMP_FILE=$(mktemp)
 PROFILE_TMP_FILE=$(mktemp)
 GETTY_TMP_FILE=$(mktemp)
-PLYMOUTH_HANDOFF_TMP_FILE=$(mktemp)
 
 cleanup() {
   rm -f "${LOGIN_HELPER_TMP_FILE}"
   rm -f "${PROFILE_TMP_FILE}"
   rm -f "${GETTY_TMP_FILE}"
-  rm -f "${PLYMOUTH_HANDOFF_TMP_FILE}"
 }
 trap cleanup EXIT
 
@@ -79,7 +73,7 @@ fi
 
 if command -v apt-get >/dev/null 2>&1; then
   apt-get update
-  apt-get install -y labwc swaybg
+  apt-get install -y labwc swaybg swaylock
 fi
 
 cat > "${LOGIN_HELPER_TMP_FILE}" <<EOF
@@ -141,34 +135,8 @@ install -d -m 0755 "${PLYMOUTH_QUIT_OVERRIDE_DIR}"
 cat > "${PLYMOUTH_QUIT_OVERRIDE_FILE}" <<EOF
 [Service]
 ExecStart=
-ExecStart=/bin/true
+ExecStart=-/usr/bin/plymouth quit --retain-splash
 EOF
-install -d -m 0755 "${PLYMOUTH_QUIT_WAIT_OVERRIDE_DIR}"
-cat > "${PLYMOUTH_QUIT_WAIT_OVERRIDE_FILE}" <<EOF
-[Service]
-ExecStart=
-ExecStart=/bin/true
-EOF
-
-cat > "${TMPFILES_FILE}" <<EOF
-d /run/digital-dash 0775 root ${TARGET_GROUP} - -
-EOF
-
-cat > "${PLYMOUTH_HANDOFF_TMP_FILE}" <<EOF
-[Unit]
-Description=Hide Plymouth after Digital Dash is ready
-After=plymouth-start.service getty@tty1.service systemd-user-sessions.service
-
-[Service]
-Type=oneshot
-ExecStart=/bin/sh -lc 'for _ in \$(seq 1 450); do [ -f /run/digital-dash/cluster-ready ] && break; sleep 0.1; done; /usr/bin/plymouth quit || true'
-RemainAfterExit=yes
-TimeoutSec=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-install -m 0644 "${PLYMOUTH_HANDOFF_TMP_FILE}" "${PLYMOUTH_HANDOFF_SERVICE_FILE}"
 
 if [ -f "${LABWC_AUTOSTART_FILE}" ]; then
   mv "${LABWC_AUTOSTART_FILE}" "${LABWC_AUTOSTART_FILE}.bak"
@@ -177,12 +145,12 @@ fi
 rm -f "${AUTOSTART_FILE}"
 rm -f /etc/lightdm/lightdm.conf.d/99-digital-dash-kiosk.conf
 rm -f /usr/share/wayland-sessions/digital-dash-kiosk.desktop
-systemd-tmpfiles --create "${TMPFILES_FILE}"
-rm -f /run/digital-dash/cluster-ready
+rm -rf /etc/systemd/system/plymouth-quit-wait.service.d
+rm -f /etc/tmpfiles.d/digital-dash.conf
+rm -f /etc/systemd/system/digital-dash-plymouth-handoff.service
 
 systemctl daemon-reload
 systemctl enable getty@tty1.service
-systemctl enable digital-dash-plymouth-handoff.service
 systemctl disable lightdm.service >/dev/null 2>&1 || true
 systemctl set-default multi-user.target
 
