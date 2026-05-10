@@ -4,7 +4,10 @@
 
 set -euo pipefail
 
-ROOT_DIR=${1:-/digital-dash}
+# Find the script directory to get ROOT_DIR
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
 SPLASH_IMAGE="${ROOT_DIR}/public/Das Rolf.png"
 CLUSTER_BG="#07090c"
@@ -16,6 +19,11 @@ export XDG_SESSION_TYPE=wayland
 export GTK_THEME=Adwaita:dark
 export XDG_RUNTIME_DIR="${RUNTIME_DIR}"
 mkdir -p "${RUNTIME_DIR}"
+
+# Find binaries (systemd has limited PATH)
+CHROMIUM_BIN=$(command -v chromium chromium-browser 2>/dev/null | head -1 || echo "/usr/bin/chromium")
+SWAYBG_BIN=$(command -v swaybg 2>/dev/null || echo "/usr/bin/swaybg")
+PLYMOUTH_BIN=$(command -v plymouth 2>/dev/null || echo "/usr/bin/plymouth")
 
 # Setup labwc config directory
 LABWC_DIR="${RUNTIME_DIR}/digital-dash"
@@ -51,19 +59,14 @@ HTMLEOF
 sed -i "s|SPLASH_URL|file://${SPLASH_IMAGE// /%20}|" "${LABWC_DIR}/splash.html"
 sed -i "s|TARGET_URL|${TARGET_URL}|" "${LABWC_DIR}/splash.html"
 
-# Labwc autostart - runs after labwc starts
+# Labwc autostart
 cat > "${LABWC_DIR}/autostart" <<AUTOSTARTEOF
 #!/bin/bash
-# Kill existing swaybg
 pkill -f swaybg 2>/dev/null || true
-# Start background matching splash color - MUST DO THIS BEFORE PLYMOUTH QUIT
-swaybg -i "${SPLASH_IMAGE}" -m fill -c ${CLUSTER_BG_HEX} &
-# Wait for swaybg to draw
+"${SWAYBG_BIN}" -i "${SPLASH_IMAGE}" -m fill -c ${CLUSTER_BG_HEX} &
 sleep 0.3
-# Now tell Plymouth to quit - we have content visible
-plymouth --ping && plymouth quit --retain-splash 2>/dev/null || true
-# Launch Chromium
-chromium --ozone-platform=wayland --kiosk --no-first-run --noerrdialogs \
+"${PLYMOUTH_BIN}" --ping && "${PLYMOUTH_BIN}" quit --retain-splash 2>/dev/null || true
+"${CHROMIUM_BIN}" --ozone-platform=wayland --kiosk --no-first-run --noerrdialogs \
   --disable-infobars --default-background-color='#07090c' \
   --app="file://${LABWC_DIR}/splash.html" &
 AUTOSTARTEOF
@@ -75,5 +78,5 @@ GTK_THEME=Adwaita:dark
 XDG_SESSION_TYPE=wayland
 EOF
 
-# Start labwc - will block until session ends
+# Start labwc
 exec labwc -C "${LABWC_DIR}"

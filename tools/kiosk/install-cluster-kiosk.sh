@@ -45,11 +45,11 @@ Conflicts=getty@tty1.service display-manager.service
 [Service]
 Type=simple
 User=${TARGET_USER}
-WorkingDirectory=${ROOT_DIR}
+WorkingDirectory=/home/${TARGET_USER}/digital-dash
 Environment=XDG_SESSION_TYPE=wayland
 Environment=GTK_THEME=Adwaita:dark
-ExecStartPre=/bin/sleep 0.5
-ExecStart=${ROOT_DIR}/tools/kiosk/zero-flash-kiosk.sh
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/${TARGET_USER}/digital-dash/tools/kiosk/zero-flash-kiosk.sh
 Restart=always
 RestartSec=3
 TTYPath=/dev/tty1
@@ -57,7 +57,7 @@ TTYReset=yes
 TTYVHangup=yes
 
 [Install]
-WantedBy=graphical.target
+WantedBy=multi-user.target
 EOF
 
 # Clean up legacy configs
@@ -79,7 +79,7 @@ fi
 systemctl daemon-reload
 systemctl disable getty@tty1.service
 systemctl enable digital-dash-kiosk.service
-systemctl set-default graphical.target
+systemctl set-default multi-user.target
 
 echo ""
 echo "Installed Digital Dash zero-flash kiosk for user: ${TARGET_USER}"
@@ -87,7 +87,7 @@ echo ""
 echo "To complete setup:"
 echo "  1. Install Plymouth theme:"
 echo "     sudo mkdir -p /usr/share/plymouth/themes/digital-dash"
-echo "     sudo cp -r ${ROOT_DIR}/tools/kiosk/plymouth-theme/* /usr/share/plymouth/themes/digital-dash/"
+echo "     sudo cp -r /home/${TARGET_USER}/digital-dash/tools/kiosk/plymouth-theme/* /usr/share/plymouth/themes/digital-dash/"
 echo "     sudo plymouth-set-default-theme digital-dash"
 echo "     sudo update-initramfs -u"
 echo "  2. Reboot: sudo reboot"
