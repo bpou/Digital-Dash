@@ -61,6 +61,13 @@ echo "START_PAGE=${START_PAGE}"
 
 cd "${ROOT_DIR}"
 
+if [ -t 1 ]; then
+  printf '\033[?25l'
+  if command -v setterm >/dev/null 2>&1; then
+    setterm --term linux --foreground black --background black --clear all --cursor off
+  fi
+fi
+
 while true; do
   cage -d -s -- "${BROWSER_BIN}" \
     --ozone-platform=wayland \

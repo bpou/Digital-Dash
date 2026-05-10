@@ -6,6 +6,7 @@ TARGET_USER=${2:-${SUDO_USER:-}}
 TARGET_URL=${3:-http://127.0.0.1:5173/cluster}
 GETTY_OVERRIDE_DIR=/etc/systemd/system/getty@tty1.service.d
 GETTY_OVERRIDE_FILE=${GETTY_OVERRIDE_DIR}/digital-dash-autologin.conf
+CMDLINE_FILE=/boot/firmware/cmdline.txt
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run this installer with sudo." >&2
@@ -43,6 +44,13 @@ cleanup() {
   rm -f "${GETTY_TMP_FILE}"
 }
 trap cleanup EXIT
+
+ensure_cmdline_arg() {
+  local arg=$1
+  if [ -f "${CMDLINE_FILE}" ] && ! grep -Eq "(^|[[:space:]])${arg}([[:space:]]|$)" "${CMDLINE_FILE}"; then
+    sed -i "1s|\$| ${arg}|" "${CMDLINE_FILE}"
+  fi
+}
 
 if [ ! -d "${TARGET_HOME}" ]; then
   echo "Home directory not found for user: ${TARGET_USER}" >&2
@@ -108,8 +116,8 @@ chown "${TARGET_USER}:${TARGET_GROUP}" "${HUSHLOGIN_FILE}"
 cat > "${GETTY_TMP_FILE}" <<EOF
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --autologin ${TARGET_USER} --noclear %I \$TERM
-Type=simple
+ExecStart=-/sbin/agetty --autologin ${TARGET_USER} --noclear %I linux
+Type=idle
 EOF
 
 install -d -m 0755 "${GETTY_OVERRIDE_DIR}"
@@ -129,9 +137,16 @@ systemctl disable lightdm.service >/dev/null 2>&1 || true
 systemctl set-default multi-user.target
 
 if command -v raspi-config >/dev/null 2>&1; then
+  raspi-config nonint do_boot_splash 0 || true
   raspi-config nonint do_blanking 1 || true
 fi
 
+ensure_cmdline_arg quiet
+ensure_cmdline_arg splash
+ensure_cmdline_arg loglevel=3
+ensure_cmdline_arg vt.global_cursor_default=0
+ensure_cmdline_arg consoleblank=0
+
 echo "Installed Digital Dash tty1 kiosk for user: ${TARGET_USER}"
 echo "Cluster URL: ${TARGET_URL}"
-echo "On next boot, Raspberry Pi OS will skip the desktop manager and launch the kiosk directly from tty1."
+echo "On next boot, Raspberry Pi OS will skip the desktop manager, keep the boot splash enabled, and launch the kiosk directly from tty1."
