@@ -4,11 +4,11 @@
 
 set -euo pipefail
 
-# Find the script directory to get ROOT_DIR
+# Find the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
+TARGET_URL=${1:-http://127.0.0.1:5173/cluster}
 SPLASH_IMAGE="${ROOT_DIR}/public/Das Rolf.png"
 CLUSTER_BG="#07090c"
 CLUSTER_BG_HEX="07090c"
@@ -20,7 +20,7 @@ export GTK_THEME=Adwaita:dark
 export XDG_RUNTIME_DIR="${RUNTIME_DIR}"
 mkdir -p "${RUNTIME_DIR}"
 
-# Find binaries (systemd has limited PATH)
+# Find binaries
 CHROMIUM_BIN=$(command -v chromium chromium-browser 2>/dev/null | head -1 || echo "/usr/bin/chromium")
 SWAYBG_BIN=$(command -v swaybg 2>/dev/null || echo "/usr/bin/swaybg")
 PLYMOUTH_BIN=$(command -v plymouth 2>/dev/null || echo "/usr/bin/plymouth")
@@ -55,7 +55,6 @@ window.addEventListener('message',e=>{
 </body></html>
 HTMLEOF
 
-# Replace placeholders
 sed -i "s|SPLASH_URL|file://${SPLASH_IMAGE// /%20}|" "${LABWC_DIR}/splash.html"
 sed -i "s|TARGET_URL|${TARGET_URL}|" "${LABWC_DIR}/splash.html"
 
@@ -78,5 +77,4 @@ GTK_THEME=Adwaita:dark
 XDG_SESSION_TYPE=wayland
 EOF
 
-# Start labwc
 exec labwc -C "${LABWC_DIR}"

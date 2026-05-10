@@ -49,6 +49,7 @@ WorkingDirectory=/home/${TARGET_USER}/digital-dash
 Environment=XDG_SESSION_TYPE=wayland
 Environment=GTK_THEME=Adwaita:dark
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=WLR_RENDERER=pixman
 ExecStart=/home/${TARGET_USER}/digital-dash/tools/kiosk/zero-flash-kiosk.sh
 Restart=always
 RestartSec=3
