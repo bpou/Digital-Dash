@@ -59,28 +59,76 @@
     <img class="splash" src="../../public/Das%20Rolf.png" alt="Das Rolf" />
     <iframe class="cluster" title="Digital Dash Cluster" tabindex="-1"></iframe>
     <script>
-      const clusterUrl = "http://127.0.0.1:5173/cluster";
+      const params = new URLSearchParams(window.location.search);
+      const target = params.get("target") || "http://127.0.0.1:5173/cluster";
+      const readySignalUrl = params.get("kiosk_ready");
       const splashEl = document.querySelector(".splash");
       const frameEl = document.querySelector(".cluster");
-      let loadingStarted = false;
+      const clusterUrl = new URL(target);
+      if (readySignalUrl) {
+        clusterUrl.searchParams.set("kiosk_ready", readySignalUrl);
+      }
 
-      frameEl.addEventListener("load", () => {
+      let loadingStarted = false;
+      let frameLoaded = false;
+      let appReady = false;
+      let readySignaled = false;
+
+      const signalReady = () => {
+        if (readySignaled || !readySignalUrl) return;
+        readySignaled = true;
+        try {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(readySignalUrl, "ready");
+            return;
+          }
+        } catch {
+          // fall through to fetch
+        }
+        fetch(readySignalUrl, { method: "POST", mode: "no-cors", keepalive: true }).catch(() => {
+          // ignore readiness signal failures
+        });
+      };
+
+      const maybeReveal = () => {
+        if (!frameLoaded || !appReady) return;
         frameEl.classList.add("cluster--visible");
         splashEl.classList.add("splash--hidden");
+        signalReady();
+      };
+
+      frameEl.addEventListener("load", () => {
+        frameLoaded = true;
+        maybeReveal();
       });
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== frameEl.contentWindow) return;
+        const payload = event.data;
+        const type = typeof payload === "string" ? payload : payload && payload.type;
+        if (type === "digital-dash-ready") {
+          appReady = true;
+          maybeReveal();
+        }
+      });
+
+      window.setTimeout(() => {
+        appReady = true;
+        maybeReveal();
+      }, 20000);
 
       const checkCluster = async () => {
         try {
-          await fetch(clusterUrl, { cache: "no-store", mode: "no-cors" });
+          await fetch(target, { cache: "no-store", mode: "no-cors" });
           if (!loadingStarted) {
             loadingStarted = true;
-            frameEl.src = clusterUrl;
+            frameEl.src = clusterUrl.toString();
           }
           return;
         } catch {
-          // Ignore until service is ready
+          // Ignore until service is ready.
         }
-        window.setTimeout(checkCluster, 1000);
+        window.setTimeout(checkCluster, 500);
       };
 
       checkCluster();

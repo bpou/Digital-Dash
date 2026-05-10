@@ -4,13 +4,13 @@ set -euo pipefail
 ROOT_DIR=${1:-/digital-dash}
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
 KIOSK_HOLD_SECONDS=${DIGITAL_DASH_KIOSK_HOLD_SECONDS:-0.4}
-STARTUP_WAIT_SECONDS=${DIGITAL_DASH_STARTUP_WAIT_SECONDS:-45}
 GTK_THEME_NAME=${DIGITAL_DASH_GTK_THEME:-Adwaita:dark}
 USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
 LOG_FILE="${LOG_DIR}/digital-dash-kiosk-session.log"
 SPLASH_IMAGE_PATH="${ROOT_DIR}/public/Das Rolf.png"
+SPLASH_HTML_PATH="${ROOT_DIR}/tools/kiosk/splash.html"
 
 mkdir -p "${LOG_DIR}"
 exec >> "${LOG_FILE}" 2>&1
@@ -19,7 +19,6 @@ echo "[$(date -Iseconds)] Starting Digital Dash kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
 echo "KIOSK_HOLD_SECONDS=${KIOSK_HOLD_SECONDS}"
-echo "STARTUP_WAIT_SECONDS=${STARTUP_WAIT_SECONDS}"
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/${USER_ID}" ]; then
   export XDG_RUNTIME_DIR="/run/user/${USER_ID}"
@@ -74,8 +73,14 @@ LABWC_CONFIG_DIR="${XDG_RUNTIME_DIR:-/tmp}/digital-dash-labwc"
 LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
 LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
 LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
+READY_MARKER_FILE="${LABWC_CONFIG_DIR}/cluster-ready"
 
 mkdir -p "${LABWC_CONFIG_DIR}"
+rm -f "${READY_MARKER_FILE}"
+
+READY_PORT=$((38000 + (USER_ID % 1000)))
+READY_SIGNAL_URL="http://127.0.0.1:${READY_PORT}/ready"
+SPLASH_URL="file://${SPLASH_HTML_PATH// /%20}?target=${TARGET_URL}&kiosk_ready=${READY_SIGNAL_URL}"
 
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
@@ -87,19 +92,25 @@ else
   swaybg -c 000000 &
 fi
 
-if command -v curl >/dev/null 2>&1; then
-  for _ in \$(seq 1 $((STARTUP_WAIT_SECONDS * 2))); do
-    if curl -fsS "${TARGET_URL}" >/dev/null 2>&1; then
-      break
-    fi
-    sleep 0.5
-  done
-fi
+node -e '
+const fs = require("fs");
+const http = require("http");
+const port = Number(process.argv[1]);
+const marker = process.argv[2];
+const server = http.createServer((req, res) => {
+  res.statusCode = 204;
+  res.end();
+  try { fs.writeFileSync(marker, String(Date.now())); } catch {}
+});
+server.listen(port, "127.0.0.1");
+setTimeout(() => server.close(() => process.exit(0)), 30000);
+' "${READY_PORT}" "${READY_MARKER_FILE}" &
+READY_SERVER_PID=\$!
 
 exec "${BROWSER_BIN}" \
   --ozone-platform=wayland \
   --kiosk \
-  --app="${TARGET_URL}" \
+  --app="${SPLASH_URL}" \
   --start-maximized \
   --no-first-run \
   --noerrdialogs \
