@@ -1,0 +1,13 @@
+[Unit]
+Description=Digital Dash Plymouth to Compositor Handoff Wait
+After=plymouth-start.service plymouth-read-write.service
+Before=graphical-session.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'while [ ! -S /run/user/%U/wayland-1 ] 2>/dev/null; do sleep 0.1; done'
+TimeoutSec=30
+
+[Install]
+WantedBy=graphical-session-pre.target

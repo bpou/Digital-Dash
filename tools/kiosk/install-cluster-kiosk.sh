@@ -144,21 +144,52 @@ fi
 touch "${HUSHLOGIN_FILE}"
 chown "${TARGET_USER}:${TARGET_GROUP}" "${HUSHLOGIN_FILE}"
 
-cat > "${GETTY_TMP_FILE}" <<EOF
+# Zero-flash kiosk service
+cat > /etc/systemd/system/digital-dash-kiosk.service <<EOF
+[Unit]
+Description=Digital Dash Zero-Flash Kiosk
+After=plymouth-start.service network-online.target
+Wants=network-online.target
+Conflicts=getty@tty1.service display-manager.service
+
 [Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin ${TARGET_USER} --noclear %I linux
-Type=idle
+Type=simple
+User=${TARGET_USER}
+Group=${TARGET_GROUP}
+WorkingDirectory=${ROOT_DIR}
+Environment=XDG_SESSION_TYPE=wayland
+Environment=GTK_THEME=Adwaita:dark
+ExecStart=${ROOT_DIR}/tools/kiosk/zero-flash-kiosk.sh
+Restart=always
+RestartSec=3
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=graphical.target
 EOF
 
-install -d -m 0755 "${GETTY_OVERRIDE_DIR}"
-install -m 0644 "${GETTY_TMP_FILE}" "${GETTY_OVERRIDE_FILE}"
+# Override Plymouth quit to NOT auto-quit - we handle it manually
 install -d -m 0755 "${PLYMOUTH_QUIT_OVERRIDE_DIR}"
 cat > "${PLYMOUTH_QUIT_OVERRIDE_FILE}" <<EOF
 [Service]
-ExecStart=
-ExecStart=-/usr/bin/plymouth quit --retain-splash
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
 EOF
+
+rm -f /etc/systemd/system/digital-dash-plymouth-handoff.service 2>/dev/null || true
+
+# Plymouth cmdline args for clean boot
+ensure_cmdline_arg quiet
+ensure_cmdline_arg splash
+ensure_cmdline_arg loglevel=3
+
+systemctl daemon-reload
+systemctl disable getty@tty1.service
+systemctl enable digital-dash-kiosk.service
+systemctl set-default graphical.target
 
 if [ -f "${LABWC_AUTOSTART_FILE}" ]; then
   mv "${LABWC_AUTOSTART_FILE}" "${LABWC_AUTOSTART_FILE}.bak"
@@ -169,27 +200,12 @@ rm -f /etc/lightdm/lightdm.conf.d/99-digital-dash-kiosk.conf
 rm -f /usr/share/wayland-sessions/digital-dash-kiosk.desktop
 rm -rf /etc/systemd/system/plymouth-quit-wait.service.d
 rm -f /etc/tmpfiles.d/digital-dash.conf
-rm -f /etc/systemd/system/digital-dash-plymouth-handoff.service
 
-systemctl daemon-reload
-systemctl enable getty@tty1.service
-systemctl disable lightdm.service >/dev/null 2>&1 || true
-systemctl set-default multi-user.target
-
-if command -v raspi-config >/dev/null 2>&1; then
-  raspi-config nonint do_boot_splash 0 || true
-  raspi-config nonint do_blanking 1 || true
-fi
-
-ensure_cmdline_arg quiet
-ensure_cmdline_arg splash
-ensure_cmdline_arg loglevel=3
-ensure_cmdline_arg systemd.show_status=false
-ensure_cmdline_arg vt.global_cursor_default=0
-ensure_cmdline_arg consoleblank=0
-ensure_cmdline_arg logo.nologo
-remove_cmdline_arg console=tty1
-
-echo "Installed Digital Dash tty1 kiosk for user: ${TARGET_USER}"
+echo "Installed Digital Dash zero-flash kiosk for user: ${TARGET_USER}"
 echo "Cluster URL: ${TARGET_URL}"
-echo "On next boot, Raspberry Pi OS will skip the desktop manager, keep the boot splash enabled, and launch the kiosk directly from tty1."
+echo ""
+echo "Next steps:"
+echo "1. Install Plymouth theme: sudo cp -r tools/kiosk/plymouth-theme/* /usr/share/plymouth/themes/digital-dash/"
+echo "2. Set theme: sudo plymouth-set-default-theme digital-dash"
+echo "3. Update initramfs: sudo update-initramfs -u"
+echo "4. Reboot to test zero-flash boot"

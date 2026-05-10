@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Digital Dash
+Description=Dark theme matching cluster background (#07090c)
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/digital-dash
+ScriptFile=/usr/share/plymouth/themes/digital-dash/digital-dash.script

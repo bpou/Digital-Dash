@@ -1,0 +1,25 @@
+[Unit]
+Description=Digital Dash Zero-Flash Kiosk
+After=plymouth-quit-wait.service network-online.target
+Wants=network-online.target
+Conflicts=getty@tty1.service display-manager.service
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+WorkingDirectory=/digital-dash
+Environment=XDG_SESSION_TYPE=wayland
+Environment=GTK_THEME=Adwaita:dark
+ExecStart=/digital-dash/tools/kiosk/zero-flash-kiosk.sh
+Restart=always
+RestartSec=3
+StandardInput=tty
+StandardOutput=inherit
+StandardError=inherit
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=graphical.target

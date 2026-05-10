@@ -1,0 +1,17 @@
+# Digital Dash Plymouth theme script
+# Matches cluster background #07090c for seamless handoff
+
+wallpaper_image = Image("splash.png");
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+# Calculate position to center the image
+x = (screen_width - wallpaper_image.GetWidth()) / 2;
+y = (screen_height - wallpaper_image.GetHeight()) / 2;
+
+# Draw background matching cluster theme
+Window.SetBackgroundTopColor(0.027, 0.035, 0.043);    # #07090c
+Window.SetBackgroundBottomColor(0.027, 0.035, 0.043);  # #07090c
+
+# Draw the splash image centered
+wallpaper_image.Composite(x, y, 1.0);
