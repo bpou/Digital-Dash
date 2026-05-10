@@ -14,7 +14,30 @@
         background: #000;
       }
 
+      body {
+        position: relative;
+      }
+
+      .cluster {
+        position: absolute;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        border: 0;
+        background: #000;
+        opacity: 0;
+        transition: opacity 180ms linear;
+        pointer-events: none;
+      }
+
+      .cluster--visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
       .splash {
+        position: absolute;
+        inset: 0;
         display: block;
         width: 100vw;
         height: 100vh;
@@ -22,18 +45,36 @@
         object-position: center;
         user-select: none;
         -webkit-user-drag: none;
+        opacity: 1;
+        transition: opacity 180ms linear;
+      }
+
+      .splash--hidden {
+        opacity: 0;
       }
     </style>
   </head>
   <body>
     <img class="splash" src="../../public/Das%20Rolf.png" alt="Das Rolf" />
+    <iframe class="cluster" title="Digital Dash Cluster" tabindex="-1"></iframe>
     <script>
       const clusterUrl = "http://127.0.0.1:5173/cluster";
+      const splashEl = document.querySelector(".splash");
+      const frameEl = document.querySelector(".cluster");
+      let loadingStarted = false;
+
+      frameEl.addEventListener("load", () => {
+        frameEl.classList.add("cluster--visible");
+        splashEl.classList.add("splash--hidden");
+      });
 
       const checkCluster = async () => {
         try {
           await fetch(clusterUrl, { cache: "no-store", mode: "no-cors" });
-          window.location.replace(clusterUrl);
+          if (!loadingStarted) {
+            loadingStarted = true;
+            frameEl.src = clusterUrl;
+          }
           return;
         } catch {
           // Ignore until service is ready
