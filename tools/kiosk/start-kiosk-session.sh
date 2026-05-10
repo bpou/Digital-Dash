@@ -273,11 +273,29 @@ run_cog_once() {
 run_cog_session() {
   write_runtime_splash ""
   local runtime_url="file://${RUNTIME_SPLASH_FILE// /%20}"
+  local started_at
+  local finished_at
+  local runtime_seconds
+  local exit_code
 
   echo "Launching Cog DRM runtime"
   while true; do
+    started_at=$(date +%s)
+    set +e
     run_cog_once "${runtime_url}"
-    echo "Cog exited; restarting in 1s"
+    exit_code=$?
+    set -e
+    finished_at=$(date +%s)
+    runtime_seconds=$((finished_at - started_at))
+
+    echo "Cog exited with code ${exit_code} after ${runtime_seconds}s"
+    if [ "${KIOSK_RUNTIME}" = "auto" ] && [ -n "${CHROMIUM_BIN}" ] && [ "${runtime_seconds}" -lt 5 ]; then
+      echo "Cog exited too quickly in auto mode; falling back to Chromium"
+      run_chromium_session
+      return
+    fi
+
+    echo "Restarting Cog in 1s"
     sleep 1
   done
 }
