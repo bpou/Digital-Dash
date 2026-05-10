@@ -1,15 +1,17 @@
 [Unit]
-Description=Digital Dash UI (Vite dev server)
+Description=Digital Dash UI
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=__ROOT_DIR__
-ExecStart=__NPM_BIN__ run dev -- --host
+Environment=DIGITAL_DASH_UI_HOST=0.0.0.0
+Environment=DIGITAL_DASH_UI_PORT=5173
+ExecStart=__NPM_BIN__ run ui:serve
 Restart=on-failure
 RestartSec=3
-Environment=NODE_ENV=development
+Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target

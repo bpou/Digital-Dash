@@ -72,8 +72,30 @@ if [ ! -f "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" ]; then
 fi
 
 if command -v apt-get >/dev/null 2>&1; then
+  PACKAGES=()
+
   apt-get update
-  apt-get install -y labwc swaybg swaylock
+  if apt-cache show cog >/dev/null 2>&1; then
+    PACKAGES+=(cog)
+  fi
+  if apt-cache show labwc >/dev/null 2>&1; then
+    PACKAGES+=(labwc)
+  fi
+  if apt-cache show swaybg >/dev/null 2>&1; then
+    PACKAGES+=(swaybg)
+  fi
+  if apt-cache show swaylock >/dev/null 2>&1; then
+    PACKAGES+=(swaylock)
+  fi
+  if apt-cache show chromium >/dev/null 2>&1; then
+    PACKAGES+=(chromium)
+  elif apt-cache show chromium-browser >/dev/null 2>&1; then
+    PACKAGES+=(chromium-browser)
+  fi
+
+  if [ "${#PACKAGES[@]}" -gt 0 ]; then
+    apt-get install -y "${PACKAGES[@]}"
+  fi
 fi
 
 cat > "${LOGIN_HELPER_TMP_FILE}" <<EOF

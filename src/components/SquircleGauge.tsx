@@ -305,6 +305,7 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
     const dir = direction === "clockwise" ? 1 : -1;
     return startAngleDeg + dir * normalized * sweepAngleDeg;
   }, [normalized, startAngleDeg, sweepAngleDeg, direction]);
+  void needleAngleDeg;
 
   // Calculate zone colors for current value
   const currentZoneColor = useMemo(() => {
@@ -346,6 +347,7 @@ const SquircleGauge: React.FC<SquircleGaugeProps> = ({
     () => getSquirclePoint(size, 16, squirclePower, endCapPos, startAngleDeg, sweepAngleDeg, direction),
     [size, squirclePower, endCapPos, startAngleDeg, sweepAngleDeg, direction]
   );
+  void [trackWidth, showEndCap, glowCapRadius, activeCapRadius, coreCapRadius, arcStartPoint, arcEndPoint];
 
   return (
     <div 

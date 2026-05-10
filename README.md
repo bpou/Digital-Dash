@@ -4,7 +4,24 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 ## Raspberry Pi Boot To Cluster
 
-To make a Raspberry Pi boot, start the app services, auto-login to the desktop, and open the cluster in Chromium kiosk mode, run this on the Pi:
+The Pi path is no longer based on Vite dev mode or desktop autostart.
+
+`tools/systemd/install.sh` now:
+
+- installs npm dependencies
+- builds the production UI bundle into `dist/`
+- serves the UI from a small local Node static server on `:5173`
+- enables the vehicle and Bluetooth services
+- optionally installs the kiosk boot path for a Pi user
+
+`tools/kiosk/install-cluster-kiosk.sh` now:
+
+- sets up `tty1` autologin for the chosen user
+- prefers `cog` on DRM/KMS when available
+- falls back to Chromium on `labwc` when `cog` is unavailable
+- keeps the Raspberry Pi boot splash enabled
+
+To install everything on the Pi:
 
 ```bash
 cd /digital-dash
@@ -12,7 +29,7 @@ sudo bash tools/systemd/install.sh /digital-dash <pi-username>
 sudo reboot
 ```
 
-Passing the Pi desktop username as the second argument installs the systemd services, installs the required npm dependencies, enables the standard Raspberry Pi boot splash, disables desktop screen blanking, and configures LightDM to autologin directly into a dedicated kiosk session that opens a local Digital Dash splash page before handing off to:
+After reboot the cluster target is:
 
 ```text
 http://127.0.0.1:5173/cluster
@@ -20,10 +37,11 @@ http://127.0.0.1:5173/cluster
 
 Notes:
 
-- This kiosk flow targets current Raspberry Pi OS Desktop with Wayland/labwc.
+- `DIGITAL_DASH_KIOSK_RUNTIME=auto` is the default. It will try `cog` first, then fall back to Chromium.
+- The UI service is production-mode now, not `npm run dev`.
+- The Chromium fallback launcher lives in `tools/kiosk/start-kiosk-session.sh`.
+- The Pi installer rewrites the systemd service files to the real repo path you pass in.
 - On Raspberry Pi 4 and 5, the physical `HDMI1` port is named `HDMI-A-2` by Raspberry Pi OS.
-- If your repo lives somewhere other than `/digital-dash`, pass that path as the first argument; the installer rewrites the service files to match the real location.
-- The dedicated kiosk session launcher lives at `tools/kiosk/start-kiosk-session.sh`, the local splash page lives at `tools/kiosk/splash.html`, and the kiosk installer lives at `tools/kiosk/install-cluster-kiosk.sh`.
 - If you want a custom full-screen image during the earliest boot phase, Raspberry Pi officially supports that with `rpi-splash-screen-support` and `configure-splash`.
 
 Currently, two official plugins are available:

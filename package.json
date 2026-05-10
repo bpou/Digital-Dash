@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "ui:build": "npm run build",
+    "ui:serve": "node tools/ui-server/server.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "ytm-server": "node tools/ytm-server/server.js",

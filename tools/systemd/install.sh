@@ -13,6 +13,18 @@ run_root() {
   fi
 }
 
+run_npm_install() {
+  local dir=$1
+  (
+    cd "${dir}"
+    if [ -f package-lock.json ]; then
+      "${NPM_BIN}" ci
+    else
+      "${NPM_BIN}" install
+    fi
+  )
+}
+
 NODE_BIN=$(command -v node || true)
 if [ -z "${NODE_BIN}" ]; then
   if [ -x /usr/bin/node ]; then
@@ -63,17 +75,17 @@ if [ -f "${ROOT_DIR}/tools/kiosk/install-cluster-kiosk.sh" ]; then
   run_root chmod +x "${ROOT_DIR}/tools/kiosk/install-cluster-kiosk.sh"
 fi
 
-echo "Installing app dependencies (npm install) in: ${ROOT_DIR}"
+echo "Installing app dependencies in: ${ROOT_DIR}"
+run_npm_install "${ROOT_DIR}"
+
+echo "Building production UI bundle in: ${ROOT_DIR}"
 (
   cd "${ROOT_DIR}"
-  "${NPM_BIN}" install
+  "${NPM_BIN}" run ui:build
 )
 
-echo "Installing bluetooth-service dependencies (npm install) in: ${ROOT_DIR}/server/bluetooth-service"
-(
-  cd "${ROOT_DIR}/server/bluetooth-service"
-  "${NPM_BIN}" install
-)
+echo "Installing bluetooth-service dependencies in: ${ROOT_DIR}/server/bluetooth-service"
+run_npm_install "${ROOT_DIR}/server/bluetooth-service"
 
 run_root systemctl daemon-reload
 run_root systemctl enable digital-dash-ui.service

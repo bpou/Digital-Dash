@@ -139,6 +139,7 @@ const bearingDegrees = (a: { lat: number; lng: number }, b: { lat: number; lng: 
   const θ = Math.atan2(y, x);
   return ((θ * 180) / Math.PI + 360) % 360;
 };
+void bearingDegrees;
 
 /**
  * Fast-ish "off-route" distance by checking nearest distance to line segments.
@@ -582,6 +583,7 @@ export default function NavigationPage() {
     // Voice callouts thresholds
     const announceFar = 220; // meters
     const announceNear = 60; // meters
+    void [distToManeuver, dynamicArrive, announceFar, announceNear];
 
     // Speak callout for current step once as you get close-ish
     if (lastSpokenStepIndex !== currentStepIndex) {

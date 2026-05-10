@@ -47,13 +47,19 @@ export default function ClusterScreen() {
     if (readySignalSentRef.current) return;
 
     const readyUrl = new URLSearchParams(window.location.search).get("kiosk_ready");
-    if (!readyUrl) return;
-
     readySignalSentRef.current = true;
     let cancelled = false;
 
     const sendReady = () => {
       if (cancelled) return;
+      try {
+        if (window.top && window.top !== window) {
+          window.top.postMessage({ type: "digital-dash-ready" }, "*");
+        }
+      } catch {
+        // ignore postMessage failures
+      }
+      if (!readyUrl) return;
       try {
         if (navigator.sendBeacon) {
           navigator.sendBeacon(readyUrl, "ready");

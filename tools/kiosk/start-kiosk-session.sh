@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR=${1:-/digital-dash}
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
+KIOSK_RUNTIME=${DIGITAL_DASH_KIOSK_RUNTIME:-auto}
 KIOSK_HOLD_SECONDS=${DIGITAL_DASH_KIOSK_HOLD_SECONDS:-0.4}
 SPLASH_MAX_WAIT_SECONDS=${DIGITAL_DASH_SPLASH_MAX_WAIT_SECONDS:-20}
 GTK_THEME_NAME=${DIGITAL_DASH_GTK_THEME:-Adwaita:dark}
@@ -18,6 +19,7 @@ exec >> "${LOG_FILE}" 2>&1
 echo "[$(date -Iseconds)] Starting Digital Dash kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
+echo "KIOSK_RUNTIME=${KIOSK_RUNTIME}"
 echo "KIOSK_HOLD_SECONDS=${KIOSK_HOLD_SECONDS}"
 echo "SPLASH_MAX_WAIT_SECONDS=${SPLASH_MAX_WAIT_SECONDS}"
 echo "GTK_THEME_NAME=${GTK_THEME_NAME}"
@@ -36,7 +38,7 @@ export GTK_THEME="${GTK_THEME_NAME}"
 echo "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset}"
 echo "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-unset}"
 
-find_browser() {
+find_chromium() {
   local candidate
   for candidate in chromium chromium-browser; do
     if command -v "${candidate}" >/dev/null 2>&1; then
@@ -47,35 +49,72 @@ find_browser() {
   return 1
 }
 
-BROWSER_BIN=$(find_browser || true)
-if [ -z "${BROWSER_BIN}" ]; then
-  echo "Chromium not found." >&2
-  exit 1
-fi
+find_cog() {
+  if command -v cog >/dev/null 2>&1; then
+    command -v cog
+    return 0
+  fi
+  return 1
+}
 
-SWAYLOCK_BIN=$(command -v swaylock || true)
-if [ -z "${SWAYLOCK_BIN}" ]; then
-  echo "swaylock not found." >&2
-  exit 1
-fi
+CHROMIUM_BIN=$(find_chromium || true)
+COG_BIN=$(find_cog || true)
 
-if ! command -v labwc >/dev/null 2>&1; then
-  echo "labwc not found." >&2
-  exit 1
-fi
+select_runtime() {
+  case "${KIOSK_RUNTIME}" in
+    auto)
+      if [ -n "${COG_BIN}" ]; then
+        echo "cog"
+      else
+        echo "chromium"
+      fi
+      ;;
+    cog|wpe)
+      if [ -z "${COG_BIN}" ]; then
+        echo "Requested runtime '${KIOSK_RUNTIME}' but cog is not installed." >&2
+        exit 1
+      fi
+      echo "cog"
+      ;;
+    chromium)
+      if [ -z "${CHROMIUM_BIN}" ]; then
+        echo "Requested Chromium runtime but Chromium is not installed." >&2
+        exit 1
+      fi
+      echo "chromium"
+      ;;
+    *)
+      echo "Unsupported DIGITAL_DASH_KIOSK_RUNTIME: ${KIOSK_RUNTIME}" >&2
+      exit 1
+      ;;
+  esac
+}
 
-if ! command -v swaybg >/dev/null 2>&1; then
-  echo "swaybg not found." >&2
-  exit 1
-fi
+RUNTIME=$(select_runtime)
+echo "RUNTIME=${RUNTIME}"
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "node not found." >&2
-  exit 1
+if [ "${RUNTIME}" = "chromium" ]; then
+  if [ -z "${CHROMIUM_BIN}" ]; then
+    echo "Chromium not found." >&2
+    exit 1
+  fi
+  if ! command -v labwc >/dev/null 2>&1; then
+    echo "labwc not found." >&2
+    exit 1
+  fi
+  if ! command -v swaybg >/dev/null 2>&1; then
+    echo "swaybg not found." >&2
+    exit 1
+  fi
+  if ! command -v swaylock >/dev/null 2>&1; then
+    echo "swaylock not found." >&2
+    exit 1
+  fi
+  if ! command -v node >/dev/null 2>&1; then
+    echo "node not found." >&2
+    exit 1
+  fi
 fi
-
-echo "BROWSER_BIN=${BROWSER_BIN}"
-echo "SWAYLOCK_BIN=${SWAYLOCK_BIN}"
 
 cd "${ROOT_DIR}"
 
@@ -88,21 +127,19 @@ fi
 
 sleep "${KIOSK_HOLD_SECONDS}"
 
-LABWC_CONFIG_DIR="${XDG_RUNTIME_DIR}/digital-dash-labwc"
+LABWC_CONFIG_DIR="${XDG_RUNTIME_DIR:-/tmp}/digital-dash-labwc"
 LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
 LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
 LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
 READY_MARKER_FILE="${LABWC_CONFIG_DIR}/cluster-ready"
 RUNTIME_SPLASH_FILE="${LABWC_CONFIG_DIR}/splash-runtime.html"
-
-mkdir -p "${LABWC_CONFIG_DIR}"
-rm -f "${READY_MARKER_FILE}"
-
-READY_PORT=$((38000 + (USER_ID % 1000)))
-READY_SIGNAL_URL="http://127.0.0.1:${READY_PORT}/ready"
 SPLASH_IMAGE_URL="file://${SPLASH_IMAGE_PATH// /%20}"
 
-cat > "${RUNTIME_SPLASH_FILE}" <<EOF
+mkdir -p "${LABWC_CONFIG_DIR}"
+
+write_runtime_splash() {
+  local ready_signal_url=$1
+  cat > "${RUNTIME_SPLASH_FILE}" <<EOF
 <!doctype html>
 <html lang="en">
   <head>
@@ -165,17 +202,43 @@ cat > "${RUNTIME_SPLASH_FILE}" <<EOF
     <iframe class="cluster" title="Digital Dash Cluster" tabindex="-1"></iframe>
     <script>
       const clusterUrlBase = ${TARGET_URL@Q};
-      const readySignalUrl = ${READY_SIGNAL_URL@Q};
+      const readySignalUrl = ${ready_signal_url@Q};
       const splashEl = document.querySelector(".splash");
       const frameEl = document.querySelector(".cluster");
       const clusterUrl = new URL(clusterUrlBase);
-      clusterUrl.searchParams.set("kiosk_ready", readySignalUrl);
-      let loadingStarted = false;
+      if (readySignalUrl) {
+        clusterUrl.searchParams.set("kiosk_ready", readySignalUrl);
+      }
 
-      frameEl.addEventListener("load", () => {
+      let loadingStarted = false;
+      let frameLoaded = false;
+      let appReady = false;
+
+      const maybeReveal = () => {
+        if (!frameLoaded || !appReady) return;
         frameEl.classList.add("cluster--visible");
         splashEl.classList.add("splash--hidden");
+      };
+
+      frameEl.addEventListener("load", () => {
+        frameLoaded = true;
+        maybeReveal();
       });
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== frameEl.contentWindow) return;
+        const payload = event.data;
+        const type = typeof payload === "string" ? payload : payload && payload.type;
+        if (type === "digital-dash-ready") {
+          appReady = true;
+          maybeReveal();
+        }
+      });
+
+      window.setTimeout(() => {
+        appReady = true;
+        maybeReveal();
+      }, 20000);
 
       const checkCluster = async () => {
         try {
@@ -186,7 +249,7 @@ cat > "${RUNTIME_SPLASH_FILE}" <<EOF
           }
           return;
         } catch {
-          // Ignore until service is ready
+          // Ignore until service is ready.
         }
         window.setTimeout(checkCluster, 500);
       };
@@ -196,8 +259,38 @@ cat > "${RUNTIME_SPLASH_FILE}" <<EOF
   </body>
 </html>
 EOF
+}
 
-cat > "${LABWC_AUTOSTART_FILE}" <<EOF
+run_cog_once() {
+  local url=$1
+  if "${COG_BIN}" --help 2>&1 | grep -q -- "--platform"; then
+    "${COG_BIN}" --platform=drm "${url}"
+  else
+    COG_PLATFORM_NAME=drm "${COG_BIN}" "${url}"
+  fi
+}
+
+run_cog_session() {
+  write_runtime_splash ""
+  local runtime_url="file://${RUNTIME_SPLASH_FILE// /%20}"
+
+  echo "Launching Cog DRM runtime"
+  while true; do
+    run_cog_once "${runtime_url}"
+    echo "Cog exited; restarting in 1s"
+    sleep 1
+  done
+}
+
+run_chromium_session() {
+  local ready_port ready_signal_url
+
+  rm -f "${READY_MARKER_FILE}"
+  ready_port=$((38000 + (USER_ID % 1000)))
+  ready_signal_url="http://127.0.0.1:${ready_port}/ready"
+  write_runtime_splash "${ready_signal_url}"
+
+  cat > "${LABWC_AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
 set -eu
 if [ -f "${SPLASH_IMAGE_PATH}" ]; then
@@ -219,7 +312,7 @@ const server = http.createServer((req, res) => {
 });
 server.listen(port, "127.0.0.1");
 setTimeout(() => server.close(() => process.exit(0)), 30000);
-' "${READY_PORT}" "${READY_MARKER_FILE}" &
+' "${ready_port}" "${READY_MARKER_FILE}" &
 READY_SERVER_PID=\$!
 
 SWAYLOCK_READY_FIFO="${LABWC_CONFIG_DIR}/swaylock-ready.fifo"
@@ -234,7 +327,7 @@ fi
 SWAYLOCK_READY_PID=\$!
 
 if [ -f "${SPLASH_IMAGE_PATH}" ]; then
-  "${SWAYLOCK_BIN}" \
+  swaylock \
     --color 000000 \
     --image "${SPLASH_IMAGE_PATH}" \
     --scaling fill \
@@ -242,7 +335,7 @@ if [ -f "${SPLASH_IMAGE_PATH}" ]; then
     --ready-fd 3 \
     3>"\${SWAYLOCK_READY_FIFO}" &
 else
-  "${SWAYLOCK_BIN}" \
+  swaylock \
     --color 000000 \
     --no-unlock-indicator \
     --ready-fd 3 \
@@ -255,14 +348,16 @@ if ! wait "\${SWAYLOCK_READY_PID}"; then
 fi
 rm -f "\${SWAYLOCK_READY_FIFO}"
 
-"${BROWSER_BIN}" \
+"${CHROMIUM_BIN}" \
   --ozone-platform=wayland \
   --kiosk \
-  --app="file://${RUNTIME_SPLASH_FILE}" \
+  --app="file://${RUNTIME_SPLASH_FILE// /%20}" \
   --start-maximized \
   --no-first-run \
   --noerrdialogs \
   --disable-infobars \
+  --disable-session-crashed-bubble \
+  --hide-scrollbars \
   --default-background-color=000000ff \
   --force-dark-mode \
   --enable-features=UseOzonePlatform,OverlayScrollbar &
@@ -287,12 +382,12 @@ wait "\${CHROMIUM_PID}"
 labwc --exit
 EOF
 
-cat > "${LABWC_ENV_FILE}" <<EOF
+  cat > "${LABWC_ENV_FILE}" <<EOF
 GTK_THEME=${GTK_THEME_NAME}
 XDG_SESSION_TYPE=wayland
 EOF
 
-cat > "${LABWC_RC_FILE}" <<'EOF'
+  cat > "${LABWC_RC_FILE}" <<'EOF'
 <?xml version="1.0"?>
 <labwc_config>
   <windowRules>
@@ -301,10 +396,21 @@ cat > "${LABWC_RC_FILE}" <<'EOF'
 </labwc_config>
 EOF
 
-chmod +x "${LABWC_AUTOSTART_FILE}"
+  chmod +x "${LABWC_AUTOSTART_FILE}"
 
-while true; do
-  labwc -C "${LABWC_CONFIG_DIR}"
-  echo "labwc exited; restarting in 1s"
-  sleep 1
-done
+  echo "Launching Chromium fallback runtime"
+  while true; do
+    labwc -C "${LABWC_CONFIG_DIR}"
+    echo "labwc exited; restarting in 1s"
+    sleep 1
+  done
+}
+
+case "${RUNTIME}" in
+  cog)
+    run_cog_session
+    ;;
+  chromium)
+    run_chromium_session
+    ;;
+esac
