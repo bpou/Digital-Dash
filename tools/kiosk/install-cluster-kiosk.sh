@@ -49,8 +49,10 @@ cat > "${TMP_FILE}" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Digital Dash Cluster
-Exec=/bin/sh -lc '${ROOT_DIR}/tools/kiosk/launch-cluster-kiosk.sh "${ROOT_DIR}" "${TARGET_URL}"'
+Exec=${ROOT_DIR}/tools/kiosk/launch-cluster-kiosk.sh ${ROOT_DIR} ${TARGET_URL}
+Path=${ROOT_DIR}
 Terminal=false
+StartupNotify=false
 X-GNOME-Autostart-enabled=true
 EOF
 
