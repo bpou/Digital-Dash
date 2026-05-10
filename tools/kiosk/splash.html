@@ -73,6 +73,7 @@
       let frameLoaded = false;
       let appReady = false;
       let readySignaled = false;
+      let loadFallbackTimer = null;
 
       const signalReady = () => {
         if (readySignaled || !readySignalUrl) return;
@@ -99,6 +100,13 @@
 
       frameEl.addEventListener("load", () => {
         frameLoaded = true;
+        if (loadFallbackTimer) {
+          window.clearTimeout(loadFallbackTimer);
+        }
+        loadFallbackTimer = window.setTimeout(() => {
+          appReady = true;
+          maybeReveal();
+        }, 900);
         maybeReveal();
       });
 

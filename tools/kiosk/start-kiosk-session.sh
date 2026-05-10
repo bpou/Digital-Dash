@@ -74,9 +74,11 @@ LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
 LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
 LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
 READY_MARKER_FILE="${LABWC_CONFIG_DIR}/cluster-ready"
+CHROMIUM_PROFILE_DIR="${LABWC_CONFIG_DIR}/chromium-profile"
 
 mkdir -p "${LABWC_CONFIG_DIR}"
 rm -f "${READY_MARKER_FILE}"
+mkdir -p "${CHROMIUM_PROFILE_DIR}"
 
 READY_PORT=$((38000 + (USER_ID % 1000)))
 READY_SIGNAL_URL="http://127.0.0.1:${READY_PORT}/ready"
@@ -107,6 +109,10 @@ setTimeout(() => server.close(() => process.exit(0)), 30000);
 ' "${READY_PORT}" "${READY_MARKER_FILE}" &
 READY_SERVER_PID=\$!
 
+pkill -x chromium >/dev/null 2>&1 || true
+pkill -x chromium-browser >/dev/null 2>&1 || true
+rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"
+
 exec "${BROWSER_BIN}" \
   --ozone-platform=wayland \
   --kiosk \
@@ -117,9 +123,15 @@ exec "${BROWSER_BIN}" \
   --disable-infobars \
   --disable-session-crashed-bubble \
   --hide-scrollbars \
+  --no-default-browser-check \
+  --disable-features=Translate,MediaRouter \
+  --disable-gpu \
+  --disable-gpu-compositing \
+  --disable-gpu-rasterization \
   --default-background-color=000000ff \
   --force-dark-mode \
-  --enable-features=UseOzonePlatform,OverlayScrollbar
+  --enable-features=UseOzonePlatform,OverlayScrollbar \
+  --user-data-dir="${CHROMIUM_PROFILE_DIR}"
 EOF
 
 cat > "${LABWC_ENV_FILE}" <<EOF
