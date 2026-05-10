@@ -12,7 +12,7 @@ sudo bash tools/systemd/install.sh /digital-dash <pi-username>
 sudo reboot
 ```
 
-Passing the Pi desktop username as the second argument installs the systemd services, installs the required npm dependencies, disables desktop screen blanking, enables desktop auto-login, and adds a labwc autostart entry that opens:
+Passing the Pi desktop username as the second argument installs the systemd services, installs the required npm dependencies, enables the standard Raspberry Pi boot splash, disables desktop screen blanking, enables desktop auto-login, and adds a desktop autostart entry that opens a local Digital Dash splash page before handing off to:
 
 ```text
 http://127.0.0.1:5173/cluster
@@ -23,7 +23,8 @@ Notes:
 - This kiosk flow targets current Raspberry Pi OS Desktop with Wayland/labwc.
 - On Raspberry Pi 4 and 5, the physical `HDMI1` port is named `HDMI-A-2` by Raspberry Pi OS.
 - If your repo lives somewhere other than `/digital-dash`, pass that path as the first argument; the installer rewrites the service files to match the real location.
-- The browser autostart script lives at `tools/kiosk/launch-cluster-kiosk.sh`, and the kiosk installer lives at `tools/kiosk/install-cluster-kiosk.sh`.
+- The browser autostart script lives at `tools/kiosk/launch-cluster-kiosk.sh`, the local splash page lives at `tools/kiosk/splash.html`, and the kiosk installer lives at `tools/kiosk/install-cluster-kiosk.sh`.
+- If you want a custom full-screen image during the earliest boot phase, Raspberry Pi officially supports that with `rpi-splash-screen-support` and `configure-splash`.
 
 Currently, two official plugins are available:
 

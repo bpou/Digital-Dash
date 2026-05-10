@@ -8,6 +8,7 @@ USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
 LOG_FILE="${LOG_DIR}/digital-dash-kiosk.log"
+SPLASH_PATH="${ROOT_DIR}/tools/kiosk/splash.html"
 
 mkdir -p "${LOG_DIR}"
 exec >> "${LOG_FILE}" 2>&1
@@ -45,32 +46,6 @@ find_browser() {
   return 1
 }
 
-probe_url() {
-  local url=$1
-  if command -v curl >/dev/null 2>&1; then
-    curl -fsS "${url}" >/dev/null 2>&1
-    return $?
-  fi
-  if command -v wget >/dev/null 2>&1; then
-    wget -q -O /dev/null "${url}" >/dev/null 2>&1
-    return $?
-  fi
-  return 0
-}
-
-wait_for_url() {
-  local url=$1
-  local waited=0
-  until probe_url "${url}"; do
-    sleep 2
-    waited=$((waited + 2))
-    if [ "${waited}" -ge "${WAIT_SECONDS}" ]; then
-      echo "Timed out waiting for ${url}" >&2
-      return 1
-    fi
-  done
-}
-
 BROWSER_BIN=$(find_browser || true)
 if [ -z "${BROWSER_BIN}" ]; then
   echo "Chromium not found. Install it on the Pi before enabling kiosk mode." >&2
@@ -79,13 +54,18 @@ fi
 
 echo "BROWSER_BIN=${BROWSER_BIN}"
 
-if pgrep -f "${TARGET_URL}" >/dev/null 2>&1; then
-  echo "Browser already running for ${TARGET_URL}"
+if pgrep -f "${SPLASH_PATH}" >/dev/null 2>&1 || pgrep -f "${TARGET_URL}" >/dev/null 2>&1; then
+  echo "Browser already running for splash or target URL"
   exit 0
 fi
 
 cd "${ROOT_DIR}"
-wait_for_url "${TARGET_URL}"
+if [ -f "${SPLASH_PATH}" ]; then
+  START_PAGE="${SPLASH_PATH}"
+else
+  echo "Splash page missing at ${SPLASH_PATH}; falling back to ${TARGET_URL}"
+  START_PAGE="${TARGET_URL}"
+fi
 
 echo "Launching Chromium"
 exec "${BROWSER_BIN}" \
@@ -96,4 +76,4 @@ exec "${BROWSER_BIN}" \
   --noerrdialogs \
   --disable-infobars \
   --enable-features=UseOzonePlatform,OverlayScrollbar \
-  "${TARGET_URL}"
+  "${START_PAGE}"

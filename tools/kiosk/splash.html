@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digital Dash Boot</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #05070b;
+        --bg-soft: #0b1017;
+        --line: rgba(126, 227, 255, 0.22);
+        --glow: rgba(126, 227, 255, 0.5);
+        --text: rgba(245, 250, 255, 0.92);
+        --muted: rgba(214, 226, 240, 0.56);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 18% 22%, rgba(126, 227, 255, 0.18), transparent 34%),
+          radial-gradient(circle at 80% 64%, rgba(0, 128, 255, 0.16), transparent 28%),
+          linear-gradient(180deg, #06080d 0%, #040609 100%);
+        color: var(--text);
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      }
+
+      body {
+        position: relative;
+      }
+
+      .frame {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        isolation: isolate;
+      }
+
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        background-size: 72px 72px;
+        mask-image: radial-gradient(circle at center, black 38%, transparent 80%);
+        opacity: 0.45;
+      }
+
+      .halo {
+        position: absolute;
+        width: 58vw;
+        height: 58vw;
+        max-width: 1200px;
+        max-height: 1200px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(126, 227, 255, 0.12), transparent 64%);
+        filter: blur(18px);
+        animation: breathe 4.4s ease-in-out infinite;
+      }
+
+      .panel {
+        position: relative;
+        width: min(70vw, 1280px);
+        padding: 42px 56px 38px;
+        border-radius: 36px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)),
+          rgba(8, 12, 18, 0.74);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.06),
+          0 28px 80px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(22px);
+      }
+
+      .logo-shell {
+        margin-top: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 32px;
+        background: rgba(0, 0, 0, 0.18);
+        padding: 18px 22px;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.04),
+          0 16px 36px rgba(0, 0, 0, 0.26);
+      }
+
+      .logo {
+        display: block;
+        width: min(28vw, 360px);
+        max-width: 100%;
+        height: auto;
+        filter: drop-shadow(0 0 28px rgba(126, 227, 255, 0.1));
+      }
+
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        letter-spacing: 0.34em;
+        text-transform: uppercase;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .brand {
+        margin-top: 30px;
+        font-size: clamp(18px, 1.8vw, 28px);
+        font-weight: 600;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.78);
+      }
+
+      .sub {
+        margin-top: 18px;
+        width: min(38rem, 70%);
+        font-size: clamp(16px, 1.4vw, 24px);
+        line-height: 1.5;
+        color: var(--muted);
+      }
+
+      .status-row {
+        margin-top: 42px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .track {
+        position: relative;
+        flex: 1;
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .track::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(126, 227, 255, 0.14), rgba(0, 128, 255, 0.82), rgba(126, 227, 255, 0.14));
+        transform: translateX(-68%);
+        animation: sweep 1.35s ease-in-out infinite;
+      }
+
+      .status {
+        min-width: 220px;
+        text-align: right;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .footer {
+        margin-top: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.36);
+      }
+
+      .pulse {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .pulse::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #7ee3ff;
+        box-shadow: 0 0 0 0 rgba(126, 227, 255, 0.5);
+        animation: ping 1.9s ease-out infinite;
+      }
+
+      @keyframes sweep {
+        0% {
+          transform: translateX(-70%);
+        }
+        100% {
+          transform: translateX(110%);
+        }
+      }
+
+      @keyframes ping {
+        0% {
+          box-shadow: 0 0 0 0 rgba(126, 227, 255, 0.55);
+        }
+        75% {
+          box-shadow: 0 0 0 12px rgba(126, 227, 255, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(126, 227, 255, 0);
+        }
+      }
+
+      @keyframes breathe {
+        0%,
+        100% {
+          transform: scale(0.96);
+          opacity: 0.9;
+        }
+        50% {
+          transform: scale(1.02);
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="grid"></div>
+      <div class="halo"></div>
+      <section class="panel">
+        <div class="eyebrow">
+          <span>Vehicle Interface</span>
+          <span id="clock">--:--</span>
+        </div>
+        <div class="logo-shell">
+          <img class="logo" src="../../public/Das%20Rolf.png" alt="Das Rolf" />
+        </div>
+        <div class="brand">Cluster Interface</div>
+        <div class="sub">Preparing cluster services, live vehicle telemetry, and audio integrations.</div>
+        <div class="status-row">
+          <div class="track"></div>
+          <div class="status" id="status">Starting Cluster</div>
+        </div>
+        <div class="footer">
+          <span class="pulse">System booting</span>
+          <span id="detail">Waiting for UI service</span>
+        </div>
+      </section>
+    </div>
+    <script>
+      const clusterUrl = "http://127.0.0.1:5173/cluster";
+      const statusEl = document.getElementById("status");
+      const detailEl = document.getElementById("detail");
+      const clockEl = document.getElementById("clock");
+      const statusFrames = [
+        "Starting Cluster",
+        "Loading Telemetry",
+        "Connecting Services",
+        "Finalizing Display",
+      ];
+      let frameIndex = 0;
+
+      const updateClock = () => {
+        const now = new Date();
+        clockEl.textContent = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      };
+
+      const rotateStatus = () => {
+        frameIndex = (frameIndex + 1) % statusFrames.length;
+        statusEl.textContent = statusFrames[frameIndex];
+      };
+
+      const checkCluster = async () => {
+        try {
+          await fetch(clusterUrl, { cache: "no-store", mode: "no-cors" });
+          detailEl.textContent = "Cluster ready";
+          statusEl.textContent = "Launching Cluster";
+          window.location.replace(clusterUrl);
+          return;
+        } catch {
+          // Ignore until service is ready
+        }
+        window.setTimeout(checkCluster, 1000);
+      };
+
+      updateClock();
+      window.setInterval(updateClock, 1000);
+      window.setInterval(rotateStatus, 1400);
+      checkCluster();
+    </script>
+  </body>
+</html>
