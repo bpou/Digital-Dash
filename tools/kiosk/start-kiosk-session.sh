@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR=${1:-/digital-dash}
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
 KIOSK_HOLD_SECONDS=${DIGITAL_DASH_KIOSK_HOLD_SECONDS:-0.4}
-SPLASH_MAX_WAIT_SECONDS=${DIGITAL_DASH_SPLASH_MAX_WAIT_SECONDS:-20}
+STARTUP_WAIT_SECONDS=${DIGITAL_DASH_STARTUP_WAIT_SECONDS:-45}
 GTK_THEME_NAME=${DIGITAL_DASH_GTK_THEME:-Adwaita:dark}
 USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
@@ -19,8 +19,7 @@ echo "[$(date -Iseconds)] Starting Digital Dash kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
 echo "KIOSK_HOLD_SECONDS=${KIOSK_HOLD_SECONDS}"
-echo "SPLASH_MAX_WAIT_SECONDS=${SPLASH_MAX_WAIT_SECONDS}"
-echo "GTK_THEME_NAME=${GTK_THEME_NAME}"
+echo "STARTUP_WAIT_SECONDS=${STARTUP_WAIT_SECONDS}"
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/${USER_ID}" ]; then
   export XDG_RUNTIME_DIR="/run/user/${USER_ID}"
@@ -32,9 +31,6 @@ fi
 
 export XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-wayland}
 export GTK_THEME="${GTK_THEME_NAME}"
-
-echo "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset}"
-echo "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-unset}"
 
 find_browser() {
   local candidate
@@ -63,18 +59,6 @@ if ! command -v swaybg >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v swaylock >/dev/null 2>&1; then
-  echo "swaylock not found." >&2
-  exit 1
-fi
-
-if ! command -v node >/dev/null 2>&1; then
-  echo "node not found." >&2
-  exit 1
-fi
-
-echo "BROWSER_BIN=${BROWSER_BIN}"
-
 cd "${ROOT_DIR}"
 
 if [ -t 1 ]; then
@@ -90,197 +74,32 @@ LABWC_CONFIG_DIR="${XDG_RUNTIME_DIR:-/tmp}/digital-dash-labwc"
 LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
 LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
 LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
-READY_MARKER_FILE="${LABWC_CONFIG_DIR}/cluster-ready"
-RUNTIME_SPLASH_FILE="${LABWC_CONFIG_DIR}/splash-runtime.html"
-SPLASH_IMAGE_URL="file://${SPLASH_IMAGE_PATH// /%20}"
 
 mkdir -p "${LABWC_CONFIG_DIR}"
-rm -f "${READY_MARKER_FILE}"
-
-READY_PORT=$((38000 + (USER_ID % 1000)))
-READY_SIGNAL_URL="http://127.0.0.1:${READY_PORT}/ready"
-
-cat > "${RUNTIME_SPLASH_FILE}" <<EOF
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
-    <title>Digital Dash Boot</title>
-    <style>
-      html,
-      body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #000;
-      }
-
-      body {
-        position: relative;
-      }
-
-      .cluster {
-        position: absolute;
-        inset: 0;
-        width: 100vw;
-        height: 100vh;
-        border: 0;
-        background: #000;
-        opacity: 0;
-        transition: opacity 180ms linear;
-        pointer-events: none;
-      }
-
-      .cluster--visible {
-        opacity: 1;
-        pointer-events: auto;
-      }
-
-      .splash {
-        position: absolute;
-        inset: 0;
-        display: block;
-        width: 100vw;
-        height: 100vh;
-        object-fit: cover;
-        object-position: center;
-        user-select: none;
-        -webkit-user-drag: none;
-        opacity: 1;
-        transition: opacity 180ms linear;
-      }
-
-      .splash--hidden {
-        opacity: 0;
-      }
-    </style>
-  </head>
-  <body>
-    <img class="splash" src="${SPLASH_IMAGE_URL}" alt="Das Rolf" />
-    <iframe class="cluster" title="Digital Dash Cluster" tabindex="-1"></iframe>
-    <script>
-      const clusterUrlBase = ${TARGET_URL@Q};
-      const readySignalUrl = ${READY_SIGNAL_URL@Q};
-      const splashEl = document.querySelector(".splash");
-      const frameEl = document.querySelector(".cluster");
-      const clusterUrl = new URL(clusterUrlBase);
-      clusterUrl.searchParams.set("kiosk_ready", readySignalUrl);
-
-      let loadingStarted = false;
-      let frameLoaded = false;
-      let appReady = false;
-
-      const maybeReveal = () => {
-        if (!frameLoaded || !appReady) return;
-        frameEl.classList.add("cluster--visible");
-        splashEl.classList.add("splash--hidden");
-      };
-
-      frameEl.addEventListener("load", () => {
-        frameLoaded = true;
-        maybeReveal();
-      });
-
-      window.addEventListener("message", (event) => {
-        if (event.source !== frameEl.contentWindow) return;
-        const payload = event.data;
-        const type = typeof payload === "string" ? payload : payload && payload.type;
-        if (type === "digital-dash-ready") {
-          appReady = true;
-          maybeReveal();
-        }
-      });
-
-      window.setTimeout(() => {
-        appReady = true;
-        maybeReveal();
-      }, 20000);
-
-      const checkCluster = async () => {
-        try {
-          await fetch(clusterUrlBase, { cache: "no-store", mode: "no-cors" });
-          if (!loadingStarted) {
-            loadingStarted = true;
-            frameEl.src = clusterUrl.toString();
-          }
-          return;
-        } catch {
-          // Ignore until service is ready.
-        }
-        window.setTimeout(checkCluster, 500);
-      };
-
-      checkCluster();
-    </script>
-  </body>
-</html>
-EOF
 
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
 set -eu
+
 if [ -f "${SPLASH_IMAGE_PATH}" ]; then
   swaybg -i "${SPLASH_IMAGE_PATH}" -m fill -c 000000 &
 else
   swaybg -c 000000 &
 fi
 
-node -e '
-const fs = require("fs");
-const http = require("http");
-const port = Number(process.argv[1]);
-const marker = process.argv[2];
-const server = http.createServer((req, res) => {
-  res.statusCode = 204;
-  res.end();
-  try { fs.writeFileSync(marker, String(Date.now())); } catch {}
-  setTimeout(() => server.close(() => process.exit(0)), 50);
-});
-server.listen(port, "127.0.0.1");
-setTimeout(() => server.close(() => process.exit(0)), 30000);
-' "${READY_PORT}" "${READY_MARKER_FILE}" &
-READY_SERVER_PID=\$!
-
-SWAYLOCK_READY_FIFO="${LABWC_CONFIG_DIR}/swaylock-ready.fifo"
-rm -f "\${SWAYLOCK_READY_FIFO}"
-mkfifo "\${SWAYLOCK_READY_FIFO}"
-
-if command -v timeout >/dev/null 2>&1; then
-  timeout 5 head -c 1 < "\${SWAYLOCK_READY_FIFO}" >/dev/null &
-else
-  head -c 1 < "\${SWAYLOCK_READY_FIFO}" >/dev/null &
+if command -v curl >/dev/null 2>&1; then
+  for _ in \$(seq 1 $((STARTUP_WAIT_SECONDS * 2))); do
+    if curl -fsS "${TARGET_URL}" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.5
+  done
 fi
-SWAYLOCK_READY_PID=\$!
 
-if [ -f "${SPLASH_IMAGE_PATH}" ]; then
-  swaylock \
-    --color 000000 \
-    --image "${SPLASH_IMAGE_PATH}" \
-    --scaling fill \
-    --no-unlock-indicator \
-    --ready-fd 3 \
-    3>"\${SWAYLOCK_READY_FIFO}" &
-else
-  swaylock \
-    --color 000000 \
-    --no-unlock-indicator \
-    --ready-fd 3 \
-    3>"\${SWAYLOCK_READY_FIFO}" &
-fi
-SPLASH_PID=\$!
-
-if ! wait "\${SWAYLOCK_READY_PID}"; then
-  echo "swaylock readiness timed out; continuing"
-fi
-rm -f "\${SWAYLOCK_READY_FIFO}"
-
-"${BROWSER_BIN}" \
+exec "${BROWSER_BIN}" \
   --ozone-platform=wayland \
   --kiosk \
-  --app="file://${RUNTIME_SPLASH_FILE// /%20}" \
+  --app="${TARGET_URL}" \
   --start-maximized \
   --no-first-run \
   --noerrdialogs \
@@ -289,26 +108,7 @@ rm -f "\${SWAYLOCK_READY_FIFO}"
   --hide-scrollbars \
   --default-background-color=000000ff \
   --force-dark-mode \
-  --enable-features=UseOzonePlatform,OverlayScrollbar &
-CHROMIUM_PID=\$!
-
-for _ in \$(seq 1 $((SPLASH_MAX_WAIT_SECONDS * 10))); do
-  if [ -f "${READY_MARKER_FILE}" ]; then
-    break
-  fi
-  sleep 0.1
-done
-
-if [ -n "\${SPLASH_PID}" ] && kill -0 "\${SPLASH_PID}" 2>/dev/null; then
-  kill "\${SPLASH_PID}" || true
-fi
-
-if kill -0 "\${READY_SERVER_PID}" 2>/dev/null; then
-  kill "\${READY_SERVER_PID}" || true
-fi
-
-wait "\${CHROMIUM_PID}"
-labwc --exit
+  --enable-features=UseOzonePlatform,OverlayScrollbar
 EOF
 
 cat > "${LABWC_ENV_FILE}" <<EOF
@@ -328,7 +128,8 @@ EOF
 chmod +x "${LABWC_AUTOSTART_FILE}"
 
 while true; do
+  echo "[$(date -Iseconds)] Launching labwc"
   labwc -C "${LABWC_CONFIG_DIR}"
-  echo "labwc exited; restarting in 1s"
+  echo "[$(date -Iseconds)] labwc exited; restarting in 1s"
   sleep 1
 done
