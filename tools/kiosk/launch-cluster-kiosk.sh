@@ -5,6 +5,7 @@ ROOT_DIR=${1:-/digital-dash}
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
 WAIT_SECONDS=${DIGITAL_DASH_WAIT_SECONDS:-90}
 KIOSK_HOLD_SECONDS=${DIGITAL_DASH_KIOSK_HOLD_SECONDS:-1.2}
+GTK_THEME_NAME=${DIGITAL_DASH_GTK_THEME:-Adwaita:dark}
 USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
@@ -18,6 +19,7 @@ echo "[$(date -Iseconds)] Starting digital-dash kiosk launcher"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
 echo "KIOSK_HOLD_SECONDS=${KIOSK_HOLD_SECONDS}"
+echo "GTK_THEME_NAME=${GTK_THEME_NAME}"
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/${USER_ID}" ]; then
   export XDG_RUNTIME_DIR="/run/user/${USER_ID}"
@@ -71,6 +73,7 @@ fi
 
 echo "Launching Chromium"
 sleep "${KIOSK_HOLD_SECONDS}"
+export GTK_THEME="${GTK_THEME_NAME}"
 exec "${BROWSER_BIN}" \
   --ozone-platform=wayland \
   --kiosk \
@@ -80,5 +83,5 @@ exec "${BROWSER_BIN}" \
   --noerrdialogs \
   --disable-infobars \
   --default-background-color=000000ff \
-  --enable-features=UseOzonePlatform,OverlayScrollbar \
-  "${START_PAGE}"
+  --force-dark-mode \
+  --enable-features=UseOzonePlatform,OverlayScrollbar

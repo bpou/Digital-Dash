@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR=${1:-/digital-dash}
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
 KIOSK_HOLD_SECONDS=${DIGITAL_DASH_KIOSK_HOLD_SECONDS:-1.2}
+GTK_THEME_NAME=${DIGITAL_DASH_GTK_THEME:-Adwaita:dark}
 USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
@@ -17,6 +18,7 @@ echo "[$(date -Iseconds)] Starting Digital Dash kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
 echo "KIOSK_HOLD_SECONDS=${KIOSK_HOLD_SECONDS}"
+echo "GTK_THEME_NAME=${GTK_THEME_NAME}"
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/${USER_ID}" ]; then
   export XDG_RUNTIME_DIR="/run/user/${USER_ID}"
@@ -27,6 +29,7 @@ if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] && [ 
 fi
 
 export XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-wayland}
+export GTK_THEME="${GTK_THEME_NAME}"
 
 echo "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset}"
 echo "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-unset}"
@@ -82,8 +85,8 @@ while true; do
     --noerrdialogs \
     --disable-infobars \
     --default-background-color=000000ff \
-    --enable-features=UseOzonePlatform,OverlayScrollbar \
-    "${START_PAGE}"
+    --force-dark-mode \
+    --enable-features=UseOzonePlatform,OverlayScrollbar
   echo "Chromium exited; restarting in 1s"
   sleep 1
 done
