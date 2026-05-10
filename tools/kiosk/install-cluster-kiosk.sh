@@ -7,6 +7,8 @@ TARGET_URL=${3:-http://127.0.0.1:5173/cluster}
 GETTY_OVERRIDE_DIR=/etc/systemd/system/getty@tty1.service.d
 GETTY_OVERRIDE_FILE=${GETTY_OVERRIDE_DIR}/digital-dash-autologin.conf
 CMDLINE_FILE=/boot/firmware/cmdline.txt
+PLYMOUTH_QUIT_OVERRIDE_DIR=/etc/systemd/system/plymouth-quit.service.d
+PLYMOUTH_QUIT_OVERRIDE_FILE=${PLYMOUTH_QUIT_OVERRIDE_DIR}/override.conf
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run this installer with sudo." >&2
@@ -49,6 +51,13 @@ ensure_cmdline_arg() {
   local arg=$1
   if [ -f "${CMDLINE_FILE}" ] && ! grep -Eq "(^|[[:space:]])${arg}([[:space:]]|$)" "${CMDLINE_FILE}"; then
     sed -i "1s|\$| ${arg}|" "${CMDLINE_FILE}"
+  fi
+}
+
+remove_cmdline_arg() {
+  local arg=$1
+  if [ -f "${CMDLINE_FILE}" ]; then
+    sed -i -E "s/(^|[[:space:]])${arg}([[:space:]]|$)/ /g; s/[[:space:]]+/ /g; s/^ //; s/ \$//" "${CMDLINE_FILE}"
   fi
 }
 
@@ -122,6 +131,12 @@ EOF
 
 install -d -m 0755 "${GETTY_OVERRIDE_DIR}"
 install -m 0644 "${GETTY_TMP_FILE}" "${GETTY_OVERRIDE_FILE}"
+install -d -m 0755 "${PLYMOUTH_QUIT_OVERRIDE_DIR}"
+cat > "${PLYMOUTH_QUIT_OVERRIDE_FILE}" <<EOF
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/plymouth quit --retain-splash
+EOF
 
 if [ -f "${LABWC_AUTOSTART_FILE}" ]; then
   mv "${LABWC_AUTOSTART_FILE}" "${LABWC_AUTOSTART_FILE}.bak"
@@ -144,8 +159,11 @@ fi
 ensure_cmdline_arg quiet
 ensure_cmdline_arg splash
 ensure_cmdline_arg loglevel=3
+ensure_cmdline_arg systemd.show_status=false
 ensure_cmdline_arg vt.global_cursor_default=0
 ensure_cmdline_arg consoleblank=0
+ensure_cmdline_arg logo.nologo
+remove_cmdline_arg console=tty1
 
 echo "Installed Digital Dash tty1 kiosk for user: ${TARGET_USER}"
 echo "Cluster URL: ${TARGET_URL}"
