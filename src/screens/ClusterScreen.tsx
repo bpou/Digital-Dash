@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import MusicPlayer from "../components/MusicPlayer";
 import SquircleGauge from "../components/SquircleGauge";
 import { hexToRgba } from "../utils/color";
@@ -17,6 +17,7 @@ const estimateRangeKm = (fuelPercent: number) => Math.round(250 - (1 - fuelPerce
 export default function ClusterScreen() {
   const data = useVehicleState();
   const [scale, setScale] = useState(1);
+  const readySignalSentRef = useRef(false);
   const ambientColor = data.ambient?.color ?? "#7EE3FF";
   const ambientBrightness = data.ambient?.brightness ?? 65;
   const ambientStrength = ambientBrightness / 100;
@@ -40,6 +41,73 @@ export default function ClusterScreen() {
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (readySignalSentRef.current) return;
+
+    const readyUrl = new URLSearchParams(window.location.search).get("kiosk_ready");
+    if (!readyUrl) return;
+
+    readySignalSentRef.current = true;
+    let cancelled = false;
+
+    const sendReady = () => {
+      if (cancelled) return;
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(readyUrl, "ready");
+          return;
+        }
+      } catch {
+        // Fall through to fetch.
+      }
+      fetch(readyUrl, { method: "POST", mode: "no-cors", keepalive: true }).catch(() => {
+        // ignore readiness signal failures
+      });
+    };
+
+    const waitForImages = async () => {
+      const images = Array.from(document.images);
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) {
+                resolve();
+                return;
+              }
+              const done = () => resolve();
+              img.addEventListener("load", done, { once: true });
+              img.addEventListener("error", done, { once: true });
+            })
+        )
+      );
+    };
+
+    const waitForFonts = async () => {
+      if ("fonts" in document) {
+        try {
+          await document.fonts.ready;
+        } catch {
+          // ignore font readiness issues
+        }
+      }
+    };
+
+    const markReady = async () => {
+      await waitForFonts();
+      await waitForImages();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      window.setTimeout(sendReady, 120);
+    };
+
+    void markReady();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
