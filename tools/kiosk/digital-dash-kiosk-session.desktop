@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Digital Dash Kiosk
+Comment=Full-screen Digital Dash kiosk session
+Exec=__ROOT_DIR__/tools/kiosk/start-kiosk-session.sh __ROOT_DIR__ http://127.0.0.1:5173/cluster
+Type=Application
+DesktopNames=DigitalDashKiosk

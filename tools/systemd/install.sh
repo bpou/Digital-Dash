@@ -55,6 +55,10 @@ if [ -f "${ROOT_DIR}/tools/kiosk/launch-cluster-kiosk.sh" ]; then
   run_root chmod +x "${ROOT_DIR}/tools/kiosk/launch-cluster-kiosk.sh"
 fi
 
+if [ -f "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" ]; then
+  run_root chmod +x "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh"
+fi
+
 if [ -f "${ROOT_DIR}/tools/kiosk/install-cluster-kiosk.sh" ]; then
   run_root chmod +x "${ROOT_DIR}/tools/kiosk/install-cluster-kiosk.sh"
 fi
