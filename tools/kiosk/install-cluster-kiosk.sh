@@ -85,7 +85,7 @@ if command -v apt-get >/dev/null 2>&1; then
 
   apt-get update
 
-  for pkg in curl xinit xserver-xorg openbox unclutter x11-xserver-utils; do
+  for pkg in curl xinit xserver-xorg unclutter x11-xserver-utils; do
     if apt-cache show "${pkg}" >/dev/null 2>&1; then
       packages+=("${pkg}")
     fi

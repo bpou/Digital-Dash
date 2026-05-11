@@ -8,12 +8,12 @@ USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
 LOG_FILE="${LOG_DIR}/digital-dash-kiosk-session.log"
-CHROMIUM_PROFILE_DIR="${LOG_DIR}/digital-dash-chromium-profile"
+CHROMIUM_PROFILE_DIR="${TMPDIR:-/tmp}/digital-dash-chromium-profile-${USER_ID}"
 
 mkdir -p "${LOG_DIR}" "${CHROMIUM_PROFILE_DIR}"
 exec >> "${LOG_FILE}" 2>&1
 
-echo "[$(date -Iseconds)] Starting Digital Dash Xorg/Openbox kiosk session"
+echo "[$(date -Iseconds)] Starting Digital Dash Xorg kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
 echo "DISPLAY=${DISPLAY:-}"
@@ -67,16 +67,11 @@ if command -v xsetroot >/dev/null 2>&1; then
   xsetroot -solid black || true
 fi
 
-if command -v openbox >/dev/null 2>&1; then
-  openbox --startup /bin/true &
-else
-  echo "openbox not found." >&2
-fi
-
 pkill -x unclutter >/dev/null 2>&1 || true
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true
-rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"
+rm -rf "${CHROMIUM_PROFILE_DIR}"
+mkdir -p "${CHROMIUM_PROFILE_DIR}"
 unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
 
 if command -v unclutter >/dev/null 2>&1; then
@@ -102,6 +97,4 @@ exec "${BROWSER_BIN}" \
   --default-background-color=000000ff \
   --force-dark-mode \
   --enable-features=OverlayScrollbar \
-  --enable-logging=stderr \
-  --log-level=0 \
   --user-data-dir="${CHROMIUM_PROFILE_DIR}"
