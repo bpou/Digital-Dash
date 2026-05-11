@@ -66,10 +66,19 @@ chmod 0644 "${AUTOSTART_FILE}"
 rm -f \
   "${AUTOSTART_DIR}/digital-dash-cluster.desktop" \
   "${AUTOSTART_DIR}/digital-dash-kiosk.desktop" \
+  "${AUTOSTART_DIR}/digital-dash-splash.desktop" \
   /etc/systemd/system/digital-dash-kiosk.service \
+  /etc/systemd/system/digital-dash-splash.service \
   /etc/systemd/system/digital-dash-zero-flash.service \
   /etc/lightdm/lightdm.conf.d/99-digital-dash-kiosk.conf \
   /usr/share/wayland-sessions/digital-dash-kiosk.desktop
+
+find "${AUTOSTART_DIR}" -maxdepth 1 -type f -name '*.desktop' -print0 2>/dev/null |
+  while IFS= read -r -d '' desktop_file; do
+    if grep -Eiq 'chromium|splash\.html|start-kiosk-session|digital-dash/.+kiosk' "${desktop_file}"; then
+      mv -f "${desktop_file}" "${desktop_file}.disabled"
+    fi
+  done
 
 if [ -f "${LABWC_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start-kiosk-session' "${LABWC_AUTOSTART_FILE}"; then
   mv -f "${LABWC_AUTOSTART_FILE}" "${LABWC_AUTOSTART_FILE}.disabled"
