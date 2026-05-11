@@ -36,9 +36,11 @@ BASH_PROFILE_FILE="${TARGET_HOME}/.bash_profile"
 HUSHLOGIN_FILE="${TARGET_HOME}/.hushlogin"
 AUTOSTART_FILE="${TARGET_HOME}/.config/autostart/digital-dash-cluster.desktop"
 LABWC_AUTOSTART_FILE="${TARGET_HOME}/.config/labwc/autostart"
+XINITRC_FILE="${TARGET_HOME}/.xinitrc"
 PROFILE_MARKER_START="# >>> digital-dash tty1 kiosk >>>"
 PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
 LOGIN_HELPER_TMP_FILE=$(mktemp)
+XINITRC_TMP_FILE=$(mktemp)
 BASH_LOGIN_FILE="${PROFILE_FILE}"
 if [ -f "${BASH_PROFILE_FILE}" ]; then
   BASH_LOGIN_FILE="${BASH_PROFILE_FILE}"
@@ -48,7 +50,7 @@ PROFILE_TMP_FILE=$(mktemp)
 GETTY_TMP_FILE=$(mktemp)
 
 cleanup() {
-  rm -f "${LOGIN_HELPER_TMP_FILE}" "${PROFILE_TMP_FILE}" "${GETTY_TMP_FILE}"
+  rm -f "${LOGIN_HELPER_TMP_FILE}" "${XINITRC_TMP_FILE}" "${PROFILE_TMP_FILE}" "${GETTY_TMP_FILE}"
 }
 trap cleanup EXIT
 
@@ -81,7 +83,7 @@ if command -v apt-get >/dev/null 2>&1; then
 
   apt-get update
 
-  for pkg in curl labwc swaybg x11-apps; do
+  for pkg in curl xinit xserver-xorg openbox unclutter x11-xserver-utils; do
     if apt-cache show "${pkg}" >/dev/null 2>&1; then
       packages+=("${pkg}")
     fi
@@ -119,12 +121,18 @@ if [ -n "\${DISPLAY:-}" ] || [ -n "\${WAYLAND_DISPLAY:-}" ] || [ -n "\${DIGITAL_
 fi
 
 export DIGITAL_DASH_KIOSK_STARTED=1
-exec "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" "${ROOT_DIR}" "${TARGET_URL}"
+exec startx "${TARGET_HOME}/.xinitrc" -- -nocursor
 EOF
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LOGIN_HELPER_DIR}"
 install -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LOGIN_HELPER_TMP_FILE}" "${LOGIN_HELPER_FILE}"
 chmod +x "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh"
+
+cat > "${XINITRC_TMP_FILE}" <<EOF
+#!/usr/bin/env bash
+exec "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" "${ROOT_DIR}" "${TARGET_URL}"
+EOF
+install -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${XINITRC_TMP_FILE}" "${XINITRC_FILE}"
 
 if [ -f "${BASH_LOGIN_FILE}" ]; then
   if ! grep -Fq "${PROFILE_MARKER_START}" "${BASH_LOGIN_FILE}"; then

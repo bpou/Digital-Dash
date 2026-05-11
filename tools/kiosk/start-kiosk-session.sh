@@ -3,31 +3,21 @@ set -euo pipefail
 
 ROOT_DIR=${1:-/digital-dash}
 TARGET_URL=${2:-http://127.0.0.1:5173/cluster}
-KIOSK_HOLD_SECONDS=${DIGITAL_DASH_KIOSK_HOLD_SECONDS:-0.4}
 GTK_THEME_NAME=${DIGITAL_DASH_GTK_THEME:-Adwaita:dark}
 USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
 LOG_FILE="${LOG_DIR}/digital-dash-kiosk-session.log"
-SPLASH_IMAGE_PATH="${ROOT_DIR}/public/Das Rolf.png"
+CHROMIUM_PROFILE_DIR="${LOG_DIR}/digital-dash-chromium-profile"
 
-mkdir -p "${LOG_DIR}"
+mkdir -p "${LOG_DIR}" "${CHROMIUM_PROFILE_DIR}"
 exec >> "${LOG_FILE}" 2>&1
 
-echo "[$(date -Iseconds)] Starting Digital Dash kiosk session"
+echo "[$(date -Iseconds)] Starting Digital Dash Xorg/Openbox kiosk session"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
-echo "KIOSK_HOLD_SECONDS=${KIOSK_HOLD_SECONDS}"
+echo "DISPLAY=${DISPLAY:-}"
 
-if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/${USER_ID}" ]; then
-  export XDG_RUNTIME_DIR="/run/user/${USER_ID}"
-fi
-
-if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "${XDG_RUNTIME_DIR}/bus" ]; then
-  export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
-fi
-
-export XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-wayland}
 export GTK_THEME="${GTK_THEME_NAME}"
 
 find_browser() {
@@ -57,98 +47,37 @@ if [ -z "${BROWSER_BIN}" ]; then
 fi
 BROWSER_VERSION=$("${BROWSER_BIN}" --version 2>&1 || true)
 
-if ! command -v labwc >/dev/null 2>&1; then
-  echo "labwc not found." >&2
-  exit 1
-fi
-
-if ! command -v swaybg >/dev/null 2>&1; then
-  echo "swaybg not found." >&2
-  exit 1
-fi
-
 cd "${ROOT_DIR}"
 
-if [ -t 1 ]; then
-  printf '\033[?25l'
-  if command -v setterm >/dev/null 2>&1; then
-    setterm --term linux --foreground black --background black --clear all --cursor off
-  fi
+if command -v xset >/dev/null 2>&1; then
+  xset s off -dpms s noblank || true
 fi
 
-sleep "${KIOSK_HOLD_SECONDS}"
-
-LABWC_CONFIG_DIR="${XDG_RUNTIME_DIR:-/tmp}/digital-dash-labwc"
-LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
-LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
-LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
-CHROMIUM_PROFILE_DIR="${LABWC_CONFIG_DIR}/chromium-profile"
-CURSOR_THEME_DIR="${LABWC_CONFIG_DIR}/icons/digital-dash-transparent"
-CURSOR_DIR="${CURSOR_THEME_DIR}/cursors"
-
-mkdir -p "${LABWC_CONFIG_DIR}"
-mkdir -p "${CHROMIUM_PROFILE_DIR}"
-mkdir -p "${CURSOR_DIR}"
-
-cat > "${CURSOR_THEME_DIR}/index.theme" <<'EOF'
-[Icon Theme]
-Name=digital-dash-transparent
-Comment=Transparent cursor theme for Digital Dash kiosk
-EOF
-
-if command -v xcursorgen >/dev/null 2>&1; then
-  TRANSPARENT_CURSOR_PNG="${LABWC_CONFIG_DIR}/transparent-cursor.png"
-  TRANSPARENT_CURSOR_CONFIG="${LABWC_CONFIG_DIR}/transparent-cursor.conf"
-
-  printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' \
-    | base64 -d > "${TRANSPARENT_CURSOR_PNG}"
-  printf '24 0 0 %s\n' "${TRANSPARENT_CURSOR_PNG}" > "${TRANSPARENT_CURSOR_CONFIG}"
-  xcursorgen "${TRANSPARENT_CURSOR_CONFIG}" "${CURSOR_DIR}/left_ptr" >/dev/null 2>&1 || true
-
-  for cursor_name in \
-    default \
-    arrow \
-    pointer \
-    hand1 \
-    hand2 \
-    xterm \
-    text \
-    crosshair \
-    wait \
-    watch; do
-    ln -sf left_ptr "${CURSOR_DIR}/${cursor_name}"
-  done
+if command -v xsetroot >/dev/null 2>&1; then
+  xsetroot -solid black || true
 fi
 
-export XCURSOR_PATH="${LABWC_CONFIG_DIR}/icons:/usr/share/icons"
-export XCURSOR_THEME="digital-dash-transparent"
-export XCURSOR_SIZE=24
-
-cat > "${LABWC_AUTOSTART_FILE}" <<EOF
-#!/usr/bin/env bash
-set -eu
-
-if [ -f "${SPLASH_IMAGE_PATH}" ]; then
-  swaybg -i "${SPLASH_IMAGE_PATH}" -m fill -c 000000 &
+if command -v openbox >/dev/null 2>&1; then
+  openbox --startup /bin/true &
 else
-  swaybg -c 000000 &
+  echo "openbox not found." >&2
 fi
 
+pkill -x unclutter >/dev/null 2>&1 || true
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true
 rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"
 unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
 
-echo "[\$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
-echo "[\$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
-if [ -d /etc/chromium.d ]; then
-  grep -R "no-decommit-pooled-pages" /etc/chromium.d >> "${LOG_FILE}" 2>&1 || true
+if command -v unclutter >/dev/null 2>&1; then
+  unclutter -idle 0.01 -root &
 fi
 
+echo "[$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
+echo "[$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
+
 exec "${BROWSER_BIN}" \
-  --ozone-platform=wayland \
-  --use-gl=egl \
-  --ignore-gpu-blocklist \
+  --ozone-platform=x11 \
   --kiosk \
   --app="${TARGET_URL}" \
   --start-maximized \
@@ -165,32 +94,4 @@ exec "${BROWSER_BIN}" \
   --enable-features=OverlayScrollbar \
   --enable-logging=stderr \
   --log-level=0 \
-  --vmodule="gpu*=2,zygote*=2" \
   --user-data-dir="${CHROMIUM_PROFILE_DIR}"
-EOF
-
-cat > "${LABWC_ENV_FILE}" <<EOF
-GTK_THEME=${GTK_THEME_NAME}
-XDG_SESSION_TYPE=wayland
-XCURSOR_PATH=${LABWC_CONFIG_DIR}/icons:/usr/share/icons
-XCURSOR_THEME=digital-dash-transparent
-XCURSOR_SIZE=24
-EOF
-
-cat > "${LABWC_RC_FILE}" <<'EOF'
-<?xml version="1.0"?>
-<labwc_config>
-  <windowRules>
-    <windowRule identifier="chromium*" serverDecoration="no" />
-  </windowRules>
-</labwc_config>
-EOF
-
-chmod +x "${LABWC_AUTOSTART_FILE}"
-
-while true; do
-  echo "[$(date -Iseconds)] Launching labwc"
-  labwc -C "${LABWC_CONFIG_DIR}"
-  echo "[$(date -Iseconds)] labwc exited; restarting in 1s"
-  sleep 1
-done
