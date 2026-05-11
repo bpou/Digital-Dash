@@ -10,6 +10,8 @@ CMDLINE_FILE=/boot/firmware/cmdline.txt
 PLYMOUTH_QUIT_OVERRIDE_DIR=/etc/systemd/system/plymouth-quit.service.d
 PLYMOUTH_QUIT_OVERRIDE_FILE=${PLYMOUTH_QUIT_OVERRIDE_DIR}/override.conf
 HIDEAWAY_CONFIG_FILE=/etc/interception/udevmon.d/digital-dash-hideaway.yaml
+XORG_CONFIG_DIR=/etc/X11/xorg.conf.d
+XORG_V3D_CONFIG_FILE=${XORG_CONFIG_DIR}/99-v3d.conf
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run this installer with sudo." >&2
@@ -104,6 +106,16 @@ rm -f "${HIDEAWAY_CONFIG_FILE}"
 if systemctl list-unit-files udevmon.service >/dev/null 2>&1; then
   systemctl restart udevmon.service >/dev/null 2>&1 || true
 fi
+
+install -d -m 0755 "${XORG_CONFIG_DIR}"
+cat > "${XORG_V3D_CONFIG_FILE}" <<'EOF'
+Section "OutputClass"
+  Identifier "vc4"
+  MatchDriver "vc4"
+  Driver "modesetting"
+  Option "PrimaryGPU" "true"
+EndSection
+EOF
 
 cat > "${LOGIN_HELPER_TMP_FILE}" <<EOF
 #!/usr/bin/env bash
