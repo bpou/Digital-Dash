@@ -9,10 +9,7 @@ GETTY_OVERRIDE_FILE=${GETTY_OVERRIDE_DIR}/digital-dash-autologin.conf
 CMDLINE_FILE=/boot/firmware/cmdline.txt
 PLYMOUTH_QUIT_OVERRIDE_DIR=/etc/systemd/system/plymouth-quit.service.d
 PLYMOUTH_QUIT_OVERRIDE_FILE=${PLYMOUTH_QUIT_OVERRIDE_DIR}/override.conf
-HIDEAWAY_SRC_DIR=/opt/digital-dash-hideaway
-HIDEAWAY_BIN=/usr/local/bin/hideaway
-HIDEAWAY_CONFIG_DIR=/etc/interception/udevmon.d
-HIDEAWAY_CONFIG_FILE=${HIDEAWAY_CONFIG_DIR}/digital-dash-hideaway.yaml
+HIDEAWAY_CONFIG_FILE=/etc/interception/udevmon.d/digital-dash-hideaway.yaml
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run this installer with sudo." >&2
@@ -84,7 +81,7 @@ if command -v apt-get >/dev/null 2>&1; then
 
   apt-get update
 
-  for pkg in curl labwc swaybg git cmake build-essential interception-tools interception-tools-compat; do
+  for pkg in curl labwc swaybg x11-apps; do
     if apt-cache show "${pkg}" >/dev/null 2>&1; then
       packages+=("${pkg}")
     fi
@@ -101,27 +98,9 @@ if command -v apt-get >/dev/null 2>&1; then
   fi
 fi
 
-if command -v git >/dev/null 2>&1 && command -v cmake >/dev/null 2>&1; then
-  if [ -d "${HIDEAWAY_SRC_DIR}/.git" ]; then
-    git -C "${HIDEAWAY_SRC_DIR}" pull --ff-only || true
-  else
-    rm -rf "${HIDEAWAY_SRC_DIR}"
-    git clone https://gitlab.com/interception/linux/plugins/hideaway.git "${HIDEAWAY_SRC_DIR}"
-  fi
-
-  cmake -S "${HIDEAWAY_SRC_DIR}" -B "${HIDEAWAY_SRC_DIR}/build" -DCMAKE_BUILD_TYPE=Release
-  cmake --build "${HIDEAWAY_SRC_DIR}/build"
-  install -m 0755 "${HIDEAWAY_SRC_DIR}/build/hideaway" "${HIDEAWAY_BIN}"
-  install -d -m 0755 "${HIDEAWAY_CONFIG_DIR}"
-  cat > "${HIDEAWAY_CONFIG_FILE}" <<'EOF'
-- JOB: "intercept $DEVNODE | /usr/local/bin/hideaway 4 10000 10000 -512 -256 | uinput -d $DEVNODE"
-  DEVICE:
-    EVENTS:
-      EV_REL: [REL_X, REL_Y]
-EOF
-
-  systemctl enable udevmon.service >/dev/null 2>&1 || true
-  systemctl restart udevmon.service || true
+rm -f "${HIDEAWAY_CONFIG_FILE}"
+if systemctl list-unit-files udevmon.service >/dev/null 2>&1; then
+  systemctl restart udevmon.service >/dev/null 2>&1 || true
 fi
 
 cat > "${LOGIN_HELPER_TMP_FILE}" <<EOF
