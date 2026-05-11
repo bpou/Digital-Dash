@@ -11,7 +11,7 @@ ApplicationWindow {
     color: "#000000"
     title: "Digital Dash"
 
-    property string activeView: "cluster"
+    property string activeView: initialView || "cluster"
     property var vehicleState: vehicleClient.state
 
     Shortcut {

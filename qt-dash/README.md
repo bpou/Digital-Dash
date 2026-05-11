@@ -15,3 +15,26 @@ cmake --build build
 ```
 
 Use `Esc` to quit while testing.
+
+Choose the screen with `--view cluster` or `--view center`:
+
+```bash
+./build/digital-dash-qt --view cluster --ws ws://127.0.0.1:8765
+./build/digital-dash-qt --view center --ws ws://127.0.0.1:8765
+```
+
+## Install as Raspberry Pi Desktop autostart
+
+This keeps the normal Raspberry Pi Wayland desktop running, so Raspberry Pi Connect screen sharing keeps working. It does not install the old tty/Chromium kiosk.
+
+```bash
+cd /home/admin/digital-dash
+sudo bash qt-dash/scripts/install-rpi-desktop-autostart.sh /home/admin/digital-dash admin cluster
+sudo reboot
+```
+
+Logs are written to:
+
+```bash
+tail -120 ~/.cache/digital-dash-qt.log
+```
