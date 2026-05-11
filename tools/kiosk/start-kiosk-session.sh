@@ -87,8 +87,6 @@ CHROMIUM_PROFILE_DIR="${LABWC_CONFIG_DIR}/chromium-profile"
 mkdir -p "${LABWC_CONFIG_DIR}"
 mkdir -p "${CHROMIUM_PROFILE_DIR}"
 
-SPLASH_URL="http://127.0.0.1:5173/kiosk-splash.html?target=${TARGET_URL}"
-
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
 set -eu
@@ -124,7 +122,7 @@ exec "${BROWSER_BIN}" \
   --use-gl=egl \
   --ignore-gpu-blocklist \
   --kiosk \
-  --app="${SPLASH_URL}" \
+  --app="${TARGET_URL}" \
   --start-maximized \
   --no-first-run \
   --noerrdialogs \
