@@ -25,6 +25,7 @@ RUNNER="${ROOT_DIR}/qt-dash/scripts/run-digital-dash-qt.sh"
 PROFILE_FILE="${TARGET_HOME}/.profile"
 BASH_PROFILE_FILE="${TARGET_HOME}/.bash_profile"
 LABWC_AUTOSTART_FILE="${TARGET_HOME}/.config/labwc/autostart"
+USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
 PROFILE_MARKER_START="# >>> digital-dash tty1 kiosk >>>"
 PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
 
@@ -67,6 +68,10 @@ rm -f \
   "${AUTOSTART_DIR}/digital-dash-cluster.desktop" \
   "${AUTOSTART_DIR}/digital-dash-kiosk.desktop" \
   "${AUTOSTART_DIR}/digital-dash-splash.desktop" \
+  "${USER_SYSTEMD_DIR}/digital-dash-kiosk.service" \
+  "${USER_SYSTEMD_DIR}/digital-dash-splash.service" \
+  "${USER_SYSTEMD_DIR}/default.target.wants/digital-dash-kiosk.service" \
+  "${USER_SYSTEMD_DIR}/default.target.wants/digital-dash-splash.service" \
   /etc/systemd/system/digital-dash-kiosk.service \
   /etc/systemd/system/digital-dash-splash.service \
   /etc/systemd/system/digital-dash-zero-flash.service \
