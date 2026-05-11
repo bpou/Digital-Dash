@@ -31,12 +31,18 @@ TARGET_GROUP=$(id -gn "${TARGET_USER}")
 LOGIN_HELPER_DIR="${TARGET_HOME}/.config/digital-dash"
 LOGIN_HELPER_FILE="${LOGIN_HELPER_DIR}/kiosk-login.sh"
 PROFILE_FILE="${TARGET_HOME}/.profile"
+BASH_PROFILE_FILE="${TARGET_HOME}/.bash_profile"
 HUSHLOGIN_FILE="${TARGET_HOME}/.hushlogin"
 AUTOSTART_FILE="${TARGET_HOME}/.config/autostart/digital-dash-cluster.desktop"
 LABWC_AUTOSTART_FILE="${TARGET_HOME}/.config/labwc/autostart"
 PROFILE_MARKER_START="# >>> digital-dash tty1 kiosk >>>"
 PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
 LOGIN_HELPER_TMP_FILE=$(mktemp)
+BASH_LOGIN_FILE="${PROFILE_FILE}"
+if [ -f "${BASH_PROFILE_FILE}" ]; then
+  BASH_LOGIN_FILE="${BASH_PROFILE_FILE}"
+fi
+
 PROFILE_TMP_FILE=$(mktemp)
 GETTY_TMP_FILE=$(mktemp)
 
@@ -114,11 +120,11 @@ install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LOGIN_HELPER_DIR}
 install -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LOGIN_HELPER_TMP_FILE}" "${LOGIN_HELPER_FILE}"
 chmod +x "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh"
 
-if [ -f "${PROFILE_FILE}" ]; then
-  if ! grep -Fq "${PROFILE_MARKER_START}" "${PROFILE_FILE}"; then
+if [ -f "${BASH_LOGIN_FILE}" ]; then
+  if ! grep -Fq "${PROFILE_MARKER_START}" "${BASH_LOGIN_FILE}"; then
     printf '\n%s\n[ -f "$HOME/.config/digital-dash/kiosk-login.sh" ] && . "$HOME/.config/digital-dash/kiosk-login.sh"\n%s\n' \
       "${PROFILE_MARKER_START}" \
-      "${PROFILE_MARKER_END}" >> "${PROFILE_FILE}"
+      "${PROFILE_MARKER_END}" >> "${BASH_LOGIN_FILE}"
   fi
 else
   cat > "${PROFILE_TMP_FILE}" <<EOF
@@ -131,7 +137,7 @@ ${PROFILE_MARKER_START}
 [ -f "\$HOME/.config/digital-dash/kiosk-login.sh" ] && . "\$HOME/.config/digital-dash/kiosk-login.sh"
 ${PROFILE_MARKER_END}
 EOF
-  install -m 0644 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${PROFILE_TMP_FILE}" "${PROFILE_FILE}"
+  install -m 0644 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${PROFILE_TMP_FILE}" "${BASH_LOGIN_FILE}"
 fi
 
 touch "${HUSHLOGIN_FILE}"
