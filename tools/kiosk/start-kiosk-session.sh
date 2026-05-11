@@ -101,6 +101,7 @@ fi
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true
 rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"
+unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
 
 exec "${BROWSER_BIN}" \
   --ozone-platform=wayland \
@@ -113,10 +114,8 @@ exec "${BROWSER_BIN}" \
   --disable-session-crashed-bubble \
   --hide-scrollbars \
   --no-default-browser-check \
-  --disable-features=Translate,MediaRouter \
-  --disable-gpu \
-  --disable-gpu-compositing \
-  --disable-gpu-rasterization \
+  --disable-vulkan \
+  --disable-features=Translate,MediaRouter,Vulkan,DefaultANGLEVulkan \
   --default-background-color=000000ff \
   --force-dark-mode \
   --enable-features=UseOzonePlatform,OverlayScrollbar \
