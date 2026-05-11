@@ -8,7 +8,8 @@ USER_ID=$(id -u)
 HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
 LOG_FILE="${LOG_DIR}/digital-dash-kiosk-session.log"
-CHROMIUM_PROFILE_DIR="${TMPDIR:-/tmp}/digital-dash-chromium-profile-${USER_ID}"
+CHROMIUM_PROFILE_DIR="${LOG_DIR}/digital-dash-chromium-profile"
+BLACK_BOOT_PAGE="${LOG_DIR}/digital-dash-black-boot.html"
 
 mkdir -p "${LOG_DIR}" "${CHROMIUM_PROFILE_DIR}"
 exec >> "${LOG_FILE}" 2>&1
@@ -20,8 +21,8 @@ echo "DISPLAY=${DISPLAY:-}"
 
 if [ -z "${DISPLAY:-}" ]; then
   if command -v startx >/dev/null 2>&1; then
-    echo "[$(date -Iseconds)] DISPLAY is not set; launching Xorg with startx -- -nocursor"
-    exec startx "$0" "${ROOT_DIR}" "${TARGET_URL}" -- -nocursor
+    echo "[$(date -Iseconds)] DISPLAY is not set; launching Xorg with startx -- -nocursor -br"
+    exec startx "$0" "${ROOT_DIR}" "${TARGET_URL}" -- -nocursor -br
   fi
 
   echo "startx not found and DISPLAY is not set." >&2
@@ -70,23 +71,50 @@ fi
 pkill -x unclutter >/dev/null 2>&1 || true
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true
-rm -rf "${CHROMIUM_PROFILE_DIR}"
-mkdir -p "${CHROMIUM_PROFILE_DIR}"
+rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"
 unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
 
 if command -v unclutter >/dev/null 2>&1; then
   unclutter -idle 0.01 -root &
 fi
 
-if command -v curl >/dev/null 2>&1; then
-  echo "[$(date -Iseconds)] Waiting for Digital Dash UI health endpoint"
-  for _ in $(seq 1 40); do
-    if curl -fsS http://127.0.0.1:5173/healthz >/dev/null 2>&1; then
-      break
-    fi
-    sleep 0.25
-  done
-fi
+cat > "${BLACK_BOOT_PAGE}" <<EOF
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const target = "${TARGET_URL}";
+      const go = () => window.location.replace(target);
+      const poll = async () => {
+        try {
+          const response = await fetch("http://127.0.0.1:5173/healthz", { cache: "no-store" });
+          if (response.ok) {
+            go();
+            return;
+          }
+        } catch {}
+        setTimeout(poll, 150);
+      };
+      poll();
+    </script>
+  </body>
+</html>
+EOF
 
 echo "[$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
 echo "[$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
@@ -94,7 +122,7 @@ echo "[$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
 exec "${BROWSER_BIN}" \
   --ozone-platform=x11 \
   --kiosk \
-  --app="${TARGET_URL}" \
+  --app="file://${BLACK_BOOT_PAGE}" \
   --start-maximized \
   --no-first-run \
   --noerrdialogs \
