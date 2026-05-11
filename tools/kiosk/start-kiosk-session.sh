@@ -32,7 +32,16 @@ export GTK_THEME="${GTK_THEME_NAME}"
 
 find_browser() {
   local candidate
-  for candidate in chromium chromium-browser; do
+  for candidate in \
+    /usr/lib/chromium/chromium \
+    /usr/lib/chromium-browser/chromium-browser \
+    /usr/lib/chromium-browser/chromium-browser-v7 \
+    chromium \
+    chromium-browser; do
+    if [ -x "${candidate}" ]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
     if command -v "${candidate}" >/dev/null 2>&1; then
       command -v "${candidate}"
       return 0
@@ -103,6 +112,12 @@ pkill -x chromium-browser >/dev/null 2>&1 || true
 rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"
 unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
 
+echo "[\$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
+echo "[\$(date -Iseconds)] Chromium version: \$("${BROWSER_BIN}" --version 2>&1 || true)" >> "${LOG_FILE}"
+if [ -d /etc/chromium.d ]; then
+  grep -R "no-decommit-pooled-pages" /etc/chromium.d >> "${LOG_FILE}" 2>&1 || true
+fi
+
 exec "${BROWSER_BIN}" \
   --ozone-platform=wayland \
   --use-gl=egl \
@@ -121,6 +136,9 @@ exec "${BROWSER_BIN}" \
   --default-background-color=000000ff \
   --force-dark-mode \
   --enable-features=OverlayScrollbar \
+  --enable-logging=stderr \
+  --log-level=0 \
+  --vmodule="gpu*=2,zygote*=2" \
   --user-data-dir="${CHROMIUM_PROFILE_DIR}"
 EOF
 
