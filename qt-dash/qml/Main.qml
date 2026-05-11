@@ -13,15 +13,26 @@ ApplicationWindow {
 
     property string activeView: initialView || "cluster"
     property var vehicleState: vehicleClient.state
+    property bool showControls: false
 
     Shortcut {
         sequence: "Esc"
         onActivated: Qt.quit()
     }
 
+    Shortcut {
+        sequence: "C"
+        onActivated: root.activeView = "cluster"
+    }
+
+    Shortcut {
+        sequence: "M"
+        onActivated: root.activeView = "center"
+    }
+
     Rectangle {
         anchors.fill: parent
-        color: "#07090c"
+        color: "#050608"
 
         ClusterView {
             anchors.fill: parent
@@ -38,8 +49,10 @@ ApplicationWindow {
         Row {
             anchors.top: parent.top
             anchors.right: parent.right
-            anchors.margins: 18
+            anchors.margins: 16
             spacing: 8
+            visible: root.showControls
+            z: 10
 
             Button {
                 text: "Cluster"

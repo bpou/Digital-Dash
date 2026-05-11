@@ -6,7 +6,7 @@ Item {
     property real maximumValue: 100
     property string label: ""
     property string valueText: ""
-    property color accentColor: "#00d1ff"
+    property color accentColor: "#f4f7fb"
 
     Canvas {
         id: canvas
@@ -25,22 +25,19 @@ Item {
 
             ctx.reset();
             ctx.lineCap = "round";
-            ctx.lineWidth = 18;
-            ctx.strokeStyle = "rgba(255,255,255,0.12)";
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = "rgba(255,255,255,0.10)";
             ctx.beginPath();
             ctx.arc(cx, cy, r, start, start + sweep);
             ctx.stroke();
 
             ctx.strokeStyle = root.accentColor;
-            ctx.shadowColor = root.accentColor;
-            ctx.shadowBlur = 18;
             ctx.beginPath();
             ctx.arc(cx, cy, r, start, start + sweep * pct);
             ctx.stroke();
-            ctx.shadowBlur = 0;
 
             ctx.lineWidth = 2;
-            ctx.strokeStyle = "rgba(255,255,255,0.25)";
+            ctx.strokeStyle = "rgba(255,255,255,0.20)";
             for (let i = 0; i <= 10; i++) {
                 const a = start + sweep * (i / 10);
                 const inner = r - 22;
@@ -63,17 +60,20 @@ Item {
     Text {
         anchors.centerIn: parent
         text: root.valueText
-        color: "white"
-        font.pixelSize: 88
-        font.bold: true
+        color: "#f4f7fb"
+        font.family: "Inter"
+        font.pixelSize: Math.max(36, parent.width * 0.18)
+        font.weight: Font.Light
     }
 
     Text {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.verticalCenter
-        anchors.topMargin: 70
+        anchors.topMargin: parent.height * 0.18
         text: root.label
-        color: "#9cadba"
-        font.pixelSize: 22
+        color: "#7b8591"
+        font.family: "Inter"
+        font.pixelSize: 15
+        font.weight: Font.Medium
     }
 }

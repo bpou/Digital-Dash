@@ -4,30 +4,33 @@ Rectangle {
     id: root
     property string label: ""
     property string value: ""
+    property color accentColor: "#f4f7fb"
 
-    width: 170
-    height: 56
-    radius: 28
-    color: "#121a22"
-    border.color: "#2a3945"
+    width: 126
+    height: 34
+    radius: 6
+    color: "#0d1014"
+    border.color: "#202832"
     border.width: 1
 
     Row {
         anchors.centerIn: parent
-        spacing: 10
+        spacing: 7
 
         Text {
             text: root.label
-            color: "#7f8d98"
-            font.pixelSize: 12
-            font.bold: true
+            color: "#727d89"
+            font.family: "Inter"
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
         }
 
         Text {
             text: root.value
-            color: "white"
-            font.pixelSize: 16
-            font.bold: true
+            color: root.accentColor
+            font.family: "Inter"
+            font.pixelSize: 13
+            font.weight: Font.DemiBold
         }
     }
 }

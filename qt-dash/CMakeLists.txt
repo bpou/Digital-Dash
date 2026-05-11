@@ -23,6 +23,7 @@ qt_add_qml_module(digital-dash-qt
         qml/ClusterView.qml
         qml/CenterView.qml
         qml/Gauge.qml
+        qml/MetricRow.qml
         qml/StatusPill.qml
 )
 
