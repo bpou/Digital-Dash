@@ -55,6 +55,7 @@ if [ -z "${BROWSER_BIN}" ]; then
   echo "Chromium not found." >&2
   exit 1
 fi
+BROWSER_VERSION=$("${BROWSER_BIN}" --version 2>&1 || true)
 
 if ! command -v labwc >/dev/null 2>&1; then
   echo "labwc not found." >&2
@@ -113,7 +114,7 @@ rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/Singleton
 unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
 
 echo "[\$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
-echo "[\$(date -Iseconds)] Chromium version: \$("${BROWSER_BIN}" --version 2>&1 || true)" >> "${LOG_FILE}"
+echo "[\$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
 if [ -d /etc/chromium.d ]; then
   grep -R "no-decommit-pooled-pages" /etc/chromium.d >> "${LOG_FILE}" 2>&1 || true
 fi
