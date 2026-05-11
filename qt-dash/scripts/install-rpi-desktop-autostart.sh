@@ -22,7 +22,11 @@ TARGET_GROUP=$(id -gn "${TARGET_USER}")
 AUTOSTART_DIR="${TARGET_HOME}/.config/autostart"
 AUTOSTART_FILE="${AUTOSTART_DIR}/digital-dash-qt.desktop"
 RUNNER="${ROOT_DIR}/qt-dash/scripts/run-digital-dash-qt.sh"
-OLD_WEB_AUTOSTART_FILE="${AUTOSTART_DIR}/digital-dash-cluster.desktop"
+PROFILE_FILE="${TARGET_HOME}/.profile"
+BASH_PROFILE_FILE="${TARGET_HOME}/.bash_profile"
+LABWC_AUTOSTART_FILE="${TARGET_HOME}/.config/labwc/autostart"
+PROFILE_MARKER_START="# >>> digital-dash tty1 kiosk >>>"
+PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
 
 if [ ! -f "${ROOT_DIR}/qt-dash/CMakeLists.txt" ]; then
   echo "Qt dash project not found at ${ROOT_DIR}/qt-dash" >&2
@@ -58,11 +62,28 @@ EOF
 
 chown "${TARGET_USER}:${TARGET_GROUP}" "${AUTOSTART_FILE}"
 chmod 0644 "${AUTOSTART_FILE}"
-rm -f "${OLD_WEB_AUTOSTART_FILE}"
+
+rm -f \
+  "${AUTOSTART_DIR}/digital-dash-cluster.desktop" \
+  "${AUTOSTART_DIR}/digital-dash-kiosk.desktop" \
+  /etc/systemd/system/digital-dash-kiosk.service \
+  /etc/systemd/system/digital-dash-zero-flash.service \
+  /etc/lightdm/lightdm.conf.d/99-digital-dash-kiosk.conf \
+  /usr/share/wayland-sessions/digital-dash-kiosk.desktop
+
+if [ -f "${LABWC_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start-kiosk-session' "${LABWC_AUTOSTART_FILE}"; then
+  mv -f "${LABWC_AUTOSTART_FILE}" "${LABWC_AUTOSTART_FILE}.disabled"
+fi
 
 if [ -f "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh" ]; then
   mv -f "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh" "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh.disabled"
 fi
+
+for login_file in "${PROFILE_FILE}" "${BASH_PROFILE_FILE}"; do
+  if [ -f "${login_file}" ] && grep -Fq "${PROFILE_MARKER_START}" "${login_file}"; then
+    sed -i "/${PROFILE_MARKER_START}/,/${PROFILE_MARKER_END}/d" "${login_file}"
+  fi
+done
 
 if [ -f /etc/lightdm/lightdm.conf ]; then
   sed -i \
@@ -74,8 +95,11 @@ if [ -f /etc/lightdm/lightdm.conf ]; then
     /etc/lightdm/lightdm.conf
 fi
 
+systemctl daemon-reload
 systemctl set-default graphical.target
 systemctl enable lightdm.service >/dev/null 2>&1 || true
+systemctl disable digital-dash-kiosk.service >/dev/null 2>&1 || true
+systemctl disable digital-dash-zero-flash.service >/dev/null 2>&1 || true
 
 echo "Installed Digital Dash Qt autostart for ${TARGET_USER}."
 echo "Autostart file: ${AUTOSTART_FILE}"
