@@ -78,6 +78,16 @@ if command -v unclutter >/dev/null 2>&1; then
   unclutter -idle 0.01 -root &
 fi
 
+if command -v curl >/dev/null 2>&1; then
+  echo "[$(date -Iseconds)] Waiting for Digital Dash UI health endpoint"
+  for _ in $(seq 1 40); do
+    if curl -fsS http://127.0.0.1:5173/healthz >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.25
+  done
+fi
+
 echo "[$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
 echo "[$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
 
@@ -94,7 +104,7 @@ exec "${BROWSER_BIN}" \
   --no-default-browser-check \
   --disable-vulkan \
   --disable-features=Translate,MediaRouter,Vulkan,DefaultANGLEVulkan \
-  --default-background-color=000000ff \
+  --default-background-color=000000 \
   --force-dark-mode \
   --enable-features=OverlayScrollbar \
   --user-data-dir="${CHROMIUM_PROFILE_DIR}"
