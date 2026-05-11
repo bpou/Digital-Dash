@@ -13,7 +13,6 @@
         height: 100%;
         overflow: hidden;
         background: #07090c;
-        cursor: none;
       }
 
       body {
@@ -40,12 +39,6 @@
       const target = params.get("target") || "http://127.0.0.1:5173/cluster";
       let navigated = false;
 
-      const getKioskTarget = () => {
-        const url = new URL(target, window.location.href);
-        url.searchParams.set("kiosk", "1");
-        return url.toString();
-      };
-
       const tryNavigate = async () => {
         if (navigated) return;
         try {
@@ -53,7 +46,7 @@
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           navigated = true;
           window.setTimeout(() => {
-            window.location.replace(getKioskTarget());
+            window.location.replace(target);
           }, 250);
           return;
         } catch {

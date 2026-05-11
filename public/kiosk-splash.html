@@ -13,7 +13,6 @@
         height: 100%;
         overflow: hidden;
         background: #07090c;
-        cursor: none;
       }
 
       .splash {
@@ -35,16 +34,10 @@
       const target = params.get("target") || "/cluster";
       let navigated = false;
 
-      const getKioskTarget = () => {
-        const url = new URL(target, window.location.href);
-        url.searchParams.set("kiosk", "1");
-        return url.toString();
-      };
-
       const navigate = () => {
         if (navigated) return;
         navigated = true;
-        window.location.replace(getKioskTarget());
+        window.location.replace(target);
       };
 
       const probe = async () => {

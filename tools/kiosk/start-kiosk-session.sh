@@ -83,48 +83,11 @@ LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
 LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
 LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
 CHROMIUM_PROFILE_DIR="${LABWC_CONFIG_DIR}/chromium-profile"
-CURSOR_THEME_DIR="${LABWC_CONFIG_DIR}/icons/digital-dash-transparent"
-CURSOR_DIR="${CURSOR_THEME_DIR}/cursors"
 
 mkdir -p "${LABWC_CONFIG_DIR}"
 mkdir -p "${CHROMIUM_PROFILE_DIR}"
-mkdir -p "${CURSOR_DIR}"
 
 SPLASH_URL="http://127.0.0.1:5173/kiosk-splash.html?target=${TARGET_URL}"
-
-cat > "${CURSOR_THEME_DIR}/index.theme" <<'EOF'
-[Icon Theme]
-Name=digital-dash-transparent
-Comment=Transparent cursor theme for Digital Dash kiosk
-EOF
-
-if command -v xcursorgen >/dev/null 2>&1; then
-  TRANSPARENT_CURSOR_PNG="${LABWC_CONFIG_DIR}/transparent-cursor.png"
-  TRANSPARENT_CURSOR_CONFIG="${LABWC_CONFIG_DIR}/transparent-cursor.conf"
-
-  printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' \
-    | base64 -d > "${TRANSPARENT_CURSOR_PNG}"
-  printf '24 0 0 %s\n' "${TRANSPARENT_CURSOR_PNG}" > "${TRANSPARENT_CURSOR_CONFIG}"
-  xcursorgen "${TRANSPARENT_CURSOR_CONFIG}" "${CURSOR_DIR}/left_ptr" >/dev/null 2>&1 || true
-
-  for cursor_name in \
-    default \
-    arrow \
-    pointer \
-    hand1 \
-    hand2 \
-    xterm \
-    text \
-    crosshair \
-    wait \
-    watch; do
-    ln -sf left_ptr "${CURSOR_DIR}/${cursor_name}"
-  done
-fi
-
-export XCURSOR_PATH="${LABWC_CONFIG_DIR}/icons:/usr/share/icons"
-export XCURSOR_THEME="digital-dash-transparent"
-export XCURSOR_SIZE=24
 
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
@@ -136,10 +99,19 @@ else
   swaybg -c 000000 &
 fi
 
+pkill -x unclutter >/dev/null 2>&1 || true
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true
 rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"
 unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
+
+if command -v unclutter >/dev/null 2>&1; then
+  if [ -n "\${DISPLAY:-}" ]; then
+    unclutter -idle 0.01 -root &
+  else
+    echo "[\$(date -Iseconds)] unclutter skipped: DISPLAY is not set" >> "${LOG_FILE}"
+  fi
+fi
 
 echo "[\$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
 echo "[\$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
@@ -148,7 +120,7 @@ if [ -d /etc/chromium.d ]; then
 fi
 
 exec "${BROWSER_BIN}" \
-  --ozone-platform=wayland \
+  --ozone-platform=x11 \
   --use-gl=egl \
   --ignore-gpu-blocklist \
   --kiosk \
@@ -174,9 +146,6 @@ EOF
 cat > "${LABWC_ENV_FILE}" <<EOF
 GTK_THEME=${GTK_THEME_NAME}
 XDG_SESSION_TYPE=wayland
-XCURSOR_PATH=${LABWC_CONFIG_DIR}/icons:/usr/share/icons
-XCURSOR_THEME=digital-dash-transparent
-XCURSOR_SIZE=24
 EOF
 
 cat > "${LABWC_RC_FILE}" <<'EOF'

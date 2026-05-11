@@ -109,11 +109,6 @@ body {
   overflow: hidden;
 }
 
-:root[data-kiosk="true"],
-:root[data-kiosk="true"] * {
-  cursor: none !important;
-}
-
 .ambient-glow {
   transition: background 320ms ease, opacity 320ms ease;
 }

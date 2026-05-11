@@ -80,7 +80,7 @@ if command -v apt-get >/dev/null 2>&1; then
 
   apt-get update
 
-  for pkg in curl labwc swaybg x11-apps; do
+  for pkg in curl labwc swaybg xwayland unclutter; do
     if apt-cache show "${pkg}" >/dev/null 2>&1; then
       packages+=("${pkg}")
     fi
