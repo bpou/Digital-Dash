@@ -83,11 +83,48 @@ LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
 LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
 LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
 CHROMIUM_PROFILE_DIR="${LABWC_CONFIG_DIR}/chromium-profile"
+CURSOR_THEME_DIR="${LABWC_CONFIG_DIR}/icons/digital-dash-transparent"
+CURSOR_DIR="${CURSOR_THEME_DIR}/cursors"
 
 mkdir -p "${LABWC_CONFIG_DIR}"
 mkdir -p "${CHROMIUM_PROFILE_DIR}"
+mkdir -p "${CURSOR_DIR}"
 
 SPLASH_URL="http://127.0.0.1:5173/kiosk-splash.html?target=${TARGET_URL}"
+
+cat > "${CURSOR_THEME_DIR}/index.theme" <<'EOF'
+[Icon Theme]
+Name=digital-dash-transparent
+Comment=Transparent cursor theme for Digital Dash kiosk
+EOF
+
+if command -v xcursorgen >/dev/null 2>&1; then
+  TRANSPARENT_CURSOR_PNG="${LABWC_CONFIG_DIR}/transparent-cursor.png"
+  TRANSPARENT_CURSOR_CONFIG="${LABWC_CONFIG_DIR}/transparent-cursor.conf"
+
+  printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' \
+    | base64 -d > "${TRANSPARENT_CURSOR_PNG}"
+  printf '24 0 0 %s\n' "${TRANSPARENT_CURSOR_PNG}" > "${TRANSPARENT_CURSOR_CONFIG}"
+  xcursorgen "${TRANSPARENT_CURSOR_CONFIG}" "${CURSOR_DIR}/left_ptr" >/dev/null 2>&1 || true
+
+  for cursor_name in \
+    default \
+    arrow \
+    pointer \
+    hand1 \
+    hand2 \
+    xterm \
+    text \
+    crosshair \
+    wait \
+    watch; do
+    ln -sf left_ptr "${CURSOR_DIR}/${cursor_name}"
+  done
+fi
+
+export XCURSOR_PATH="${LABWC_CONFIG_DIR}/icons:/usr/share/icons"
+export XCURSOR_THEME="digital-dash-transparent"
+export XCURSOR_SIZE=24
 
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
@@ -97,15 +134,6 @@ if [ -f "${SPLASH_IMAGE_PATH}" ]; then
   swaybg -i "${SPLASH_IMAGE_PATH}" -m fill -c 000000 &
 else
   swaybg -c 000000 &
-fi
-
-if command -v curl >/dev/null 2>&1; then
-  for _ in \$(seq 1 120); do
-    if curl -fsS http://127.0.0.1:5173/healthz >/dev/null 2>&1; then
-      break
-    fi
-    sleep 0.5
-  done
 fi
 
 pkill -x chromium >/dev/null 2>&1 || true
@@ -146,6 +174,9 @@ EOF
 cat > "${LABWC_ENV_FILE}" <<EOF
 GTK_THEME=${GTK_THEME_NAME}
 XDG_SESSION_TYPE=wayland
+XCURSOR_PATH=${LABWC_CONFIG_DIR}/icons:/usr/share/icons
+XCURSOR_THEME=digital-dash-transparent
+XCURSOR_SIZE=24
 EOF
 
 cat > "${LABWC_RC_FILE}" <<'EOF'
