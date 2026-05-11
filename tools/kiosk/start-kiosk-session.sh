@@ -105,6 +105,8 @@ unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
 
 exec "${BROWSER_BIN}" \
   --ozone-platform=wayland \
+  --use-gl=egl \
+  --ignore-gpu-blocklist \
   --kiosk \
   --app="${SPLASH_URL}" \
   --start-maximized \
@@ -118,7 +120,7 @@ exec "${BROWSER_BIN}" \
   --disable-features=Translate,MediaRouter,Vulkan,DefaultANGLEVulkan \
   --default-background-color=000000ff \
   --force-dark-mode \
-  --enable-features=UseOzonePlatform,OverlayScrollbar \
+  --enable-features=OverlayScrollbar \
   --user-data-dir="${CHROMIUM_PROFILE_DIR}"
 EOF
 
