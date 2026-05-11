@@ -10,7 +10,6 @@ HOME_DIR=${HOME:-$(getent passwd "${USER_ID}" | cut -d: -f6)}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME_DIR}/.cache}
 LOG_FILE="${LOG_DIR}/digital-dash-kiosk-session.log"
 SPLASH_IMAGE_PATH="${ROOT_DIR}/public/Das Rolf.png"
-SPLASH_HTML_PATH="${ROOT_DIR}/tools/kiosk/splash.html"
 
 mkdir -p "${LOG_DIR}"
 exec >> "${LOG_FILE}" 2>&1
@@ -73,16 +72,12 @@ LABWC_CONFIG_DIR="${XDG_RUNTIME_DIR:-/tmp}/digital-dash-labwc"
 LABWC_AUTOSTART_FILE="${LABWC_CONFIG_DIR}/autostart"
 LABWC_ENV_FILE="${LABWC_CONFIG_DIR}/environment"
 LABWC_RC_FILE="${LABWC_CONFIG_DIR}/rc.xml"
-READY_MARKER_FILE="${LABWC_CONFIG_DIR}/cluster-ready"
 CHROMIUM_PROFILE_DIR="${LABWC_CONFIG_DIR}/chromium-profile"
 
 mkdir -p "${LABWC_CONFIG_DIR}"
-rm -f "${READY_MARKER_FILE}"
 mkdir -p "${CHROMIUM_PROFILE_DIR}"
 
-READY_PORT=$((38000 + (USER_ID % 1000)))
-READY_SIGNAL_URL="http://127.0.0.1:${READY_PORT}/ready"
-SPLASH_URL="file://${SPLASH_HTML_PATH// /%20}?target=${TARGET_URL}&kiosk_ready=${READY_SIGNAL_URL}"
+SPLASH_URL="http://127.0.0.1:5173/kiosk-splash.html?target=${TARGET_URL}"
 
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
 #!/usr/bin/env bash
@@ -94,20 +89,14 @@ else
   swaybg -c 000000 &
 fi
 
-node -e '
-const fs = require("fs");
-const http = require("http");
-const port = Number(process.argv[1]);
-const marker = process.argv[2];
-const server = http.createServer((req, res) => {
-  res.statusCode = 204;
-  res.end();
-  try { fs.writeFileSync(marker, String(Date.now())); } catch {}
-});
-server.listen(port, "127.0.0.1");
-setTimeout(() => server.close(() => process.exit(0)), 30000);
-' "${READY_PORT}" "${READY_MARKER_FILE}" &
-READY_SERVER_PID=\$!
+if command -v curl >/dev/null 2>&1; then
+  for _ in \$(seq 1 120); do
+    if curl -fsS http://127.0.0.1:5173/healthz >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.5
+  done
+fi
 
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true

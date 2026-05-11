@@ -16,14 +16,9 @@
         cursor: none;
       }
 
-      body {
-        position: relative;
-      }
-
       .splash {
-        position: absolute;
+        position: fixed;
         inset: 0;
-        display: block;
         width: 100vw;
         height: 100vh;
         object-fit: cover;
@@ -34,10 +29,10 @@
     </style>
   </head>
   <body>
-    <img class="splash" src="../../public/Das%20Rolf.png" alt="Das Rolf" />
+    <img class="splash" src="/Das%20Rolf.png" alt="Das Rolf" />
     <script>
       const params = new URLSearchParams(window.location.search);
-      const target = params.get("target") || "http://127.0.0.1:5173/cluster";
+      const target = params.get("target") || "/cluster";
       let navigated = false;
 
       const getKioskTarget = () => {
@@ -46,23 +41,26 @@
         return url.toString();
       };
 
-      const tryNavigate = async () => {
+      const navigate = () => {
         if (navigated) return;
-        try {
-          const response = await fetch(target, { cache: "no-store", mode: "same-origin" });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          navigated = true;
-          window.setTimeout(() => {
-            window.location.replace(getKioskTarget());
-          }, 250);
-          return;
-        } catch {
-          // Ignore until service is ready.
-        }
-        window.setTimeout(tryNavigate, 500);
+        navigated = true;
+        window.location.replace(getKioskTarget());
       };
 
-      tryNavigate();
+      const probe = async () => {
+        try {
+          const response = await fetch(target, { cache: "no-store" });
+          if (response.ok) {
+            window.setTimeout(navigate, 250);
+            return;
+          }
+        } catch {
+          // Service not ready yet.
+        }
+        window.setTimeout(probe, 500);
+      };
+
+      probe();
     </script>
   </body>
 </html>
