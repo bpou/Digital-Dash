@@ -67,12 +67,6 @@ if command -v xsetroot >/dev/null 2>&1; then
   xsetroot -solid black || true
 fi
 
-BLACK_COVER_PID=""
-if command -v xmessage >/dev/null 2>&1; then
-  xmessage -buttons '' -geometry 10000x10000+0+0 -bg black -fg black '' &
-  BLACK_COVER_PID=$!
-fi
-
 pkill -x unclutter >/dev/null 2>&1 || true
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true
@@ -95,10 +89,6 @@ fi
 
 echo "[$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
 echo "[$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
-
-if [ -n "${BLACK_COVER_PID}" ]; then
-  (sleep 2; kill "${BLACK_COVER_PID}" >/dev/null 2>&1 || true) &
-fi
 
 "${BROWSER_BIN}" \
   --ozone-platform=x11 \
