@@ -68,6 +68,7 @@ if command -v xsetroot >/dev/null 2>&1; then
 fi
 
 pkill -x unclutter >/dev/null 2>&1 || true
+pkill -x xmessage >/dev/null 2>&1 || true
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true
 rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"

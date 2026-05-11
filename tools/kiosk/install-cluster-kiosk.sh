@@ -106,6 +106,7 @@ rm -f "${HIDEAWAY_CONFIG_FILE}"
 if systemctl list-unit-files udevmon.service >/dev/null 2>&1; then
   systemctl restart udevmon.service >/dev/null 2>&1 || true
 fi
+pkill -x xmessage >/dev/null 2>&1 || true
 
 install -d -m 0755 "${XORG_CONFIG_DIR}"
 cat > "${XORG_V3D_CONFIG_FILE}" <<'EOF'
