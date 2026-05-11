@@ -121,7 +121,7 @@ if [ -n "\${DISPLAY:-}" ] || [ -n "\${WAYLAND_DISPLAY:-}" ] || [ -n "\${DIGITAL_
 fi
 
 export DIGITAL_DASH_KIOSK_STARTED=1
-exec startx "${TARGET_HOME}/.xinitrc" -- -nocursor
+exec "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" "${ROOT_DIR}" "${TARGET_URL}"
 EOF
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LOGIN_HELPER_DIR}"

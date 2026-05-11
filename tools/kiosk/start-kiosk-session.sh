@@ -18,6 +18,16 @@ echo "ROOT_DIR=${ROOT_DIR}"
 echo "TARGET_URL=${TARGET_URL}"
 echo "DISPLAY=${DISPLAY:-}"
 
+if [ -z "${DISPLAY:-}" ]; then
+  if command -v startx >/dev/null 2>&1; then
+    echo "[$(date -Iseconds)] DISPLAY is not set; launching Xorg with startx -- -nocursor"
+    exec startx "$0" "${ROOT_DIR}" "${TARGET_URL}" -- -nocursor
+  fi
+
+  echo "startx not found and DISPLAY is not set." >&2
+  exit 1
+fi
+
 export GTK_THEME="${GTK_THEME_NAME}"
 
 find_browser() {
