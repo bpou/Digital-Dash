@@ -70,8 +70,8 @@ if [ ! -d "${TARGET_HOME}" ]; then
   exit 1
 fi
 
-if [ ! -f "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" ]; then
-  echo "Missing session launcher script: ${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" >&2
+if [ ! -f "${ROOT_DIR}/tools/kiosk/start-x-kiosk-session.sh" ]; then
+  echo "Missing session launcher script: ${ROOT_DIR}/tools/kiosk/start-x-kiosk-session.sh" >&2
   exit 1
 fi
 
@@ -80,7 +80,7 @@ if command -v apt-get >/dev/null 2>&1; then
 
   apt-get update
 
-  for pkg in curl labwc swaybg xwayland unclutter; do
+  for pkg in curl xinit xserver-xorg x11-xserver-utils unclutter; do
     if apt-cache show "${pkg}" >/dev/null 2>&1; then
       packages+=("${pkg}")
     fi
@@ -113,12 +113,17 @@ if [ -n "\${DISPLAY:-}" ] || [ -n "\${WAYLAND_DISPLAY:-}" ] || [ -n "\${DIGITAL_
 fi
 
 export DIGITAL_DASH_KIOSK_STARTED=1
+if command -v startx >/dev/null 2>&1; then
+  exec startx "${ROOT_DIR}/tools/kiosk/start-x-kiosk-session.sh" "${ROOT_DIR}" "${TARGET_URL}" -- -nocursor
+fi
+
 exec "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh" "${ROOT_DIR}" "${TARGET_URL}"
 EOF
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LOGIN_HELPER_DIR}"
 install -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LOGIN_HELPER_TMP_FILE}" "${LOGIN_HELPER_FILE}"
 chmod +x "${ROOT_DIR}/tools/kiosk/start-kiosk-session.sh"
+chmod +x "${ROOT_DIR}/tools/kiosk/start-x-kiosk-session.sh"
 
 if [ -f "${BASH_LOGIN_FILE}" ]; then
   if ! grep -Fq "${PROFILE_MARKER_START}" "${BASH_LOGIN_FILE}"; then
