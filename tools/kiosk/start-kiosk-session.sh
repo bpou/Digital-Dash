@@ -97,19 +97,10 @@ else
   swaybg -c 000000 &
 fi
 
-pkill -x unclutter >/dev/null 2>&1 || true
 pkill -x chromium >/dev/null 2>&1 || true
 pkill -x chromium-browser >/dev/null 2>&1 || true
 rm -f "${CHROMIUM_PROFILE_DIR}/SingletonLock" "${CHROMIUM_PROFILE_DIR}/SingletonSocket" "${CHROMIUM_PROFILE_DIR}/SingletonCookie"
 unset CHROME_FLAGS CHROMIUM_FLAGS NODE_OPTIONS V8_OPTIONS
-
-if command -v unclutter >/dev/null 2>&1; then
-  if [ -n "\${DISPLAY:-}" ]; then
-    unclutter -idle 0.01 -root &
-  else
-    echo "[\$(date -Iseconds)] unclutter skipped: DISPLAY is not set" >> "${LOG_FILE}"
-  fi
-fi
 
 echo "[\$(date -Iseconds)] Launching Chromium: ${BROWSER_BIN}" >> "${LOG_FILE}"
 echo "[\$(date -Iseconds)] Chromium version: ${BROWSER_VERSION}" >> "${LOG_FILE}"
@@ -118,7 +109,7 @@ if [ -d /etc/chromium.d ]; then
 fi
 
 exec "${BROWSER_BIN}" \
-  --ozone-platform=x11 \
+  --ozone-platform=wayland \
   --use-gl=egl \
   --ignore-gpu-blocklist \
   --kiosk \
