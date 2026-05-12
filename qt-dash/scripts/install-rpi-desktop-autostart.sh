@@ -35,6 +35,8 @@ USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
 GETTY_OVERRIDE_FILE=/etc/systemd/system/getty@tty1.service.d/digital-dash-autologin.conf
 LIGHTDM_QT_CONF_FILE=/etc/lightdm/lightdm.conf.d/99-digital-dash-qt-autologin.conf
 SYSTEMD_QT_SERVICE_FILE=/etc/systemd/system/digital-dash-qt.service
+PLYMOUTH_HANDOFF_SERVICE_FILE=/etc/systemd/system/digital-dash-plymouth-handoff.service
+PLYMOUTH_WAIT_SERVICE_FILE=/etc/systemd/system/digital-dash-plymouth-wait.service
 QT_AUTOSTART_LOCK_DIR="${TARGET_HOME}/.cache/digital-dash-qt-autostart.lock"
 PROFILE_MARKER_START="# >>> digital-dash tty1 kiosk >>>"
 PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
@@ -78,6 +80,8 @@ rm -f \
   /etc/systemd/system/digital-dash-kiosk.service \
   /etc/systemd/system/digital-dash-splash.service \
   /etc/systemd/system/digital-dash-zero-flash.service \
+  "${PLYMOUTH_HANDOFF_SERVICE_FILE}" \
+  "${PLYMOUTH_WAIT_SERVICE_FILE}" \
   /etc/lightdm/lightdm.conf.d/99-digital-dash-kiosk.conf \
   /usr/share/wayland-sessions/digital-dash-kiosk.desktop
 
@@ -175,6 +179,8 @@ systemctl enable lightdm.service >/dev/null 2>&1 || true
 systemctl enable digital-dash-qt.service >/dev/null 2>&1
 systemctl disable digital-dash-kiosk.service >/dev/null 2>&1 || true
 systemctl disable digital-dash-zero-flash.service >/dev/null 2>&1 || true
+systemctl disable --now digital-dash-plymouth-handoff.service >/dev/null 2>&1 || true
+systemctl disable --now digital-dash-plymouth-wait.service >/dev/null 2>&1 || true
 
 echo "Installed Digital Dash Qt autostart for ${TARGET_USER}."
 echo "Systemd service: ${SYSTEMD_QT_SERVICE_FILE}"
