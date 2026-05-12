@@ -54,6 +54,7 @@ apt-get install -y \
   qml6-module-qtquick \
   qml6-module-qtquick-controls
 
+rm -rf "${ROOT_DIR}/qt-dash/build"
 cmake -S "${ROOT_DIR}/qt-dash" -B "${ROOT_DIR}/qt-dash/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build "${ROOT_DIR}/qt-dash/build"
 
