@@ -31,6 +31,14 @@ SYSTEM_LABWC_AUTOSTART_FILE=/etc/xdg/labwc/autostart
 SYSTEM_LABWC_BACKUP_FILE=/etc/xdg/labwc/autostart.digital-dash-desktop.bak
 LXSESSION_AUTOSTART_DIR="${TARGET_HOME}/.config/lxsession/LXDE-pi"
 LXSESSION_AUTOSTART_FILE="${LXSESSION_AUTOSTART_DIR}/autostart"
+PCMANFM_CONFIG_DIR="${TARGET_HOME}/.config/pcmanfm/LXDE-pi"
+PCMANFM_DESKTOP_CONFIG_FILE="${PCMANFM_CONFIG_DIR}/desktop-items-0.conf"
+USER_DIRS_FILE="${TARGET_HOME}/.config/user-dirs.dirs"
+USER_DIRS_BACKUP_FILE="${TARGET_HOME}/.config/user-dirs.dirs.digital-dash.bak"
+DIGITAL_DASH_CONFIG_DIR="${TARGET_HOME}/.config/digital-dash"
+DIGITAL_DASH_EMPTY_DESKTOP_DIR="${DIGITAL_DASH_CONFIG_DIR}/empty-desktop"
+DIGITAL_DASH_WALLPAPER_DIR=/usr/share/backgrounds/digital-dash
+DIGITAL_DASH_WALLPAPER_FILE="${DIGITAL_DASH_WALLPAPER_DIR}/das-rolf.png"
 USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
 GETTY_OVERRIDE_FILE=/etc/systemd/system/getty@tty1.service.d/digital-dash-autologin.conf
 LIGHTDM_QT_CONF_FILE=/etc/lightdm/lightdm.conf.d/99-digital-dash-qt-autologin.conf
@@ -65,6 +73,46 @@ cmake --build "${ROOT_DIR}/qt-dash/build"
 
 chmod +x "${RUNNER}" "${AUTOSTART_RUNNER}"
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${AUTOSTART_DIR}"
+
+install -d -m 0755 "${DIGITAL_DASH_WALLPAPER_DIR}"
+install -m 0644 "${ROOT_DIR}/public/Das Rolf.png" "${DIGITAL_DASH_WALLPAPER_FILE}"
+
+install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" \
+  "${PCMANFM_CONFIG_DIR}" \
+  "${DIGITAL_DASH_CONFIG_DIR}" \
+  "${DIGITAL_DASH_EMPTY_DESKTOP_DIR}"
+
+cat > "${PCMANFM_DESKTOP_CONFIG_FILE}" <<EOF
+[*]
+desktop_bg=#000000000000
+desktop_shadow=#000000000000
+desktop_fg=#ffffffffffff
+desktop_font=PibotoLt 12
+wallpaper=${DIGITAL_DASH_WALLPAPER_FILE}
+wallpaper_mode=crop
+show_documents=0
+show_trash=0
+show_mounts=0
+EOF
+chown "${TARGET_USER}:${TARGET_GROUP}" "${PCMANFM_DESKTOP_CONFIG_FILE}"
+chmod 0644 "${PCMANFM_DESKTOP_CONFIG_FILE}"
+
+if [ -f "${USER_DIRS_FILE}" ] && [ ! -f "${USER_DIRS_BACKUP_FILE}" ]; then
+  cp -a "${USER_DIRS_FILE}" "${USER_DIRS_BACKUP_FILE}"
+fi
+
+cat > "${USER_DIRS_FILE}" <<EOF
+XDG_DESKTOP_DIR="${DIGITAL_DASH_EMPTY_DESKTOP_DIR}"
+XDG_DOWNLOAD_DIR="${TARGET_HOME}/Downloads"
+XDG_TEMPLATES_DIR="${TARGET_HOME}/Templates"
+XDG_PUBLICSHARE_DIR="${TARGET_HOME}/Public"
+XDG_DOCUMENTS_DIR="${TARGET_HOME}/Documents"
+XDG_MUSIC_DIR="${TARGET_HOME}/Music"
+XDG_PICTURES_DIR="${TARGET_HOME}/Pictures"
+XDG_VIDEOS_DIR="${TARGET_HOME}/Videos"
+EOF
+chown "${TARGET_USER}:${TARGET_GROUP}" "${USER_DIRS_FILE}"
+chmod 0644 "${USER_DIRS_FILE}"
 
 rm -f \
   "${AUTOSTART_FILE}" \
@@ -104,9 +152,22 @@ if [ -f "${SYSTEM_LABWC_BACKUP_FILE}" ]; then
   cp -a "${SYSTEM_LABWC_BACKUP_FILE}" "${SYSTEM_LABWC_AUTOSTART_FILE}"
 fi
 
+if [ ! -f "${SYSTEM_LABWC_AUTOSTART_FILE}" ]; then
+  cat > "${SYSTEM_LABWC_AUTOSTART_FILE}" <<'EOF'
+/usr/bin/lwrespawn /usr/bin/pcmanfm --desktop --profile LXDE-pi &
+EOF
+fi
+
 if [ -f "${SYSTEM_LABWC_AUTOSTART_FILE}" ]; then
+  sed -i -E '/wf-panel-pi|lxpanel/d' "${SYSTEM_LABWC_AUTOSTART_FILE}"
+  if ! grep -Eq 'pcmanfm[[:space:]].*--desktop' "${SYSTEM_LABWC_AUTOSTART_FILE}"; then
+    printf '\n/usr/bin/lwrespawn /usr/bin/pcmanfm --desktop --profile LXDE-pi &\n' >> "${SYSTEM_LABWC_AUTOSTART_FILE}"
+  fi
   chmod 0644 "${SYSTEM_LABWC_AUTOSTART_FILE}"
 fi
+
+pkill -x wf-panel-pi >/dev/null 2>&1 || true
+pkill -x lxpanel >/dev/null 2>&1 || true
 
 if [ -f "${LXSESSION_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start-kiosk-session' "${LXSESSION_AUTOSTART_FILE}"; then
   mv -f "${LXSESSION_AUTOSTART_FILE}" "${LXSESSION_AUTOSTART_FILE}.digital-dash-disabled"
