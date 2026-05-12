@@ -35,6 +35,7 @@ USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
 GETTY_OVERRIDE_FILE=/etc/systemd/system/getty@tty1.service.d/digital-dash-autologin.conf
 LIGHTDM_QT_CONF_FILE=/etc/lightdm/lightdm.conf.d/99-digital-dash-qt-autologin.conf
 SYSTEMD_QT_SERVICE_FILE=/etc/systemd/system/digital-dash-qt.service
+QT_AUTOSTART_LOCK_DIR="${TARGET_HOME}/.cache/digital-dash-qt-autostart.lock"
 PROFILE_MARKER_START="# >>> digital-dash tty1 kiosk >>>"
 PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
 
@@ -91,11 +92,7 @@ if [ -f "${LABWC_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start-kio
 fi
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LABWC_AUTOSTART_DIR}"
-cat > "${LABWC_AUTOSTART_FILE}" <<EOF
-# Digital Dash Qt is launched by ${SYSTEMD_QT_SERVICE_FILE}.
-EOF
-chown "${TARGET_USER}:${TARGET_GROUP}" "${LABWC_AUTOSTART_FILE}"
-chmod 0644 "${LABWC_AUTOSTART_FILE}"
+rm -f "${LABWC_AUTOSTART_FILE}"
 
 install -d -m 0755 /etc/xdg/labwc
 if [ -f "${SYSTEM_LABWC_BACKUP_FILE}" ]; then
@@ -111,11 +108,9 @@ if [ -f "${LXSESSION_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start
 fi
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LXSESSION_AUTOSTART_DIR}"
-cat > "${LXSESSION_AUTOSTART_FILE}" <<EOF
-# Digital Dash Qt is launched by ${SYSTEMD_QT_SERVICE_FILE}.
-EOF
-chown "${TARGET_USER}:${TARGET_GROUP}" "${LXSESSION_AUTOSTART_FILE}"
-chmod 0644 "${LXSESSION_AUTOSTART_FILE}"
+rm -f "${LXSESSION_AUTOSTART_FILE}"
+
+rmdir "${QT_AUTOSTART_LOCK_DIR}" 2>/dev/null || true
 
 if [ -f "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh" ]; then
   mv -f "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh" "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh.disabled"
