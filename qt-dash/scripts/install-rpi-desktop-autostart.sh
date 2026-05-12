@@ -24,8 +24,11 @@ AUTOSTART_FILE="${AUTOSTART_DIR}/digital-dash-qt.desktop"
 RUNNER="${ROOT_DIR}/qt-dash/scripts/run-digital-dash-qt.sh"
 PROFILE_FILE="${TARGET_HOME}/.profile"
 BASH_PROFILE_FILE="${TARGET_HOME}/.bash_profile"
+LABWC_AUTOSTART_DIR="${TARGET_HOME}/.config/labwc"
 LABWC_AUTOSTART_FILE="${TARGET_HOME}/.config/labwc/autostart"
 USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
+GETTY_OVERRIDE_FILE=/etc/systemd/system/getty@tty1.service.d/digital-dash-autologin.conf
+LIGHTDM_QT_CONF_FILE=/etc/lightdm/lightdm.conf.d/99-digital-dash-qt-autologin.conf
 PROFILE_MARKER_START="# >>> digital-dash tty1 kiosk >>>"
 PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
 
@@ -72,6 +75,7 @@ rm -f \
   "${USER_SYSTEMD_DIR}/digital-dash-splash.service" \
   "${USER_SYSTEMD_DIR}/default.target.wants/digital-dash-kiosk.service" \
   "${USER_SYSTEMD_DIR}/default.target.wants/digital-dash-splash.service" \
+  "${GETTY_OVERRIDE_FILE}" \
   /etc/systemd/system/digital-dash-kiosk.service \
   /etc/systemd/system/digital-dash-splash.service \
   /etc/systemd/system/digital-dash-zero-flash.service \
@@ -88,6 +92,14 @@ find "${AUTOSTART_DIR}" -maxdepth 1 -type f -name '*.desktop' -print0 2>/dev/nul
 if [ -f "${LABWC_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start-kiosk-session' "${LABWC_AUTOSTART_FILE}"; then
   mv -f "${LABWC_AUTOSTART_FILE}" "${LABWC_AUTOSTART_FILE}.disabled"
 fi
+
+install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LABWC_AUTOSTART_DIR}"
+cat > "${LABWC_AUTOSTART_FILE}" <<EOF
+# Digital Dash Qt autostart
+"${RUNNER}" "${ROOT_DIR}" "${VIEW}" "${WS_URL}" &
+EOF
+chown "${TARGET_USER}:${TARGET_GROUP}" "${LABWC_AUTOSTART_FILE}"
+chmod 0644 "${LABWC_AUTOSTART_FILE}"
 
 if [ -f "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh" ]; then
   mv -f "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh" "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh.disabled"
@@ -109,6 +121,16 @@ if [ -f /etc/lightdm/lightdm.conf ]; then
     /etc/lightdm/lightdm.conf
 fi
 
+install -d -m 0755 /etc/lightdm/lightdm.conf.d
+cat > "${LIGHTDM_QT_CONF_FILE}" <<EOF
+[Seat:*]
+autologin-user=${TARGET_USER}
+autologin-user-timeout=0
+user-session=rpd-labwc
+autologin-session=rpd-labwc
+xserver-command=X
+EOF
+
 systemctl daemon-reload
 systemctl set-default graphical.target
 systemctl enable lightdm.service >/dev/null 2>&1 || true
@@ -117,4 +139,5 @@ systemctl disable digital-dash-zero-flash.service >/dev/null 2>&1 || true
 
 echo "Installed Digital Dash Qt autostart for ${TARGET_USER}."
 echo "Autostart file: ${AUTOSTART_FILE}"
+echo "Labwc autostart file: ${LABWC_AUTOSTART_FILE}"
 echo "Run now with: ${RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}"

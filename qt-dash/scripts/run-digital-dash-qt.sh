@@ -26,6 +26,6 @@ fi
 
 cd "${ROOT_DIR}"
 
-export QT_QPA_PLATFORM=${QT_QPA_PLATFORM:-wayland}
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland;xcb}"
 
 exec "${APP_BIN}" --view "${VIEW}" --ws "${WS_URL}"
