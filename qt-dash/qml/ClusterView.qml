@@ -14,25 +14,41 @@ Item {
     property var nowPlaying: audio.nowPlaying || ({})
     property var turn: safeState.turn || ({})
     property var car: safeState.car || ({})
+    property var gps: safeState.gps || ({})
 
     property real rpm: engine.rpm || 0
     property real speed: vehicle.speedKmh || 0
     property real fuel: fuelState.percent || 0
     property real battery: electrical.batteryV || 0
-    property string gear: speed > 1 ? "D" : "P"
+    property real oilTemp: temp.oilC || 0
+    property real coolantTemp: temp.coolantC || 0
+    property int musicPosition: nowPlaying.positionSec || 0
+    property int musicDuration: nowPlaying.durationSec || 0
     property date clockTime: new Date()
 
-    property color bg0: "#030507"
-    property color bg1: "#080d12"
-    property color panel: "#0d131a"
-    property color panel2: "#111922"
-    property color border: "#202b36"
-    property color textMain: "#f4f7fb"
-    property color textSoft: "#9aa6b2"
-    property color textDim: "#65717d"
-    property color accent: "#dfe7ef"
-    property color blue: "#8ebcff"
-    property color warning: "#ff7575"
+    function clamp(value, minValue, maxValue) {
+        return Math.max(minValue, Math.min(maxValue, value));
+    }
+
+    function formatDuration(totalSeconds) {
+        var safeSeconds = Math.max(0, Math.floor(totalSeconds || 0));
+        var minutes = Math.floor(safeSeconds / 60);
+        var seconds = safeSeconds % 60;
+        return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+    }
+
+    function headingLabel(value) {
+        if (value === undefined || value === null || isNaN(value)) {
+            return "N";
+        }
+        var labels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+        var normalized = ((value % 360) + 360) % 360;
+        return labels[Math.round(normalized / 45) % labels.length];
+    }
+
+    function mediaControl(action) {
+        vehicleClient.sendCommand("bt/media/control", { "action": action });
+    }
 
     Timer {
         interval: 1000
@@ -43,340 +59,768 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: root.bg0
+        color: "#020405"
 
         Rectangle {
             anchors.fill: parent
             gradient: Gradient {
-                GradientStop { position: 0.00; color: "#111923" }
-                GradientStop { position: 0.42; color: "#070a0e" }
-                GradientStop { position: 1.00; color: "#010203" }
+                GradientStop { position: 0.00; color: "#0b1518" }
+                GradientStop { position: 0.46; color: "#020405" }
+                GradientStop { position: 1.00; color: "#010202" }
             }
         }
 
-        Rectangle {
+        Canvas {
             anchors.fill: parent
-            opacity: 0.13
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.00; color: "#1d2b3a" }
-                GradientStop { position: 0.50; color: "transparent" }
-                GradientStop { position: 1.00; color: "#1d2b3a" }
+            opacity: 0.48
+            onPaint: {
+                var ctx = getContext("2d");
+                ctx.reset();
+
+                var g = ctx.createRadialGradient(width * 0.20, height * 0.42, 0, width * 0.20, height * 0.42, width * 0.36);
+                g.addColorStop(0.0, "rgba(102, 229, 255, 0.20)");
+                g.addColorStop(1.0, "rgba(102, 229, 255, 0.00)");
+                ctx.fillStyle = g;
+                ctx.fillRect(0, 0, width, height);
+
+                g = ctx.createRadialGradient(width * 0.78, height * 0.44, 0, width * 0.78, height * 0.44, width * 0.34);
+                g.addColorStop(0.0, "rgba(180, 248, 200, 0.16)");
+                g.addColorStop(1.0, "rgba(180, 248, 200, 0.00)");
+                ctx.fillStyle = g;
+                ctx.fillRect(0, 0, width, height);
             }
+            Component.onCompleted: requestPaint()
         }
     }
 
     Rectangle {
         id: shell
         anchors.fill: parent
-        anchors.margins: 24
-        radius: 34
-        color: "#070b10"
-        border.color: "#16202a"
+        anchors.margins: 10
+        radius: 28
+        color: "#05090b"
+        opacity: 0.92
+        border.color: "#1c2a2e"
         border.width: 1
     }
 
     Rectangle {
-        id: softCenterGlow
-        anchors.centerIn: parent
-        width: 680
-        height: 420
-        radius: 240
-        color: "#101923"
-        opacity: 0.62
+        anchors.fill: shell
+        anchors.margins: 10
+        radius: 22
+        color: "transparent"
+        border.color: "#132428"
+        border.width: 1
+        opacity: 0.95
     }
 
     Row {
-        id: topBar
-        anchors.top: shell.top
         anchors.left: shell.left
-        anchors.right: shell.right
-        anchors.topMargin: 22
-        anchors.leftMargin: 28
-        anchors.rightMargin: 28
-        height: 44
-        spacing: 12
-
-        StatusPill {
-            label: vehicleClient.connected ? "ONLINE" : "LOCAL"
-            value: vehicleClient.connected ? "CAN" : "SIM"
-            accentColor: vehicleClient.connected ? root.blue : root.textDim
-        }
-
-        StatusPill {
-            label: "GEAR"
-            value: root.gear
-            accentColor: root.textMain
-        }
-
-        StatusPill {
-            label: "LEFT"
-            value: root.turn.left ? "ON" : "OFF"
-            accentColor: root.turn.left ? root.blue : root.textDim
-        }
-
-        StatusPill {
-            label: "RIGHT"
-            value: root.turn.right ? "ON" : "OFF"
-            accentColor: root.turn.right ? root.blue : root.textDim
-        }
-    }
-
-    Text {
         anchors.top: shell.top
-        anchors.right: shell.right
-        anchors.topMargin: 31
-        anchors.rightMargin: 34
-        text: Qt.formatTime(root.clockTime, "HH:mm")
-        color: root.textSoft
-        font.family: "Inter"
-        font.pixelSize: 22
-        font.weight: Font.Medium
-    }
-
-    Column {
-        id: centerStack
-        anchors.centerIn: parent
-        width: 640
-        spacing: 0
+        anchors.leftMargin: 42
+        anchors.topMargin: 22
+        spacing: 14
 
         Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: root.gear === "D" ? "DRIVE" : "READY"
-            color: root.textSoft
+            text: "GOLF MK2"
+            color: "#f7fbff"
             font.family: "Inter"
-            font.pixelSize: 17
-            font.letterSpacing: 4
+            font.pixelSize: 24
+            font.weight: Font.Black
+        }
+
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "OEM+ DIGITAL COCKPIT"
+            color: "#66747b"
+            font.family: "Inter"
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
+        }
+    }
+
+    Row {
+        anchors.right: shell.right
+        anchors.top: shell.top
+        anchors.rightMargin: 42
+        anchors.topMargin: 26
+        spacing: 12
+
+        Rectangle {
+            width: 8
+            height: 8
+            radius: 4
+            anchors.verticalCenter: parent.verticalCenter
+            color: vehicleClient.connected ? "#9fffd1" : "#6b7479"
+        }
+
+        Text {
+            text: vehicleClient.connected ? "CAN online" : "SIM local"
+            color: "#a9b3ba"
+            font.family: "Inter"
+            font.pixelSize: 13
             font.weight: Font.DemiBold
         }
 
         Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: Math.round(root.speed).toString()
-            color: root.textMain
-            font.family: "Inter"
-            font.pixelSize: 196
-            font.weight: Font.ExtraLight
-            lineHeight: 0.82
+            text: "|"
+            color: "#344046"
+            font.pixelSize: 13
         }
 
         Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "km/h"
-            color: root.textSoft
+            text: root.headingLabel(root.gps.heading) + " heading"
+            color: "#a9b3ba"
             font.family: "Inter"
-            font.pixelSize: 24
-            font.weight: Font.Medium
+            font.pixelSize: 13
+            font.weight: Font.DemiBold
         }
+
+        Text {
+            text: Qt.formatTime(root.clockTime, "HH:mm")
+            color: "#d6dee4"
+            font.family: "Inter"
+            font.pixelSize: 13
+            font.weight: Font.DemiBold
+        }
+    }
+
+    QtGauge {
+        id: rpmGauge
+        anchors.left: shell.left
+        anchors.leftMargin: parent.width * 0.16
+        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width * 0.30
+        height: width
+        value: root.rpm
+        maximumValue: 8000
+        majorStep: 2000
+        label: "RPM"
+        subLabel: "16V READY"
+        valueText: Math.round(root.rpm).toString()
+        accentColor: "#66e5ff"
+        warnColor: "#ff4d5e"
+        dangerAt: 6500
+        reverse: false
+    }
+
+    QtGauge {
+        id: speedGauge
+        anchors.right: shell.right
+        anchors.rightMargin: parent.width * 0.16
+        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width * 0.30
+        height: width
+        value: root.speed
+        maximumValue: 240
+        majorStep: 50
+        label: "KM/H"
+        subLabel: "ROAD SPEED"
+        valueText: Math.round(root.speed).toString()
+        accentColor: "#b4f8c8"
+        warnColor: "#ff4d5e"
+        dangerAt: 180
+        reverse: true
+    }
+
+    Column {
+        anchors.left: shell.left
+        anchors.leftMargin: 40
+        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width * 0.14
+        spacing: 10
+
+        MetricTile { label: "Fuel"; value: Math.round(root.fuel) + "%"; detail: Math.round(210 + root.fuel * 0.4) + " km est."; accent: root.fuel <= 15 ? "#ffd166" : "#d8f7ff" }
+        MetricTile { label: "Oil temp"; value: Math.round(root.oilTemp) + "C"; detail: root.oilTemp >= 110 ? "watch" : "stable"; accent: root.oilTemp >= 110 ? "#ffd166" : "#d8f7ff" }
+        MetricTile { label: "Coolant"; value: Math.round(root.coolantTemp) + "C"; detail: root.coolantTemp >= 100 ? "high" : "regulated"; accent: root.coolantTemp >= 100 ? "#ffd166" : "#d8f7ff" }
+        MetricTile { label: "Charging"; value: root.battery.toFixed(1) + "V"; detail: "alternator"; accent: root.battery < 12.2 ? "#ffd166" : "#d8f7ff" }
+    }
+
+    Column {
+        anchors.right: shell.right
+        anchors.rightMargin: 40
+        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width * 0.14
+        spacing: 10
+
+        MetricTile { label: "RPM"; value: Math.round(root.rpm).toString(); detail: "live engine"; accent: "#d8f7ff" }
+        MetricTile { label: "Audio"; value: Math.round(root.audio.volume || 0) + "%"; detail: (root.audio.source || "bt").toUpperCase(); accent: "#d8f7ff" }
+        MetricTile { label: "Exterior"; value: root.car.lights ? "ON" : "OFF"; detail: root.car.locked ? "locked" : "unlocked"; accent: root.car.lights ? "#d8f7ff" : "#ffffff" }
+        MetricTile { label: "Hazards"; value: root.car.hazards ? "ON" : "OFF"; detail: "warning"; accent: root.car.hazards ? "#ffd166" : "#ffffff" }
+    }
+
+    Item {
+        id: centerBridge
+        anchors.centerIn: parent
+        width: parent.width * 0.22
+        height: parent.height * 0.58
 
         Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: 455
-            height: 1
-            color: root.border
-            opacity: 0.95
+            anchors.centerIn: parent
+            width: Math.min(parent.width, parent.height) * 0.86
+            height: width
+            radius: width * 0.28
+            color: "#0b1418"
+            opacity: 0.86
+            border.color: "#1e3a42"
+            border.width: 1
         }
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            width: 520
-            horizontalAlignment: Text.AlignHCenter
-            elide: Text.ElideRight
-            text: root.nowPlaying.title
-                  ? root.nowPlaying.title + "  —  " + (root.nowPlaying.artist || "")
-                  : "No media playing"
-            color: "#d4dbe4"
+            anchors.top: parent.top
+            anchors.topMargin: 44
+            text: "SPEED"
+            color: "#829097"
             font.family: "Inter"
-            font.pixelSize: 19
-            font.weight: Font.Medium
+            font.pixelSize: 11
+            font.weight: Font.DemiBold
         }
-    }
 
-    Rectangle {
-        id: leftCard
-        anchors.left: shell.left
-        anchors.leftMargin: 36
-        anchors.verticalCenter: parent.verticalCenter
-        width: 322
-        height: 410
-        radius: 26
-        color: root.panel
-        border.color: root.border
-        border.width: 1
-
-        Column {
-            anchors.fill: parent
-            anchors.margins: 22
-            spacing: 14
-
-            Text {
-                text: "POWERTRAIN"
-                color: root.textDim
-                font.family: "Inter"
-                font.pixelSize: 13
-                font.letterSpacing: 2
-                font.weight: Font.DemiBold
-            }
-
-            Gauge {
-                width: 278
-                height: 214
-                value: root.rpm
-                maximumValue: 8000
-                label: "RPM"
-                valueText: Math.round(root.rpm).toString()
-                accentColor: root.accent
-            }
-
-            MetricRow {
-                label: "Fuel"
-                value: Math.round(root.fuel).toString()
-                suffix: "%"
-            }
-
-            MetricRow {
-                label: "Battery"
-                value: root.battery.toFixed(1)
-                suffix: "V"
-            }
-
-            MetricRow {
-                label: "Locked"
-                value: root.car.locked ? "YES" : "NO"
-            }
+        Text {
+            anchors.centerIn: parent
+            text: Math.round(root.speed).toString()
+            color: "#ffffff"
+            font.family: "Inter"
+            font.pixelSize: 74
+            font.weight: Font.Bold
         }
-    }
 
-    Rectangle {
-        id: rightCard
-        anchors.right: shell.right
-        anchors.rightMargin: 36
-        anchors.verticalCenter: parent.verticalCenter
-        width: 322
-        height: 410
-        radius: 26
-        color: root.panel
-        border.color: root.border
-        border.width: 1
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.verticalCenter
+            anchors.topMargin: 44
+            text: "km/h"
+            color: "#a5b0b6"
+            font.family: "Inter"
+            font.pixelSize: 15
+            font.weight: Font.DemiBold
+        }
 
-        Column {
-            anchors.fill: parent
-            anchors.margins: 22
-            spacing: 16
+        Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: 4
+            spacing: 30
 
-            Text {
-                text: "VEHICLE"
-                color: root.textDim
-                font.family: "Inter"
-                font.pixelSize: 13
-                font.letterSpacing: 2
-                font.weight: Font.DemiBold
-            }
-
-            MetricRow {
-                label: "Oil temp"
-                value: Math.round(root.temp.oilC || 0).toString()
-                suffix: "°C"
-            }
-
-            MetricRow {
-                label: "Coolant"
-                value: Math.round(root.temp.coolantC || 0).toString()
-                suffix: "°C"
-            }
-
-            MetricRow {
-                label: "Lights"
-                value: root.car.lights ? "ON" : "OFF"
-            }
-
-            MetricRow {
-                label: "Hazards"
-                value: root.car.hazards ? "ON" : "OFF"
-                accentColor: root.car.hazards ? root.warning : root.textMain
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: root.border
-                opacity: 0.9
+            TurnArrow {
+                active: root.turn.left
+                mirror: true
             }
 
             Row {
-                width: parent.width
-                spacing: 10
+                spacing: 8
+                anchors.verticalCenter: parent.verticalCenter
 
-                Rectangle {
-                    width: 10
-                    height: 10
-                    radius: 5
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: vehicleClient.connected ? root.blue : root.textDim
-                }
+                LampChip { label: "LOW"; active: root.car.lights; colorOn: "#7ee3ff" }
+                LampChip { label: "HAZ"; active: root.car.hazards; colorOn: "#ffd166" }
+            }
 
-                Text {
-                    text: vehicleClient.connected ? "Vehicle data online" : "Mock data active"
-                    color: root.textSoft
-                    font.family: "Inter"
-                    font.pixelSize: 16
-                    font.weight: Font.Medium
-                }
+            TurnArrow {
+                active: root.turn.right
+                mirror: false
             }
         }
     }
 
-    Rectangle {
-        id: bottomInfo
-        anchors.bottom: shell.bottom
+    Column {
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottomMargin: 22
-        width: 570
-        height: 46
-        radius: 23
-        color: root.panel2
-        border.color: root.border
+        anchors.bottom: mediaCard.top
+        anchors.bottomMargin: 6
+        width: parent.width * 0.28
+        spacing: 7
+
+        BarMeter { label: "OIL"; value: root.oilTemp; minValue: 40; maxValue: 140; suffix: "C"; warn: root.oilTemp >= 110 }
+        BarMeter { label: "COOLANT"; value: root.coolantTemp; minValue: 40; maxValue: 120; suffix: "C"; warn: root.coolantTemp >= 100 }
+        BarMeter { label: "FUEL"; value: root.fuel; minValue: 0; maxValue: 100; suffix: "%"; warn: root.fuel <= 15 }
+    }
+
+    Rectangle {
+        id: mediaCard
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: shell.bottom
+        anchors.bottomMargin: 20
+        width: parent.width * 0.43
+        height: 78
+        radius: 18
+        color: "#10191c"
+        opacity: 0.96
+        border.color: "#203238"
         border.width: 1
 
+        Rectangle {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 14
+            width: 52
+            height: 52
+            radius: 13
+            color: "#213338"
+            border.color: "#3a565d"
+
+            Text {
+                anchors.centerIn: parent
+                text: "M"
+                color: "#b9cbd1"
+                font.pixelSize: 28
+                font.weight: Font.Bold
+            }
+        }
+
+        Column {
+            anchors.left: parent.left
+            anchors.leftMargin: 82
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width * 0.34
+            spacing: 3
+
+            Text {
+                width: parent.width
+                elide: Text.ElideRight
+                text: root.nowPlaying.title || "No media playing"
+                color: "#ffffff"
+                font.family: "Inter"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+            }
+
+            Text {
+                width: parent.width
+                elide: Text.ElideRight
+                text: root.nowPlaying.artist || ""
+                color: "#94a2a8"
+                font.family: "Inter"
+                font.pixelSize: 13
+            }
+
+            Text {
+                width: parent.width
+                elide: Text.ElideRight
+                text: root.nowPlaying.album || ""
+                color: "#647278"
+                font.family: "Inter"
+                font.pixelSize: 10
+                font.letterSpacing: 3
+            }
+        }
+
         Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: 14
+            spacing: 9
+
+            MediaButton { label: "<<"; onClicked: root.mediaControl("prev") }
+            MediaButton { label: root.nowPlaying.isPlaying ? "||" : ">"; primary: true; onClicked: root.mediaControl(root.nowPlaying.isPlaying ? "pause" : "play") }
+            MediaButton { label: ">>"; onClicked: root.mediaControl("next") }
+        }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.leftMargin: parent.width * 0.48
+            anchors.right: parent.right
+            anchors.rightMargin: 16
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 24
+            height: 4
+            radius: 2
+            color: "#263236"
+
+            Rectangle {
+                width: parent.width * root.clamp(root.musicPosition / Math.max(1, root.musicDuration), 0, 1)
+                height: parent.height
+                radius: parent.radius
+                color: "#c9eee1"
+            }
+        }
+
+        Text {
+            anchors.left: parent.left
+            anchors.leftMargin: parent.width * 0.48
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 8
+            text: root.formatDuration(root.musicPosition)
+            color: "#8d9aa0"
+            font.pixelSize: 11
+        }
+
+        Text {
+            anchors.right: parent.right
+            anchors.rightMargin: 16
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 8
+            text: "-" + root.formatDuration(root.musicDuration - root.musicPosition)
+            color: "#8d9aa0"
+            font.pixelSize: 11
+        }
+    }
+
+    Text {
+        anchors.right: shell.right
+        anchors.bottom: shell.bottom
+        anchors.rightMargin: 42
+        anchors.bottomMargin: 24
+        text: "180000 km"
+        color: "#455259"
+        font.family: "Inter"
+        font.pixelSize: 12
+    }
+
+    component MetricTile: Rectangle {
+        property string label: ""
+        property string value: ""
+        property string detail: ""
+        property color accent: "#d8f7ff"
+
+        width: parent ? parent.width : 170
+        height: 68
+        radius: 14
+        color: "#12191c"
+        opacity: 0.95
+        border.color: "#273238"
+        border.width: 1
+
+        Column {
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.right: parent.right
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 3
+
+            Text {
+                text: label
+                color: "#6f858d"
+                font.family: "Inter"
+                font.pixelSize: 10
+                font.weight: Font.DemiBold
+            }
+
+            Text {
+                width: parent.width
+                elide: Text.ElideRight
+                text: value
+                color: accent
+                font.family: "Inter"
+                font.pixelSize: 22
+                font.weight: Font.Bold
+            }
+
+            Text {
+                width: parent.width
+                elide: Text.ElideRight
+                text: detail
+                color: "#748087"
+                font.family: "Inter"
+                font.pixelSize: 10
+            }
+        }
+    }
+
+    component LampChip: Rectangle {
+        property string label: ""
+        property bool active: false
+        property color colorOn: "#7ee3ff"
+
+        width: 54
+        height: 28
+        radius: 14
+        color: active ? Qt.rgba(colorOn.r, colorOn.g, colorOn.b, 0.18) : "#101719"
+        border.color: active ? colorOn : "#2a363b"
+        border.width: 1
+
+        Text {
             anchors.centerIn: parent
-            spacing: 34
+            text: label
+            color: active ? "#ffffff" : "#66747a"
+            font.family: "Inter"
+            font.pixelSize: 10
+            font.weight: Font.Bold
+        }
+    }
 
-            Text {
-                text: "Range  " + Math.round(root.fuel * 4.2) + " km"
-                color: root.textSoft
-                font.family: "Inter"
-                font.pixelSize: 16
-                font.weight: Font.Medium
+    component TurnArrow: Canvas {
+        property bool active: false
+        property bool mirror: false
+
+        width: 30
+        height: 24
+        opacity: active ? 1.0 : 0.24
+
+        onPaint: {
+            var ctx = getContext("2d");
+            ctx.reset();
+            ctx.fillStyle = "#9fffd1";
+            ctx.beginPath();
+            if (mirror) {
+                ctx.moveTo(width, 0);
+                ctx.lineTo(0, height / 2);
+                ctx.lineTo(width, height);
+            } else {
+                ctx.moveTo(0, 0);
+                ctx.lineTo(width, height / 2);
+                ctx.lineTo(0, height);
             }
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        onActiveChanged: requestPaint()
+        Component.onCompleted: requestPaint()
+    }
+
+    component MediaButton: Rectangle {
+        signal clicked()
+        property string label: ""
+        property bool primary: false
+
+        width: primary ? 40 : 32
+        height: width
+        radius: width / 2
+        color: primary ? "#18313a" : "#141b1e"
+        border.color: primary ? "#5ecfe9" : "#3a454a"
+        border.width: 1
+
+        Text {
+            anchors.centerIn: parent
+            text: label
+            color: "#ffffff"
+            font.pixelSize: primary ? 18 : 20
+            font.weight: Font.Bold
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: parent.clicked()
+        }
+    }
+
+    component BarMeter: Item {
+        property string label: ""
+        property real value: 0
+        property real minValue: 0
+        property real maxValue: 100
+        property string suffix: ""
+        property bool warn: false
+
+        function clampValue(input, minValue, maxValue) {
+            return Math.max(minValue, Math.min(maxValue, input));
+        }
+
+        width: parent ? parent.width : 360
+        height: 24
+
+        Text {
+            anchors.left: parent.left
+            text: label
+            color: "#7b8a90"
+            font.family: "Inter"
+            font.pixelSize: 10
+            font.weight: Font.Bold
+        }
+
+        Text {
+            anchors.right: parent.right
+            text: Math.round(value) + suffix
+            color: warn ? "#ffd166" : "#ffffff"
+            font.family: "Inter"
+            font.pixelSize: 10
+            font.weight: Font.Bold
+        }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 5
+            radius: 3
+            color: "#20282b"
 
             Rectangle {
-                width: 1
-                height: 18
-                color: "#2b3744"
+                width: parent.width * clampValue((value - minValue) / Math.max(1, maxValue - minValue), 0, 1)
+                height: parent.height
+                radius: parent.radius
+                color: warn ? "#ffd166" : "#c9eee1"
+            }
+        }
+    }
+
+    component QtGauge: Item {
+        property real value: 0
+        property real maximumValue: 100
+        property real majorStep: 20
+        property string label: ""
+        property string subLabel: ""
+        property string valueText: ""
+        property color accentColor: "#66e5ff"
+        property color warnColor: "#ff4d5e"
+        property real dangerAt: maximumValue + 1
+        property bool reverse: false
+        property real displayValue: value
+
+        function clampValue(input, minValue, maxValue) {
+            return Math.max(minValue, Math.min(maxValue, input));
+        }
+
+        Behavior on displayValue {
+            NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+        }
+
+        onValueChanged: displayValue = value
+
+        Canvas {
+            id: gaugeCanvas
+            anchors.fill: parent
+            antialiasing: true
+
+            onPaint: {
+                var ctx = getContext("2d");
+                var w = width;
+                var h = height;
+                var cx = w / 2;
+                var cy = h / 2;
+                var r = Math.min(w, h) * 0.40;
+                var start = reverse ? Math.PI * 0.17 : Math.PI * 0.83;
+                var sweep = reverse ? -Math.PI * 1.66 : Math.PI * 1.66;
+                var pct = clampValue(displayValue / Math.max(1, maximumValue), 0, 1);
+                var liveColor = displayValue >= dangerAt ? warnColor : accentColor;
+
+                ctx.reset();
+                ctx.lineCap = "round";
+
+                var glow = ctx.createRadialGradient(cx, cy, r * 0.10, cx, cy, r * 1.22);
+                glow.addColorStop(0.0, "rgba(255,255,255,0.08)");
+                glow.addColorStop(0.72, "rgba(255,255,255,0.02)");
+                glow.addColorStop(1.0, "rgba(0,0,0,0.0)");
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r * 1.16, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.lineWidth = 30;
+                ctx.strokeStyle = "rgba(255,255,255,0.035)";
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, start, start + sweep);
+                ctx.stroke();
+
+                ctx.lineWidth = 17;
+                ctx.strokeStyle = liveColor;
+                ctx.globalAlpha = 0.20;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, start, start + sweep * pct);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+
+                ctx.lineWidth = 9;
+                ctx.strokeStyle = liveColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, start, start + sweep * pct);
+                ctx.stroke();
+
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = "rgba(255,255,255,0.92)";
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, start, start + sweep * pct);
+                ctx.stroke();
+
+                var ticks = 36;
+                for (var i = 0; i <= ticks; i++) {
+                    var amount = i / ticks;
+                    var a = start + sweep * amount;
+                    var major = i % 6 === 0;
+                    var inner = major ? r - 25 : r - 14;
+                    var outer = r - 1;
+                    ctx.lineWidth = major ? 2 : 1;
+                    ctx.strokeStyle = major ? "rgba(255,255,255,0.52)" : "rgba(255,255,255,0.22)";
+                    ctx.beginPath();
+                    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+                    ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+                    ctx.stroke();
+                }
+
+                var needleAngle = start + sweep * pct;
+                var needleLen = r - 20;
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = "rgba(0,0,0,0.55)";
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(needleAngle) * needleLen, cy + Math.sin(needleAngle) * needleLen);
+                ctx.stroke();
+
+                ctx.lineWidth = 2.2;
+                ctx.strokeStyle = liveColor;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(needleAngle) * needleLen, cy + Math.sin(needleAngle) * needleLen);
+                ctx.stroke();
+
+                ctx.fillStyle = liveColor;
+                ctx.beginPath();
+                ctx.arc(cx + Math.cos(needleAngle) * needleLen, cy + Math.sin(needleAngle) * needleLen, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = "#10181b";
+                ctx.beginPath();
+                ctx.arc(cx, cy, 11, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,0.20)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                for (var labelValue = 0; labelValue <= maximumValue; labelValue += majorStep) {
+                    var labelPct = labelValue / maximumValue;
+                    var labelAngle = start + sweep * labelPct;
+                    var lr = r + 33;
+                    ctx.fillStyle = "rgba(255,255,255,0.42)";
+                    ctx.font = "bold 15px Inter";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    var shown = maximumValue > 1000 ? Math.round(labelValue / 1000).toString() : Math.round(labelValue).toString();
+                    ctx.fillText(shown, cx + Math.cos(labelAngle) * lr, cy + Math.sin(labelAngle) * lr);
+                }
             }
 
-            Text {
-                text: "Battery  " + root.battery.toFixed(1) + " V"
-                color: root.textSoft
-                font.family: "Inter"
-                font.pixelSize: 16
-                font.weight: Font.Medium
+            Connections {
+                target: parent
+                function onDisplayValueChanged() { gaugeCanvas.requestPaint(); }
+                function onWidthChanged() { gaugeCanvas.requestPaint(); }
+                function onHeightChanged() { gaugeCanvas.requestPaint(); }
             }
 
-            Rectangle {
-                width: 1
-                height: 18
-                color: "#2b3744"
-            }
+            Component.onCompleted: requestPaint()
+        }
 
-            Text {
-                text: vehicleClient.connected ? "CAN online" : "CAN mock"
-                color: vehicleClient.connected ? root.blue : root.textSoft
-                font.family: "Inter"
-                font.pixelSize: 16
-                font.weight: Font.Medium
-            }
+        Text {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: -8
+            text: valueText
+            color: "#ffffff"
+            font.family: "Inter"
+            font.pixelSize: parent.width * 0.13
+            font.weight: Font.Bold
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: parent.width * 0.12
+            text: label
+            color: "#bac3c8"
+            font.family: "Inter"
+            font.pixelSize: parent.width * 0.035
+            font.letterSpacing: 5
+            font.weight: Font.Bold
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: parent.width * 0.19
+            text: subLabel
+            color: "#737f85"
+            font.family: "Inter"
+            font.pixelSize: parent.width * 0.032
+            font.weight: Font.DemiBold
         }
     }
 }
