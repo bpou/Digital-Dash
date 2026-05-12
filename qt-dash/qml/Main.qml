@@ -97,7 +97,7 @@ Item {
             accentColor: root.turn.right ? "#8db8ff" : "#6d7580"
         }
 
-        Item { width: 1; height: 1; Layout.fillWidth: true }
+        Item { width: 1; height: 1 }
     }
 
     Text {
