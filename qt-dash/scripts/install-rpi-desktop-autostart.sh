@@ -103,23 +103,20 @@ fi
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LABWC_AUTOSTART_DIR}"
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
-# Digital Dash Qt is launched from ${SYSTEM_LABWC_AUTOSTART_FILE}.
+# Digital Dash Qt user autostart
+/usr/bin/lwrespawn "${AUTOSTART_RUNNER}" "${ROOT_DIR}" "${VIEW}" "${WS_URL}" &
 EOF
 chown "${TARGET_USER}:${TARGET_GROUP}" "${LABWC_AUTOSTART_FILE}"
 chmod 0644 "${LABWC_AUTOSTART_FILE}"
 
 install -d -m 0755 /etc/xdg/labwc
-if [ -f "${SYSTEM_LABWC_AUTOSTART_FILE}" ] && [ ! -f "${SYSTEM_LABWC_BACKUP_FILE}" ]; then
-  cp -a "${SYSTEM_LABWC_AUTOSTART_FILE}" "${SYSTEM_LABWC_BACKUP_FILE}"
+if [ -f "${SYSTEM_LABWC_BACKUP_FILE}" ]; then
+  cp -a "${SYSTEM_LABWC_BACKUP_FILE}" "${SYSTEM_LABWC_AUTOSTART_FILE}"
 fi
 
-cat > "${SYSTEM_LABWC_AUTOSTART_FILE}" <<EOF
-# Digital Dash Qt kiosk autostart
-# Original Raspberry Pi desktop autostart is backed up at:
-# ${SYSTEM_LABWC_BACKUP_FILE}
-/usr/bin/lwrespawn "${AUTOSTART_RUNNER}" "${ROOT_DIR}" "${VIEW}" "${WS_URL}" &
-EOF
-chmod 0644 "${SYSTEM_LABWC_AUTOSTART_FILE}"
+if [ -f "${SYSTEM_LABWC_AUTOSTART_FILE}" ]; then
+  chmod 0644 "${SYSTEM_LABWC_AUTOSTART_FILE}"
+fi
 
 if [ -f "${LXSESSION_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start-kiosk-session' "${LXSESSION_AUTOSTART_FILE}"; then
   mv -f "${LXSESSION_AUTOSTART_FILE}" "${LXSESSION_AUTOSTART_FILE}.digital-dash-disabled"
