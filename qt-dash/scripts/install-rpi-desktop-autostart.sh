@@ -23,6 +23,7 @@ AUTOSTART_DIR="${TARGET_HOME}/.config/autostart"
 AUTOSTART_FILE="${AUTOSTART_DIR}/digital-dash-qt.desktop"
 RUNNER="${ROOT_DIR}/qt-dash/scripts/run-digital-dash-qt.sh"
 AUTOSTART_RUNNER="${ROOT_DIR}/qt-dash/scripts/start-digital-dash-qt-autostart.sh"
+DESKTOP_STYLE_RUNNER="${ROOT_DIR}/qt-dash/scripts/apply-rpi-desktop-style.sh"
 PROFILE_FILE="${TARGET_HOME}/.profile"
 BASH_PROFILE_FILE="${TARGET_HOME}/.bash_profile"
 LABWC_AUTOSTART_DIR="${TARGET_HOME}/.config/labwc"
@@ -33,6 +34,8 @@ LXSESSION_AUTOSTART_DIR="${TARGET_HOME}/.config/lxsession/LXDE-pi"
 LXSESSION_AUTOSTART_FILE="${LXSESSION_AUTOSTART_DIR}/autostart"
 PCMANFM_CONFIG_DIR="${TARGET_HOME}/.config/pcmanfm/LXDE-pi"
 PCMANFM_DESKTOP_CONFIG_FILE="${PCMANFM_CONFIG_DIR}/desktop-items-0.conf"
+SYSTEM_PCMANFM_CONFIG_DIR=/etc/xdg/pcmanfm/LXDE-pi
+SYSTEM_PCMANFM_DESKTOP_CONFIG_FILE="${SYSTEM_PCMANFM_CONFIG_DIR}/desktop-items-0.conf"
 USER_DIRS_FILE="${TARGET_HOME}/.config/user-dirs.dirs"
 USER_DIRS_BACKUP_FILE="${TARGET_HOME}/.config/user-dirs.dirs.digital-dash.bak"
 DIGITAL_DASH_CONFIG_DIR="${TARGET_HOME}/.config/digital-dash"
@@ -71,7 +74,7 @@ rm -rf "${ROOT_DIR}/qt-dash/build"
 cmake -S "${ROOT_DIR}/qt-dash" -B "${ROOT_DIR}/qt-dash/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build "${ROOT_DIR}/qt-dash/build"
 
-chmod +x "${RUNNER}" "${AUTOSTART_RUNNER}"
+chmod +x "${RUNNER}" "${AUTOSTART_RUNNER}" "${DESKTOP_STYLE_RUNNER}"
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${AUTOSTART_DIR}"
 
 install -d -m 0755 "${DIGITAL_DASH_WALLPAPER_DIR}"
@@ -96,6 +99,21 @@ show_mounts=0
 EOF
 chown "${TARGET_USER}:${TARGET_GROUP}" "${PCMANFM_DESKTOP_CONFIG_FILE}"
 chmod 0644 "${PCMANFM_DESKTOP_CONFIG_FILE}"
+
+install -d -m 0755 "${SYSTEM_PCMANFM_CONFIG_DIR}"
+cat > "${SYSTEM_PCMANFM_DESKTOP_CONFIG_FILE}" <<EOF
+[*]
+desktop_bg=#000000000000
+desktop_shadow=#000000000000
+desktop_fg=#ffffffffffff
+desktop_font=PibotoLt 12
+wallpaper=${DIGITAL_DASH_WALLPAPER_FILE}
+wallpaper_mode=crop
+show_documents=0
+show_trash=0
+show_mounts=0
+EOF
+chmod 0644 "${SYSTEM_PCMANFM_DESKTOP_CONFIG_FILE}"
 
 if [ -f "${USER_DIRS_FILE}" ] && [ ! -f "${USER_DIRS_BACKUP_FILE}" ]; then
   cp -a "${USER_DIRS_FILE}" "${USER_DIRS_BACKUP_FILE}"
@@ -160,9 +178,11 @@ fi
 
 if [ -f "${SYSTEM_LABWC_AUTOSTART_FILE}" ]; then
   sed -i -E '/wf-panel-pi|lxpanel/d' "${SYSTEM_LABWC_AUTOSTART_FILE}"
+  sed -i '\|apply-rpi-desktop-style\.sh|d' "${SYSTEM_LABWC_AUTOSTART_FILE}"
   if ! grep -Eq 'pcmanfm[[:space:]].*--desktop' "${SYSTEM_LABWC_AUTOSTART_FILE}"; then
     printf '\n/usr/bin/lwrespawn /usr/bin/pcmanfm --desktop --profile LXDE-pi &\n' >> "${SYSTEM_LABWC_AUTOSTART_FILE}"
   fi
+  printf '"%s" "%s" &\n' "${DESKTOP_STYLE_RUNNER}" "${DIGITAL_DASH_WALLPAPER_FILE}" >> "${SYSTEM_LABWC_AUTOSTART_FILE}"
   chmod 0644 "${SYSTEM_LABWC_AUTOSTART_FILE}"
 fi
 
