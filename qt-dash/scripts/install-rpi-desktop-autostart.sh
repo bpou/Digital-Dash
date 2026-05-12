@@ -54,7 +54,8 @@ apt-get install -y \
   qt6-declarative-dev \
   qt6-websockets-dev \
   qml6-module-qtquick \
-  qml6-module-qtquick-controls
+  qml6-module-qtquick-controls \
+  qml6-module-qtquick-window
 
 rm -rf "${ROOT_DIR}/qt-dash/build"
 cmake -S "${ROOT_DIR}/qt-dash" -B "${ROOT_DIR}/qt-dash/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -155,6 +156,7 @@ Group=${TARGET_GROUP}
 WorkingDirectory=${ROOT_DIR}
 Environment=HOME=${TARGET_HOME}
 Environment=XDG_RUNTIME_DIR=/run/user/$(id -u "${TARGET_USER}")
+Environment=XDG_SESSION_TYPE=wayland
 Environment=WAYLAND_DISPLAY=wayland-0
 Environment=DISPLAY=:0
 Environment=QT_QPA_PLATFORM=wayland;xcb

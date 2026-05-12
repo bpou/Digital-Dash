@@ -1,7 +1,15 @@
 import QtQuick
+import QtQuick.Window
 
-Item {
+Window {
     id: root
+    width: 1280
+    height: 480
+    visible: true
+    visibility: Window.FullScreen
+    title: "Digital Dash Qt"
+    color: "#07090d"
+    flags: Qt.Window | Qt.FramelessWindowHint
 
     property var state
     property var safeState: state || ({})
