@@ -160,10 +160,9 @@ Environment=XDG_SESSION_TYPE=wayland
 Environment=WAYLAND_DISPLAY=wayland-0
 Environment=DISPLAY=:0
 Environment=QT_QPA_PLATFORM=wayland;xcb
-ExecStartPre=/bin/sleep 10
 ExecStart=${RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}
 Restart=always
-RestartSec=3
+RestartSec=1
 
 [Install]
 WantedBy=graphical.target
