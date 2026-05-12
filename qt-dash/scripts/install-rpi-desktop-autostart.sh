@@ -27,6 +27,8 @@ PROFILE_FILE="${TARGET_HOME}/.profile"
 BASH_PROFILE_FILE="${TARGET_HOME}/.bash_profile"
 LABWC_AUTOSTART_DIR="${TARGET_HOME}/.config/labwc"
 LABWC_AUTOSTART_FILE="${TARGET_HOME}/.config/labwc/autostart"
+SYSTEM_LABWC_AUTOSTART_FILE=/etc/xdg/labwc/autostart
+SYSTEM_LABWC_BACKUP_FILE=/etc/xdg/labwc/autostart.digital-dash-desktop.bak
 LXSESSION_AUTOSTART_DIR="${TARGET_HOME}/.config/lxsession/LXDE-pi"
 LXSESSION_AUTOSTART_FILE="${LXSESSION_AUTOSTART_DIR}/autostart"
 USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
@@ -44,6 +46,7 @@ apt-get update
 apt-get install -y \
   build-essential \
   cmake \
+  labwc \
   ninja-build \
   qt6-base-dev \
   qt6-declarative-dev \
@@ -99,11 +102,23 @@ fi
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LABWC_AUTOSTART_DIR}"
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
-# Digital Dash Qt autostart
-"${AUTOSTART_RUNNER}" "${ROOT_DIR}" "${VIEW}" "${WS_URL}" &
+# Digital Dash Qt is launched from ${SYSTEM_LABWC_AUTOSTART_FILE}.
 EOF
 chown "${TARGET_USER}:${TARGET_GROUP}" "${LABWC_AUTOSTART_FILE}"
 chmod 0644 "${LABWC_AUTOSTART_FILE}"
+
+install -d -m 0755 /etc/xdg/labwc
+if [ -f "${SYSTEM_LABWC_AUTOSTART_FILE}" ] && [ ! -f "${SYSTEM_LABWC_BACKUP_FILE}" ]; then
+  cp -a "${SYSTEM_LABWC_AUTOSTART_FILE}" "${SYSTEM_LABWC_BACKUP_FILE}"
+fi
+
+cat > "${SYSTEM_LABWC_AUTOSTART_FILE}" <<EOF
+# Digital Dash Qt kiosk autostart
+# Original Raspberry Pi desktop autostart is backed up at:
+# ${SYSTEM_LABWC_BACKUP_FILE}
+/usr/bin/lwrespawn "${AUTOSTART_RUNNER}" "${ROOT_DIR}" "${VIEW}" "${WS_URL}" &
+EOF
+chmod 0644 "${SYSTEM_LABWC_AUTOSTART_FILE}"
 
 if [ -f "${LXSESSION_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start-kiosk-session' "${LXSESSION_AUTOSTART_FILE}"; then
   mv -f "${LXSESSION_AUTOSTART_FILE}" "${LXSESSION_AUTOSTART_FILE}.digital-dash-disabled"

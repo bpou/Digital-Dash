@@ -25,7 +25,7 @@ Choose the screen with `--view cluster` or `--view center`:
 
 ## Install as Raspberry Pi Desktop autostart
 
-This keeps the normal Raspberry Pi Wayland desktop running behind the fullscreen Qt app, so Raspberry Pi Connect screen sharing keeps working. It removes the old tty/Chromium kiosk autostart, enables LightDM autologin, and installs XDG desktop, labwc, and LXDE autostart entries for Qt.
+This boots the Raspberry Pi into the normal Wayland graphical session, but replaces the default labwc desktop autostart with the fullscreen Qt app. The installer backs up the original desktop autostart at `/etc/xdg/labwc/autostart.digital-dash-desktop.bak`, removes the old tty/Chromium kiosk autostart, enables LightDM autologin, and installs Qt startup entries for labwc.
 
 ```bash
 cd /home/admin/digital-dash
