@@ -42,6 +42,9 @@ DIGITAL_DASH_CONFIG_DIR="${TARGET_HOME}/.config/digital-dash"
 DIGITAL_DASH_EMPTY_DESKTOP_DIR="${DIGITAL_DASH_CONFIG_DIR}/empty-desktop"
 DIGITAL_DASH_WALLPAPER_DIR=/usr/share/backgrounds/digital-dash
 DIGITAL_DASH_WALLPAPER_FILE="${DIGITAL_DASH_WALLPAPER_DIR}/das-rolf.png"
+PLYMOUTH_THEME_SOURCE_DIR="${ROOT_DIR}/tools/kiosk/plymouth-theme"
+PLYMOUTH_THEME_TARGET_DIR=/usr/share/plymouth/themes/digital-dash
+CMDLINE_FILE=/boot/firmware/cmdline.txt
 USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
 GETTY_OVERRIDE_FILE=/etc/systemd/system/getty@tty1.service.d/digital-dash-autologin.conf
 LIGHTDM_QT_CONF_FILE=/etc/lightdm/lightdm.conf.d/99-digital-dash-qt-autologin.conf
@@ -57,12 +60,20 @@ if [ ! -f "${ROOT_DIR}/qt-dash/CMakeLists.txt" ]; then
   exit 1
 fi
 
+ensure_cmdline_arg() {
+  local arg=$1
+  if [ -f "${CMDLINE_FILE}" ] && ! grep -Eq "(^|[[:space:]])${arg}([[:space:]]|$)" "${CMDLINE_FILE}"; then
+    sed -i "1s|\$| ${arg}|" "${CMDLINE_FILE}"
+  fi
+}
+
 apt-get update
 apt-get install -y \
   build-essential \
   cmake \
   labwc \
   ninja-build \
+  plymouth \
   qt6-base-dev \
   qt6-declarative-dev \
   qt6-websockets-dev \
@@ -79,6 +90,19 @@ install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${AUTOSTART_DIR}"
 
 install -d -m 0755 "${DIGITAL_DASH_WALLPAPER_DIR}"
 install -m 0644 "${ROOT_DIR}/public/Das Rolf.png" "${DIGITAL_DASH_WALLPAPER_FILE}"
+
+install -d -m 0755 "${PLYMOUTH_THEME_TARGET_DIR}"
+install -m 0644 "${PLYMOUTH_THEME_SOURCE_DIR}/digital-dash.plymouth" "${PLYMOUTH_THEME_TARGET_DIR}/digital-dash.plymouth"
+install -m 0644 "${PLYMOUTH_THEME_SOURCE_DIR}/digital-dash.script" "${PLYMOUTH_THEME_TARGET_DIR}/digital-dash.script"
+install -m 0644 "${ROOT_DIR}/public/Das Rolf.png" "${PLYMOUTH_THEME_TARGET_DIR}/splash.png"
+ensure_cmdline_arg quiet
+ensure_cmdline_arg splash
+if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+  plymouth-set-default-theme digital-dash
+fi
+if command -v update-initramfs >/dev/null 2>&1; then
+  update-initramfs -u
+fi
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" \
   "${PCMANFM_CONFIG_DIR}" \

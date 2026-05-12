@@ -5,13 +5,21 @@ wallpaper_image = Image("splash.png");
 screen_width = Window.GetWidth();
 screen_height = Window.GetHeight();
 
-# Calculate position to center the image
-x = (screen_width - wallpaper_image.GetWidth()) / 2;
-y = (screen_height - wallpaper_image.GetHeight()) / 2;
-
 # Draw background matching cluster theme
 Window.SetBackgroundTopColor(0.027, 0.035, 0.043);    # #07090c
 Window.SetBackgroundBottomColor(0.027, 0.035, 0.043);  # #07090c
 
-# Draw the splash image centered
-wallpaper_image.Composite(x, y, 1.0);
+# Draw the splash image scaled to cover the screen
+scale_x = screen_width / wallpaper_image.GetWidth();
+scale_y = screen_height / wallpaper_image.GetHeight();
+scale = scale_x;
+if (scale_y > scale_x) {
+  scale = scale_y;
+}
+
+scaled_width = wallpaper_image.GetWidth() * scale;
+scaled_height = wallpaper_image.GetHeight() * scale;
+x = (screen_width - scaled_width) / 2;
+y = (screen_height - scaled_height) / 2;
+
+wallpaper_image.Scale(scaled_width, scaled_height).Composite(x, y, 1.0);
