@@ -34,6 +34,7 @@ LXSESSION_AUTOSTART_FILE="${LXSESSION_AUTOSTART_DIR}/autostart"
 USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
 GETTY_OVERRIDE_FILE=/etc/systemd/system/getty@tty1.service.d/digital-dash-autologin.conf
 LIGHTDM_QT_CONF_FILE=/etc/lightdm/lightdm.conf.d/99-digital-dash-qt-autologin.conf
+SYSTEMD_QT_SERVICE_FILE=/etc/systemd/system/digital-dash-qt.service
 PROFILE_MARKER_START="# >>> digital-dash tty1 kiosk >>>"
 PROFILE_MARKER_END="# <<< digital-dash tty1 kiosk <<<"
 
@@ -61,20 +62,8 @@ cmake --build "${ROOT_DIR}/qt-dash/build"
 chmod +x "${RUNNER}" "${AUTOSTART_RUNNER}"
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${AUTOSTART_DIR}"
 
-cat > "${AUTOSTART_FILE}" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Digital Dash Qt
-Comment=Start the native Digital Dash fullscreen app
-Exec=${AUTOSTART_RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}
-Terminal=false
-X-GNOME-Autostart-enabled=true
-EOF
-
-chown "${TARGET_USER}:${TARGET_GROUP}" "${AUTOSTART_FILE}"
-chmod 0644 "${AUTOSTART_FILE}"
-
 rm -f \
+  "${AUTOSTART_FILE}" \
   "${AUTOSTART_DIR}/digital-dash-cluster.desktop" \
   "${AUTOSTART_DIR}/digital-dash-kiosk.desktop" \
   "${AUTOSTART_DIR}/digital-dash-splash.desktop" \
@@ -103,8 +92,7 @@ fi
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LABWC_AUTOSTART_DIR}"
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
-# Digital Dash Qt user autostart
-/usr/bin/lwrespawn "${AUTOSTART_RUNNER}" "${ROOT_DIR}" "${VIEW}" "${WS_URL}" &
+# Digital Dash Qt is launched by ${SYSTEMD_QT_SERVICE_FILE}.
 EOF
 chown "${TARGET_USER}:${TARGET_GROUP}" "${LABWC_AUTOSTART_FILE}"
 chmod 0644 "${LABWC_AUTOSTART_FILE}"
@@ -124,7 +112,7 @@ fi
 
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LXSESSION_AUTOSTART_DIR}"
 cat > "${LXSESSION_AUTOSTART_FILE}" <<EOF
-@${AUTOSTART_RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}
+# Digital Dash Qt is launched by ${SYSTEMD_QT_SERVICE_FILE}.
 EOF
 chown "${TARGET_USER}:${TARGET_GROUP}" "${LXSESSION_AUTOSTART_FILE}"
 chmod 0644 "${LXSESSION_AUTOSTART_FILE}"
@@ -159,14 +147,39 @@ autologin-session=rpd-labwc
 xserver-command=X
 EOF
 
+cat > "${SYSTEMD_QT_SERVICE_FILE}" <<EOF
+[Unit]
+Description=Digital Dash Qt fullscreen app
+After=lightdm.service graphical.target
+Wants=lightdm.service
+
+[Service]
+Type=simple
+User=${TARGET_USER}
+Group=${TARGET_GROUP}
+WorkingDirectory=${ROOT_DIR}
+Environment=HOME=${TARGET_HOME}
+Environment=XDG_RUNTIME_DIR=/run/user/$(id -u "${TARGET_USER}")
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=DISPLAY=:0
+Environment=QT_QPA_PLATFORM=wayland;xcb
+ExecStartPre=/bin/sleep 10
+ExecStart=${RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target
+EOF
+chmod 0644 "${SYSTEMD_QT_SERVICE_FILE}"
+
 systemctl daemon-reload
 systemctl set-default graphical.target
 systemctl enable lightdm.service >/dev/null 2>&1 || true
+systemctl enable digital-dash-qt.service >/dev/null 2>&1
 systemctl disable digital-dash-kiosk.service >/dev/null 2>&1 || true
 systemctl disable digital-dash-zero-flash.service >/dev/null 2>&1 || true
 
 echo "Installed Digital Dash Qt autostart for ${TARGET_USER}."
-echo "Autostart file: ${AUTOSTART_FILE}"
-echo "Labwc autostart file: ${LABWC_AUTOSTART_FILE}"
-echo "LXDE autostart file: ${LXSESSION_AUTOSTART_FILE}"
+echo "Systemd service: ${SYSTEMD_QT_SERVICE_FILE}"
 echo "Run now with: ${RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}"

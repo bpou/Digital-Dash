@@ -25,7 +25,7 @@ Choose the screen with `--view cluster` or `--view center`:
 
 ## Install as Raspberry Pi Desktop autostart
 
-This boots the Raspberry Pi into the normal Wayland graphical session and starts the fullscreen Qt app from the user's labwc autostart. The installer restores the default system labwc desktop autostart when a previous Digital Dash backup exists, removes the old tty/Chromium kiosk autostart, enables LightDM autologin, and installs Qt startup entries for the target user.
+This boots the Raspberry Pi into the normal Wayland graphical session and starts the fullscreen Qt app with a systemd service running as the target user. The installer restores the default system labwc desktop autostart when a previous Digital Dash backup exists, removes old tty/Chromium kiosk autostart entries, enables LightDM autologin, and enables `digital-dash-qt.service`.
 
 ```bash
 cd /home/admin/digital-dash
@@ -37,4 +37,11 @@ Logs are written to:
 
 ```bash
 tail -120 ~/.cache/digital-dash-qt.log
+```
+
+Check the service with:
+
+```bash
+systemctl status digital-dash-qt.service
+journalctl -u digital-dash-qt.service -n 120 --no-pager
 ```
