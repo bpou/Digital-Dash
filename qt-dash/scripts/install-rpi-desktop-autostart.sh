@@ -44,6 +44,7 @@ DIGITAL_DASH_WALLPAPER_DIR=/usr/share/backgrounds/digital-dash
 DIGITAL_DASH_WALLPAPER_FILE="${DIGITAL_DASH_WALLPAPER_DIR}/das-rolf.png"
 PLYMOUTH_THEME_SOURCE_DIR="${ROOT_DIR}/tools/kiosk/plymouth-theme"
 PLYMOUTH_THEME_TARGET_DIR=/usr/share/plymouth/themes/digital-dash
+PLYMOUTH_CONFIG_FILE=/etc/plymouth/plymouthd.conf
 CMDLINE_FILE=/boot/firmware/cmdline.txt
 USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
 GETTY_OVERRIDE_FILE=/etc/systemd/system/getty@tty1.service.d/digital-dash-autologin.conf
@@ -64,6 +65,13 @@ ensure_cmdline_arg() {
   local arg=$1
   if [ -f "${CMDLINE_FILE}" ] && ! grep -Eq "(^|[[:space:]])${arg}([[:space:]]|$)" "${CMDLINE_FILE}"; then
     sed -i "1s|\$| ${arg}|" "${CMDLINE_FILE}"
+  fi
+}
+
+remove_cmdline_arg() {
+  local arg=$1
+  if [ -f "${CMDLINE_FILE}" ]; then
+    sed -i -E "s/(^|[[:space:]])${arg}([[:space:]]|$)/ /g; s/[[:space:]]+/ /g; s/^ //; s/ \$//" "${CMDLINE_FILE}"
   fi
 }
 
@@ -95,12 +103,19 @@ install -d -m 0755 "${PLYMOUTH_THEME_TARGET_DIR}"
 install -m 0644 "${PLYMOUTH_THEME_SOURCE_DIR}/digital-dash.plymouth" "${PLYMOUTH_THEME_TARGET_DIR}/digital-dash.plymouth"
 install -m 0644 "${PLYMOUTH_THEME_SOURCE_DIR}/digital-dash.script" "${PLYMOUTH_THEME_TARGET_DIR}/digital-dash.script"
 install -m 0644 "${ROOT_DIR}/public/Das Rolf.png" "${PLYMOUTH_THEME_TARGET_DIR}/splash.png"
+install -d -m 0755 /etc/plymouth
+cat > "${PLYMOUTH_CONFIG_FILE}" <<EOF
+[Daemon]
+Theme=digital-dash
+ShowDelay=0
+EOF
+remove_cmdline_arg nosplash
+remove_cmdline_arg plymouth.enable=0
 ensure_cmdline_arg quiet
 ensure_cmdline_arg splash
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
-  plymouth-set-default-theme digital-dash
-fi
-if command -v update-initramfs >/dev/null 2>&1; then
+  plymouth-set-default-theme -R digital-dash
+elif command -v update-initramfs >/dev/null 2>&1; then
   update-initramfs -u
 fi
 

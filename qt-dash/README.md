@@ -45,3 +45,11 @@ Check the service with:
 systemctl status digital-dash-qt.service
 journalctl -u digital-dash-qt.service -n 120 --no-pager
 ```
+
+Check the boot splash with:
+
+```bash
+plymouth-set-default-theme
+cat /etc/plymouth/plymouthd.conf
+cat /boot/firmware/cmdline.txt
+```
