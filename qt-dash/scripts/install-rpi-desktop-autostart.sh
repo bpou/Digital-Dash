@@ -22,10 +22,13 @@ TARGET_GROUP=$(id -gn "${TARGET_USER}")
 AUTOSTART_DIR="${TARGET_HOME}/.config/autostart"
 AUTOSTART_FILE="${AUTOSTART_DIR}/digital-dash-qt.desktop"
 RUNNER="${ROOT_DIR}/qt-dash/scripts/run-digital-dash-qt.sh"
+AUTOSTART_RUNNER="${ROOT_DIR}/qt-dash/scripts/start-digital-dash-qt-autostart.sh"
 PROFILE_FILE="${TARGET_HOME}/.profile"
 BASH_PROFILE_FILE="${TARGET_HOME}/.bash_profile"
 LABWC_AUTOSTART_DIR="${TARGET_HOME}/.config/labwc"
 LABWC_AUTOSTART_FILE="${TARGET_HOME}/.config/labwc/autostart"
+LXSESSION_AUTOSTART_DIR="${TARGET_HOME}/.config/lxsession/LXDE-pi"
+LXSESSION_AUTOSTART_FILE="${LXSESSION_AUTOSTART_DIR}/autostart"
 USER_SYSTEMD_DIR="${TARGET_HOME}/.config/systemd/user"
 GETTY_OVERRIDE_FILE=/etc/systemd/system/getty@tty1.service.d/digital-dash-autologin.conf
 LIGHTDM_QT_CONF_FILE=/etc/lightdm/lightdm.conf.d/99-digital-dash-qt-autologin.conf
@@ -51,7 +54,7 @@ apt-get install -y \
 cmake -S "${ROOT_DIR}/qt-dash" -B "${ROOT_DIR}/qt-dash/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build "${ROOT_DIR}/qt-dash/build"
 
-chmod +x "${RUNNER}"
+chmod +x "${RUNNER}" "${AUTOSTART_RUNNER}"
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${AUTOSTART_DIR}"
 
 cat > "${AUTOSTART_FILE}" <<EOF
@@ -59,7 +62,7 @@ cat > "${AUTOSTART_FILE}" <<EOF
 Type=Application
 Name=Digital Dash Qt
 Comment=Start the native Digital Dash fullscreen app
-Exec=${RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}
+Exec=${AUTOSTART_RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}
 Terminal=false
 X-GNOME-Autostart-enabled=true
 EOF
@@ -71,6 +74,7 @@ rm -f \
   "${AUTOSTART_DIR}/digital-dash-cluster.desktop" \
   "${AUTOSTART_DIR}/digital-dash-kiosk.desktop" \
   "${AUTOSTART_DIR}/digital-dash-splash.desktop" \
+  "${LXSESSION_AUTOSTART_FILE}.digital-dash-disabled" \
   "${USER_SYSTEMD_DIR}/digital-dash-kiosk.service" \
   "${USER_SYSTEMD_DIR}/digital-dash-splash.service" \
   "${USER_SYSTEMD_DIR}/default.target.wants/digital-dash-kiosk.service" \
@@ -96,10 +100,21 @@ fi
 install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LABWC_AUTOSTART_DIR}"
 cat > "${LABWC_AUTOSTART_FILE}" <<EOF
 # Digital Dash Qt autostart
-"${RUNNER}" "${ROOT_DIR}" "${VIEW}" "${WS_URL}" &
+"${AUTOSTART_RUNNER}" "${ROOT_DIR}" "${VIEW}" "${WS_URL}" &
 EOF
 chown "${TARGET_USER}:${TARGET_GROUP}" "${LABWC_AUTOSTART_FILE}"
 chmod 0644 "${LABWC_AUTOSTART_FILE}"
+
+if [ -f "${LXSESSION_AUTOSTART_FILE}" ] && grep -Eq 'digital-dash|chromium|start-kiosk-session' "${LXSESSION_AUTOSTART_FILE}"; then
+  mv -f "${LXSESSION_AUTOSTART_FILE}" "${LXSESSION_AUTOSTART_FILE}.digital-dash-disabled"
+fi
+
+install -d -m 0755 -o "${TARGET_USER}" -g "${TARGET_GROUP}" "${LXSESSION_AUTOSTART_DIR}"
+cat > "${LXSESSION_AUTOSTART_FILE}" <<EOF
+@${AUTOSTART_RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}
+EOF
+chown "${TARGET_USER}:${TARGET_GROUP}" "${LXSESSION_AUTOSTART_FILE}"
+chmod 0644 "${LXSESSION_AUTOSTART_FILE}"
 
 if [ -f "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh" ]; then
   mv -f "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh" "${TARGET_HOME}/.config/digital-dash/kiosk-login.sh.disabled"
@@ -140,4 +155,5 @@ systemctl disable digital-dash-zero-flash.service >/dev/null 2>&1 || true
 echo "Installed Digital Dash Qt autostart for ${TARGET_USER}."
 echo "Autostart file: ${AUTOSTART_FILE}"
 echo "Labwc autostart file: ${LABWC_AUTOSTART_FILE}"
+echo "LXDE autostart file: ${LXSESSION_AUTOSTART_FILE}"
 echo "Run now with: ${RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}"
