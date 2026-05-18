@@ -662,6 +662,38 @@ Item {
             return Math.max(minValue, Math.min(maxValue, input));
         }
 
+        function sign(value) {
+            return value < 0 ? -1 : 1;
+        }
+
+        function squirclePoint(size, inset, power, normalized, startAngle, sweep) {
+            var side = size / 2 - inset;
+            var t = startAngle + sweep * normalized;
+            var cosValue = Math.cos(t);
+            var sinValue = Math.sin(t);
+            var x = sign(cosValue) * Math.pow(Math.abs(cosValue), 2 / power) * side + size / 2;
+            var y = sign(sinValue) * Math.pow(Math.abs(sinValue), 2 / power) * side + size / 2;
+            return { x: x, y: y, angle: t };
+        }
+
+        function drawSquirclePath(ctx, size, inset, power, startAngle, sweep, normalizedEnd, steps) {
+            var count = Math.max(2, Math.ceil(steps * Math.max(0.01, normalizedEnd)));
+            for (var pi = 0; pi <= count; pi++) {
+                var normalized = normalizedEnd * (pi / count);
+                var point = squirclePoint(size, inset, power, normalized, startAngle, sweep);
+                if (pi === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            }
+        }
+
+        function drawClosedSquircle(ctx, size, inset, power, steps) {
+            drawSquirclePath(ctx, size, inset, power, 0, Math.PI * 2, 1, steps);
+            ctx.closePath();
+        }
+
         Behavior on displayValue {
             NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
         }
@@ -679,84 +711,100 @@ Item {
                 var h = height;
                 var cx = w / 2;
                 var cy = h / 2;
-                var r = Math.min(w, h) * 0.40;
-                var start = reverse ? Math.PI * 0.17 : Math.PI * 0.83;
-                var sweep = reverse ? -Math.PI * 1.66 : Math.PI * 1.66;
+                var size = Math.min(w, h);
+                var xOffset = (w - size) / 2;
+                var yOffset = (h - size) / 2;
+                var start = reverse ? Math.PI * 0.03 : Math.PI * 0.97;
+                var sweep = reverse ? -Math.PI * 1.94 : Math.PI * 1.94;
+                var power = 3.05;
                 var pct = clampValue(displayValue / Math.max(1, maximumValue), 0, 1);
                 var liveColor = displayValue >= dangerAt ? warnColor : accentColor;
 
                 ctx.reset();
                 ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                ctx.translate(xOffset, yOffset);
 
-                var glow = ctx.createRadialGradient(cx, cy, r * 0.10, cx, cy, r * 1.22);
+                var glow = ctx.createRadialGradient(size / 2, size / 2, size * 0.04, size / 2, size / 2, size * 0.54);
                 glow.addColorStop(0.0, "rgba(255,255,255,0.08)");
                 glow.addColorStop(0.72, "rgba(255,255,255,0.02)");
                 glow.addColorStop(1.0, "rgba(0,0,0,0.0)");
                 ctx.fillStyle = glow;
                 ctx.beginPath();
-                ctx.arc(cx, cy, r * 1.16, 0, Math.PI * 2);
+                drawClosedSquircle(ctx, size, 12, power, 160);
                 ctx.fill();
 
-                ctx.lineWidth = 30;
+                ctx.fillStyle = "rgba(255,255,255,0.025)";
+                ctx.beginPath();
+                drawClosedSquircle(ctx, size, size * 0.26, power, 160);
+                ctx.fill();
+
+                ctx.lineWidth = Math.max(24, size * 0.075);
                 ctx.strokeStyle = "rgba(255,255,255,0.035)";
                 ctx.beginPath();
-                ctx.arc(cx, cy, r, start, start + sweep);
+                drawSquirclePath(ctx, size, size * 0.08, power, start, sweep, 1, 150);
                 ctx.stroke();
 
-                ctx.lineWidth = 17;
+                ctx.lineWidth = Math.max(15, size * 0.042);
                 ctx.strokeStyle = liveColor;
                 ctx.globalAlpha = 0.20;
                 ctx.beginPath();
-                ctx.arc(cx, cy, r, start, start + sweep * pct);
+                drawSquirclePath(ctx, size, size * 0.08, power, start, sweep, pct, 150);
                 ctx.stroke();
                 ctx.globalAlpha = 1.0;
 
-                ctx.lineWidth = 9;
+                ctx.lineWidth = Math.max(8, size * 0.023);
                 ctx.strokeStyle = liveColor;
                 ctx.beginPath();
-                ctx.arc(cx, cy, r, start, start + sweep * pct);
+                drawSquirclePath(ctx, size, size * 0.08, power, start, sweep, pct, 150);
                 ctx.stroke();
 
-                ctx.lineWidth = 3;
+                ctx.lineWidth = Math.max(2, size * 0.008);
                 ctx.strokeStyle = "rgba(255,255,255,0.92)";
                 ctx.beginPath();
-                ctx.arc(cx, cy, r, start, start + sweep * pct);
+                drawSquirclePath(ctx, size, size * 0.08, power, start, sweep, pct, 150);
+                ctx.stroke();
+
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "rgba(255,255,255,0.07)";
+                ctx.beginPath();
+                drawSquirclePath(ctx, size, size * 0.19, power, start, sweep, 1, 150);
                 ctx.stroke();
 
                 var ticks = 36;
                 for (var i = 0; i <= ticks; i++) {
                     var amount = i / ticks;
-                    var a = start + sweep * amount;
                     var major = i % 6 === 0;
-                    var inner = major ? r - 25 : r - 14;
-                    var outer = r - 1;
+                    var outerPoint = squirclePoint(size, size * 0.085, power, amount, start, sweep);
+                    var innerPoint = squirclePoint(size, major ? size * 0.155 : size * 0.125, power, amount, start, sweep);
                     ctx.lineWidth = major ? 2 : 1;
                     ctx.strokeStyle = major ? "rgba(255,255,255,0.52)" : "rgba(255,255,255,0.22)";
                     ctx.beginPath();
-                    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
-                    ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+                    ctx.moveTo(innerPoint.x, innerPoint.y);
+                    ctx.lineTo(outerPoint.x, outerPoint.y);
                     ctx.stroke();
                 }
 
-                var needleAngle = start + sweep * pct;
-                var needleLen = r - 20;
+                var needlePoint = squirclePoint(size, size * 0.14, power, pct, start, sweep);
+                cx = size / 2;
+                cy = size / 2;
                 ctx.lineWidth = 5;
                 ctx.strokeStyle = "rgba(0,0,0,0.55)";
                 ctx.beginPath();
                 ctx.moveTo(cx, cy);
-                ctx.lineTo(cx + Math.cos(needleAngle) * needleLen, cy + Math.sin(needleAngle) * needleLen);
+                ctx.lineTo(needlePoint.x, needlePoint.y);
                 ctx.stroke();
 
                 ctx.lineWidth = 2.2;
                 ctx.strokeStyle = liveColor;
                 ctx.beginPath();
                 ctx.moveTo(cx, cy);
-                ctx.lineTo(cx + Math.cos(needleAngle) * needleLen, cy + Math.sin(needleAngle) * needleLen);
+                ctx.lineTo(needlePoint.x, needlePoint.y);
                 ctx.stroke();
 
                 ctx.fillStyle = liveColor;
                 ctx.beginPath();
-                ctx.arc(cx + Math.cos(needleAngle) * needleLen, cy + Math.sin(needleAngle) * needleLen, 4.5, 0, Math.PI * 2);
+                ctx.arc(needlePoint.x, needlePoint.y, 4.5, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.fillStyle = "#10181b";
@@ -769,20 +817,25 @@ Item {
 
                 for (var labelValue = 0; labelValue <= maximumValue; labelValue += majorStep) {
                     var labelPct = labelValue / maximumValue;
-                    var labelAngle = start + sweep * labelPct;
-                    var lr = r + 33;
+                    var labelPoint = squirclePoint(size, -size * 0.035, power, labelPct, start, sweep);
                     ctx.fillStyle = "rgba(255,255,255,0.42)";
                     ctx.font = "bold 15px Inter";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
                     var shown = maximumValue > 1000 ? Math.round(labelValue / 1000).toString() : Math.round(labelValue).toString();
-                    ctx.fillText(shown, cx + Math.cos(labelAngle) * lr, cy + Math.sin(labelAngle) * lr);
+                    ctx.fillText(shown, labelPoint.x, labelPoint.y);
                 }
             }
 
             Connections {
                 target: parent
                 function onDisplayValueChanged() { gaugeCanvas.requestPaint(); }
+                function onDangerAtChanged() { gaugeCanvas.requestPaint(); }
+                function onReverseChanged() { gaugeCanvas.requestPaint(); }
+                function onAccentColorChanged() { gaugeCanvas.requestPaint(); }
+                function onWarnColorChanged() { gaugeCanvas.requestPaint(); }
+                function onMaximumValueChanged() { gaugeCanvas.requestPaint(); }
+                function onMajorStepChanged() { gaugeCanvas.requestPaint(); }
                 function onWidthChanged() { gaugeCanvas.requestPaint(); }
                 function onHeightChanged() { gaugeCanvas.requestPaint(); }
             }
