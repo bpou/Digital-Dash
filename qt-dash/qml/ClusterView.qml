@@ -183,38 +183,14 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.verticalCenterOffset: -10
         width: parent.width * 0.30
-        height: parent.height * 0.64
-
-        Image {
-            anchors.left: parent.left
-            anchors.verticalCenter: coverFrame.verticalCenter
-            width: coverFrame.width * 0.78
-            height: coverFrame.height * 0.78
-            source: root.artworkSource
-            fillMode: Image.PreserveAspectCrop
-            opacity: 0.18
-            smooth: true
-            asynchronous: true
-        }
-
-        Image {
-            anchors.right: parent.right
-            anchors.verticalCenter: coverFrame.verticalCenter
-            width: coverFrame.width * 0.78
-            height: coverFrame.height * 0.78
-            source: root.artworkSource
-            fillMode: Image.PreserveAspectCrop
-            opacity: 0.18
-            smooth: true
-            asynchronous: true
-        }
+        height: parent.height * 0.70
 
         Rectangle {
             id: coverFrame
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            width: Math.min(parent.width * 0.54, parent.height * 0.58)
-            height: width
+            width: Math.min(parent.width * 0.68, parent.height * 0.62)
+            height: width * 0.86
             radius: 22
             color: "#0b1114"
             border.color: "#263a40"
@@ -237,6 +213,32 @@ Item {
                     GradientStop { position: 0.00; color: Qt.rgba(1, 1, 1, 0.10) }
                     GradientStop { position: 0.56; color: Qt.rgba(0, 0, 0, 0.00) }
                     GradientStop { position: 1.00; color: Qt.rgba(0, 0, 0, 0.35) }
+                }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: parent.width * 0.30
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.88) }
+                    GradientStop { position: 0.46; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.34) }
+                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
+                }
+            }
+
+            Rectangle {
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: parent.width * 0.30
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
+                    GradientStop { position: 0.54; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.34) }
+                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.88) }
                 }
             }
 
