@@ -180,16 +180,15 @@ Item {
     Item {
         id: mediaPlayer
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: -10
+        anchors.top: coverFrame.top
         width: parent.width * 0.30
-        height: parent.height * 0.70
+        height: coverFrame.height + 108
 
         Rectangle {
             id: coverFrame
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            width: Math.min(parent.width * 0.68, parent.height * 0.62)
+            anchors.verticalCenter: root.verticalCenter
+            width: Math.min(mediaPlayer.width * 0.68, root.height * 0.44)
             height: width * 0.86
             radius: 22
             color: "#0b1114"
@@ -220,11 +219,11 @@ Item {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: parent.width * 0.30
+                width: parent.width * 0.24
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.88) }
-                    GradientStop { position: 0.46; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.34) }
+                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.76) }
+                    GradientStop { position: 0.52; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.28) }
                     GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
                 }
             }
@@ -233,12 +232,36 @@ Item {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: parent.width * 0.30
+                width: parent.width * 0.24
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
-                    GradientStop { position: 0.54; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.34) }
-                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.88) }
+                    GradientStop { position: 0.48; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.28) }
+                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.76) }
+                }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: parent.height * 0.24
+                gradient: Gradient {
+                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.62) }
+                    GradientStop { position: 0.54; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.20) }
+                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
+                }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: parent.height * 0.24
+                gradient: Gradient {
+                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
+                    GradientStop { position: 0.46; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.20) }
+                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.62) }
                 }
             }
 
@@ -255,7 +278,7 @@ Item {
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: coverFrame.bottom
-            anchors.topMargin: 12
+            anchors.topMargin: 14
             width: parent.width
             spacing: 5
 
@@ -283,8 +306,8 @@ Item {
 
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: elapsedRow.top
-            anchors.bottomMargin: 11
+            anchors.top: coverFrame.bottom
+            anchors.topMargin: 62
             width: parent.width * 0.78
             height: 5
             radius: 3
@@ -301,7 +324,8 @@ Item {
         Row {
             id: elapsedRow
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
+            anchors.top: coverFrame.bottom
+            anchors.topMargin: 78
             spacing: 14
 
             Text {
