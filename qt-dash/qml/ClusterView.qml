@@ -495,6 +495,8 @@ Item {
     }
 
     component QtGauge: Item {
+        id: gaugeRoot
+
         property real value: 0
         property real maximumValue: 100
         property real majorStep: 20
@@ -639,20 +641,20 @@ Item {
                 ctx.lineWidth = Math.max(28, size * 0.088);
                 ctx.strokeStyle = rgbaString(liveColor, 0.11);
                 ctx.beginPath();
-                drawSamples(ctx, fullTrack, 1, true);
+                drawSamples(ctx, activeTrack, 1, false);
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
                 ctx.lineWidth = Math.max(21, size * 0.061);
                 ctx.strokeStyle = "rgba(255,255,255,0.045)";
                 ctx.beginPath();
-                drawSamples(ctx, fullTrack, 1, true);
+                drawSamples(ctx, activeTrack, 1, false);
                 ctx.stroke();
 
                 ctx.lineWidth = Math.max(6, size * 0.018);
                 ctx.strokeStyle = "rgba(255,255,255,0.13)";
                 ctx.beginPath();
-                drawSamples(ctx, fullTrack, 1, true);
+                drawSamples(ctx, activeTrack, 1, false);
                 ctx.stroke();
 
                 ctx.shadowColor = rgbaString(liveColor, 1);
@@ -677,7 +679,7 @@ Item {
                 ctx.stroke();
 
                 ctx.lineWidth = 1;
-                ctx.strokeStyle = "rgba(255,255,255,0.08)";
+                ctx.strokeStyle = "rgba(255,255,255,0.055)";
                 ctx.beginPath();
                 drawSamples(ctx, innerFrame, 1, true);
                 ctx.stroke();
@@ -711,7 +713,7 @@ Item {
             }
 
             Connections {
-                target: parent
+                target: gaugeRoot
                 function onDisplayValueChanged() { gaugeCanvas.requestPaint(); }
                 function onDangerAtChanged() { gaugeCanvas.requestPaint(); }
                 function onReverseChanged() { gaugeCanvas.requestPaint(); }
