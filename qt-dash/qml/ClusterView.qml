@@ -179,16 +179,13 @@ Item {
 
     Item {
         id: mediaPlayer
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: coverFrame.top
-        width: parent.width * 0.30
-        height: coverFrame.height + 108
+        anchors.fill: parent
 
         Rectangle {
             id: coverFrame
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: root.verticalCenter
-            width: Math.min(mediaPlayer.width * 0.68, root.height * 0.44)
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(root.width * 0.145, root.height * 0.40)
             height: width * 0.86
             radius: 22
             color: "#0b1114"
@@ -279,7 +276,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: coverFrame.bottom
             anchors.topMargin: 14
-            width: parent.width
+            width: root.width * 0.30
             spacing: 5
 
             Text {
@@ -307,8 +304,8 @@ Item {
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: coverFrame.bottom
-            anchors.topMargin: 62
-            width: parent.width * 0.78
+            anchors.topMargin: 86
+            width: root.width * 0.30 * 0.78
             height: 5
             radius: 3
             color: "#20282b"
@@ -325,7 +322,7 @@ Item {
             id: elapsedRow
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: coverFrame.bottom
-            anchors.topMargin: 78
+            anchors.topMargin: 48
             spacing: 14
 
             Text {
