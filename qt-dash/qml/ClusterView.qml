@@ -146,35 +146,7 @@ Item {
         anchors.topMargin: 26
         spacing: 12
 
-        Rectangle {
-            width: 8
-            height: 8
-            radius: 4
-            anchors.verticalCenter: parent.verticalCenter
-            color: vehicleClient.connected ? "#9fffd1" : "#6b7479"
-        }
 
-        Text {
-            text: vehicleClient.connected ? "CAN online" : "SIM local"
-            color: "#a9b3ba"
-            font.family: "Inter"
-            font.pixelSize: 13
-            font.weight: Font.DemiBold
-        }
-
-        Text {
-            text: "|"
-            color: "#344046"
-            font.pixelSize: 13
-        }
-
-        Text {
-            text: root.headingLabel(root.gps.heading) + " heading"
-            color: "#a9b3ba"
-            font.family: "Inter"
-            font.pixelSize: 13
-            font.weight: Font.DemiBold
-        }
 
         Text {
             text: Qt.formatTime(root.clockTime, "HH:mm")
