@@ -137,7 +137,7 @@ Item {
     QtGauge {
         id: rpmGauge
         anchors.left: shell.left
-        anchors.leftMargin: parent.width * 0.02
+        anchors.leftMargin: parent.width * 0.04
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width * 0.30
         height: width
@@ -145,7 +145,7 @@ Item {
         maximumValue: 8000
         majorStep: 2000
         label: "RPM"
-        subLabel: "16V READY"
+       
         valueText: Math.round(root.rpm).toString()
         accentColor: "#66e5ff"
         warnColor: "#ff4d5e"
@@ -156,20 +156,20 @@ Item {
     QtGauge {
         id: speedGauge
         anchors.right: shell.right
-        anchors.rightMargin: parent.width * 0.02
+        anchors.rightMargin: parent.width * 0.04
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width * 0.30
         height: width
         value: root.speed
-        maximumValue: 240
-        majorStep: 50
+        maximumValue: 180
+        majorStep: 30
         label: "KM/H"
-        subLabel: "ROAD SPEED"
+       
         valueText: Math.round(root.speed).toString()
         accentColor: "#b4f8c8"
         warnColor: "#ff4d5e"
-        dangerAt: 180
-        reverse: true
+        dangerAt: 160
+        reverse: false
     }
 
     Column {
@@ -563,8 +563,8 @@ Item {
                 var size = Math.min(w, h);
                 var xOffset = (w - size) / 2;
                 var yOffset = (h - size) / 2;
-                var start = reverse ? Math.PI * 0.03 : Math.PI * 0.97;
-                var sweep = reverse ? -Math.PI * 1.94 : Math.PI * 1.94;
+                var start = Math.PI * 0.75;
+                var sweep = Math.PI * 1.5;
                 var power = 5.4;
                 var pct = clampValue(displayValue / Math.max(1, maximumValue), 0, 1);
                 var liveColor = displayValue >= dangerAt ? warnColor : accentColor;
@@ -620,10 +620,12 @@ Item {
                 drawSquirclePath(ctx, size, size * 0.19, power, start, sweep, 1, 150);
                 ctx.stroke();
 
-                var ticks = 36;
-                for (var i = 0; i <= ticks; i++) {
-                    var amount = i / ticks;
-                    var major = i % 6 === 0;
+                var minorPerMajor = 5;
+                var majorIntervals = Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
+                var tickIntervals = majorIntervals * minorPerMajor;
+                for (var i = 0; i <= tickIntervals; i++) {
+                    var amount = i / tickIntervals;
+                    var major = i % minorPerMajor === 0;
                     var outerPoint = squirclePoint(size, size * 0.085, power, amount, start, sweep);
                     var innerPoint = squirclePoint(size, major ? size * 0.155 : size * 0.125, power, amount, start, sweep);
                     ctx.lineWidth = major ? 2 : 1;
@@ -633,36 +635,6 @@ Item {
                     ctx.lineTo(outerPoint.x, outerPoint.y);
                     ctx.stroke();
                 }
-
-                var needlePoint = squirclePoint(size, size * 0.14, power, pct, start, sweep);
-                cx = size / 2;
-                cy = size / 2;
-                ctx.lineWidth = 5;
-                ctx.strokeStyle = "rgba(0,0,0,0.55)";
-                ctx.beginPath();
-                ctx.moveTo(cx, cy);
-                ctx.lineTo(needlePoint.x, needlePoint.y);
-                ctx.stroke();
-
-                ctx.lineWidth = 2.2;
-                ctx.strokeStyle = liveColor;
-                ctx.beginPath();
-                ctx.moveTo(cx, cy);
-                ctx.lineTo(needlePoint.x, needlePoint.y);
-                ctx.stroke();
-
-                ctx.fillStyle = liveColor;
-                ctx.beginPath();
-                ctx.arc(needlePoint.x, needlePoint.y, 4.5, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = "#10181b";
-                ctx.beginPath();
-                ctx.arc(cx, cy, 11, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = "rgba(255,255,255,0.20)";
-                ctx.lineWidth = 1;
-                ctx.stroke();
 
                 for (var labelValue = 0; labelValue <= maximumValue; labelValue += majorStep) {
                     var labelPct = labelValue / maximumValue;
