@@ -114,30 +114,7 @@ Item {
         opacity: 0.95
     }
 
-    Row {
-        anchors.left: shell.left
-        anchors.top: shell.top
-        anchors.leftMargin: 42
-        anchors.topMargin: 22
-        spacing: 14
 
-        Text {
-            text: "GOLF MK2"
-            color: "#f7fbff"
-            font.family: "Inter"
-            font.pixelSize: 24
-            font.weight: Font.Black
-        }
-
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: "OEM+ DIGITAL COCKPIT"
-            color: "#66747b"
-            font.family: "Inter"
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-        }
-    }
 
     Row {
         anchors.right: shell.right
