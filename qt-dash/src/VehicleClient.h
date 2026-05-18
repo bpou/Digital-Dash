@@ -48,4 +48,5 @@ private:
     bool m_connected = false;
     bool m_simulationOnly = false;
     double m_mockTick = 0.0;
+    double m_mockMusicAccumulator = 0.0;
 };

@@ -39,6 +39,22 @@ void VehicleClient::connectTo(const QUrl &url) {
 
 void VehicleClient::sendCommand(const QString &type, const QJsonObject &payload) {
     if (m_socket.state() != QAbstractSocket::ConnectedState) {
+        if (type == QStringLiteral("bt/media/control")) {
+            const QString action = payload.value(QStringLiteral("action")).toString();
+            QJsonObject next = m_state;
+            QJsonObject audio = next.value(QStringLiteral("audio")).toObject();
+            QJsonObject nowPlaying = audio.value(QStringLiteral("nowPlaying")).toObject();
+
+            if (action == QStringLiteral("play")) {
+                nowPlaying.insert(QStringLiteral("isPlaying"), true);
+            } else if (action == QStringLiteral("pause")) {
+                nowPlaying.insert(QStringLiteral("isPlaying"), false);
+            }
+
+            audio.insert(QStringLiteral("nowPlaying"), nowPlaying);
+            next.insert(QStringLiteral("audio"), audio);
+            setState(next);
+        }
         return;
     }
 
@@ -113,6 +129,21 @@ void VehicleClient::advanceMock() {
     vehicle.insert(QStringLiteral("speedKmh"), ((qSin(m_mockTick * 0.7 + 1.2) + 1) / 2) * 180);
     next.insert(QStringLiteral("vehicle"), vehicle);
 
+    QJsonObject audio = next.value(QStringLiteral("audio")).toObject();
+    QJsonObject nowPlaying = audio.value(QStringLiteral("nowPlaying")).toObject();
+    const int duration = nowPlaying.value(QStringLiteral("durationSec")).toInt(0);
+    if (nowPlaying.value(QStringLiteral("isPlaying")).toBool(false) && duration > 0) {
+        m_mockMusicAccumulator += 0.12;
+        int position = nowPlaying.value(QStringLiteral("positionSec")).toInt(0);
+        while (m_mockMusicAccumulator >= 1.0) {
+            position = (position + 1) % duration;
+            m_mockMusicAccumulator -= 1.0;
+        }
+        nowPlaying.insert(QStringLiteral("positionSec"), position);
+        audio.insert(QStringLiteral("nowPlaying"), nowPlaying);
+        next.insert(QStringLiteral("audio"), audio);
+    }
+
     setState(next);
 }
 
@@ -168,6 +199,8 @@ QJsonObject VehicleClient::defaultState() const {
                       QJsonObject{{QStringLiteral("title"), QStringLiteral("Midnight Lights")},
                                   {QStringLiteral("artist"), QStringLiteral("Eliora")},
                                   {QStringLiteral("album"), QStringLiteral("Signals")},
+                                  {QStringLiteral("artworkUrl"),
+                                   QStringLiteral("file:///home/admin/digital-dash/public/albumcover.jpg")},
                                   {QStringLiteral("durationSec"), 256},
                                   {QStringLiteral("positionSec"), 114},
                                   {QStringLiteral("isPlaying"), true}}}}},

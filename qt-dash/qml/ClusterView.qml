@@ -24,6 +24,11 @@ Item {
     property real coolantTemp: temp.coolantC || 0
     property int musicPosition: nowPlaying.positionSec || 0
     property int musicDuration: nowPlaying.durationSec || 0
+    property real musicProgress: clamp(musicPosition / Math.max(1, musicDuration), 0, 1)
+    property string artworkSource: {
+        var source = nowPlaying.artworkUrl || "";
+        return source.length > 0 ? source : "file:///home/admin/digital-dash/public/albumcover.jpg";
+    }
     property date clockTime: new Date()
 
     function clamp(value, minValue, maxValue) {
@@ -172,59 +177,89 @@ Item {
         reverse: false
     }
 
-    Column {
+    Item {
+        id: mediaPlayer
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: mediaCard.top
-        anchors.bottomMargin: 6
-        width: parent.width * 0.28
-        spacing: 7
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: -10
+        width: parent.width * 0.30
+        height: parent.height * 0.64
 
-        BarMeter { label: "OIL"; value: root.oilTemp; minValue: 40; maxValue: 140; suffix: "C"; warn: root.oilTemp >= 110 }
-        BarMeter { label: "COOLANT"; value: root.coolantTemp; minValue: 40; maxValue: 120; suffix: "C"; warn: root.coolantTemp >= 100 }
-        BarMeter { label: "FUEL"; value: root.fuel; minValue: 0; maxValue: 100; suffix: "%"; warn: root.fuel <= 15 }
-    }
+        Image {
+            anchors.left: parent.left
+            anchors.verticalCenter: coverFrame.verticalCenter
+            width: coverFrame.width * 0.78
+            height: coverFrame.height * 0.78
+            source: root.artworkSource
+            fillMode: Image.PreserveAspectCrop
+            opacity: 0.18
+            smooth: true
+            asynchronous: true
+        }
 
-    Rectangle {
-        id: mediaCard
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: shell.bottom
-        anchors.bottomMargin: 20
-        width: parent.width * 0.43
-        height: 78
-        radius: 18
-        color: "#10191c"
-        opacity: 0.96
-        border.color: "#203238"
-        border.width: 1
+        Image {
+            anchors.right: parent.right
+            anchors.verticalCenter: coverFrame.verticalCenter
+            width: coverFrame.width * 0.78
+            height: coverFrame.height * 0.78
+            source: root.artworkSource
+            fillMode: Image.PreserveAspectCrop
+            opacity: 0.18
+            smooth: true
+            asynchronous: true
+        }
 
         Rectangle {
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 14
-            width: 52
-            height: 52
-            radius: 13
-            color: "#213338"
-            border.color: "#3a565d"
+            id: coverFrame
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            width: Math.min(parent.width * 0.54, parent.height * 0.58)
+            height: width
+            radius: 22
+            color: "#0b1114"
+            border.color: "#263a40"
+            border.width: 1
+            clip: true
+
+            Image {
+                id: coverImage
+                anchors.fill: parent
+                source: root.artworkSource
+                fillMode: Image.PreserveAspectCrop
+                smooth: true
+                asynchronous: true
+                opacity: status === Image.Ready ? 1.0 : 0.0
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                gradient: Gradient {
+                    GradientStop { position: 0.00; color: Qt.rgba(1, 1, 1, 0.10) }
+                    GradientStop { position: 0.56; color: Qt.rgba(0, 0, 0, 0.00) }
+                    GradientStop { position: 1.00; color: Qt.rgba(0, 0, 0, 0.35) }
+                }
+            }
 
             Text {
                 anchors.centerIn: parent
+                visible: coverImage.status !== Image.Ready
                 text: "M"
                 color: "#b9cbd1"
-                font.pixelSize: 28
+                font.pixelSize: parent.width * 0.34
                 font.weight: Font.Bold
             }
         }
 
         Column {
-            anchors.left: parent.left
-            anchors.leftMargin: 82
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width * 0.34
-            spacing: 3
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: coverFrame.bottom
+            anchors.topMargin: 12
+            width: parent.width
+            spacing: 5
 
             Text {
                 width: parent.width
+                horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 text: root.nowPlaying.title || "No media playing"
                 color: "#ffffff"
@@ -235,73 +270,112 @@ Item {
 
             Text {
                 width: parent.width
+                horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 text: root.nowPlaying.artist || ""
                 color: "#94a2a8"
                 font.family: "Inter"
                 font.pixelSize: 13
             }
-
-            Text {
-                width: parent.width
-                elide: Text.ElideRight
-                text: root.nowPlaying.album || ""
-                color: "#647278"
-                font.family: "Inter"
-                font.pixelSize: 10
-                font.letterSpacing: 3
-            }
-        }
-
-        Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.topMargin: 14
-            spacing: 9
-
-            MediaButton { label: "<<"; onClicked: root.mediaControl("prev") }
-            MediaButton { label: root.nowPlaying.isPlaying ? "||" : ">"; primary: true; onClicked: root.mediaControl(root.nowPlaying.isPlaying ? "pause" : "play") }
-            MediaButton { label: ">>"; onClicked: root.mediaControl("next") }
         }
 
         Rectangle {
-            anchors.left: parent.left
-            anchors.leftMargin: parent.width * 0.48
-            anchors.right: parent.right
-            anchors.rightMargin: 16
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 24
-            height: 4
-            radius: 2
-            color: "#263236"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: elapsedRow.top
+            anchors.bottomMargin: 11
+            width: parent.width * 0.78
+            height: 5
+            radius: 3
+            color: "#20282b"
 
             Rectangle {
-                width: parent.width * root.clamp(root.musicPosition / Math.max(1, root.musicDuration), 0, 1)
+                width: parent.width * root.musicProgress
                 height: parent.height
                 radius: parent.radius
                 color: "#c9eee1"
             }
         }
 
-        Text {
-            anchors.left: parent.left
-            anchors.leftMargin: parent.width * 0.48
+        Row {
+            id: elapsedRow
+            anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 8
-            text: root.formatDuration(root.musicPosition)
-            color: "#8d9aa0"
-            font.pixelSize: 11
-        }
+            spacing: 14
 
-        Text {
-            anchors.right: parent.right
-            anchors.rightMargin: 16
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 8
-            text: "-" + root.formatDuration(root.musicDuration - root.musicPosition)
-            color: "#8d9aa0"
-            font.pixelSize: 11
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.formatDuration(root.musicPosition)
+                color: "#a8b4ba"
+                font.family: "Inter"
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+            }
+
+            Rectangle {
+                width: 36
+                height: 36
+                radius: 18
+                anchors.verticalCenter: parent.verticalCenter
+                color: root.nowPlaying.isPlaying ? "#18313a" : "#141b1e"
+                border.color: root.nowPlaying.isPlaying ? "#5ecfe9" : "#3a454a"
+                border.width: 1
+
+                Canvas {
+                    id: playIconCanvas
+                    anchors.centerIn: parent
+                    width: 17
+                    height: 17
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.reset();
+                        ctx.fillStyle = "#ffffff";
+                        if (root.nowPlaying.isPlaying) {
+                            ctx.fillRect(3, 2, 4, 13);
+                            ctx.fillRect(10, 2, 4, 13);
+                        } else {
+                            ctx.beginPath();
+                            ctx.moveTo(4, 2);
+                            ctx.lineTo(14, 8.5);
+                            ctx.lineTo(4, 15);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                    }
+
+                    Connections {
+                        target: root
+                        function onNowPlayingChanged() { playIconCanvas.requestPaint(); }
+                    }
+                    Component.onCompleted: requestPaint()
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: root.mediaControl(root.nowPlaying.isPlaying ? "pause" : "play")
+                }
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "-" + root.formatDuration(root.musicDuration - root.musicPosition)
+                color: "#657177"
+                font.family: "Inter"
+                font.pixelSize: 12
+                font.weight: Font.DemiBold
+            }
         }
+    }
+
+    Row {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: shell.bottom
+        anchors.bottomMargin: 22
+        width: parent.width * 0.72
+        spacing: 20
+
+        BarMeter { width: (parent.width - 40) / 3; label: "OIL"; value: root.oilTemp; minValue: 40; maxValue: 140; suffix: "C"; warn: root.oilTemp >= 110 }
+        BarMeter { width: (parent.width - 40) / 3; label: "COOLANT"; value: root.coolantTemp; minValue: 40; maxValue: 120; suffix: "C"; warn: root.coolantTemp >= 100 }
+        BarMeter { width: (parent.width - 40) / 3; label: "FUEL"; value: root.fuel; minValue: 0; maxValue: 100; suffix: "%"; warn: root.fuel <= 15 }
     }
 
     Text {
