@@ -224,106 +224,6 @@ Item {
     }
 
     Column {
-        anchors.left: shell.left
-        anchors.leftMargin: 40
-        anchors.verticalCenter: parent.verticalCenter
-        width: parent.width * 0.14
-        spacing: 10
-
-        MetricTile { label: "Fuel"; value: Math.round(root.fuel) + "%"; detail: Math.round(210 + root.fuel * 0.4) + " km est."; accent: root.fuel <= 15 ? "#ffd166" : "#d8f7ff" }
-        MetricTile { label: "Oil temp"; value: Math.round(root.oilTemp) + "C"; detail: root.oilTemp >= 110 ? "watch" : "stable"; accent: root.oilTemp >= 110 ? "#ffd166" : "#d8f7ff" }
-        MetricTile { label: "Coolant"; value: Math.round(root.coolantTemp) + "C"; detail: root.coolantTemp >= 100 ? "high" : "regulated"; accent: root.coolantTemp >= 100 ? "#ffd166" : "#d8f7ff" }
-        MetricTile { label: "Charging"; value: root.battery.toFixed(1) + "V"; detail: "alternator"; accent: root.battery < 12.2 ? "#ffd166" : "#d8f7ff" }
-    }
-
-    Column {
-        anchors.right: shell.right
-        anchors.rightMargin: 40
-        anchors.verticalCenter: parent.verticalCenter
-        width: parent.width * 0.14
-        spacing: 10
-
-        MetricTile { label: "RPM"; value: Math.round(root.rpm).toString(); detail: "live engine"; accent: "#d8f7ff" }
-        MetricTile { label: "Audio"; value: Math.round(root.audio.volume || 0) + "%"; detail: (root.audio.source || "bt").toUpperCase(); accent: "#d8f7ff" }
-        MetricTile { label: "Exterior"; value: root.car.lights ? "ON" : "OFF"; detail: root.car.locked ? "locked" : "unlocked"; accent: root.car.lights ? "#d8f7ff" : "#ffffff" }
-        MetricTile { label: "Hazards"; value: root.car.hazards ? "ON" : "OFF"; detail: "warning"; accent: root.car.hazards ? "#ffd166" : "#ffffff" }
-    }
-
-    Item {
-        id: centerBridge
-        anchors.centerIn: parent
-        width: parent.width * 0.22
-        height: parent.height * 0.58
-
-        Rectangle {
-            anchors.centerIn: parent
-            width: Math.min(parent.width, parent.height) * 0.86
-            height: width
-            radius: width * 0.28
-            color: "#0b1418"
-            opacity: 0.86
-            border.color: "#1e3a42"
-            border.width: 1
-        }
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.topMargin: 44
-            text: "SPEED"
-            color: "#829097"
-            font.family: "Inter"
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-        }
-
-        Text {
-            anchors.centerIn: parent
-            text: Math.round(root.speed).toString()
-            color: "#ffffff"
-            font.family: "Inter"
-            font.pixelSize: 74
-            font.weight: Font.Bold
-        }
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.verticalCenter
-            anchors.topMargin: 44
-            text: "km/h"
-            color: "#a5b0b6"
-            font.family: "Inter"
-            font.pixelSize: 15
-            font.weight: Font.DemiBold
-        }
-
-        Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.topMargin: 4
-            spacing: 30
-
-            TurnArrow {
-                active: root.turn.left
-                mirror: true
-            }
-
-            Row {
-                spacing: 8
-                anchors.verticalCenter: parent.verticalCenter
-
-                LampChip { label: "LOW"; active: root.car.lights; colorOn: "#7ee3ff" }
-                LampChip { label: "HAZ"; active: root.car.hazards; colorOn: "#ffd166" }
-            }
-
-            TurnArrow {
-                active: root.turn.right
-                mirror: false
-            }
-        }
-    }
-
-    Column {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: mediaCard.top
         anchors.bottomMargin: 6
@@ -716,7 +616,7 @@ Item {
                 var yOffset = (h - size) / 2;
                 var start = reverse ? Math.PI * 0.03 : Math.PI * 0.97;
                 var sweep = reverse ? -Math.PI * 1.94 : Math.PI * 1.94;
-                var power = 3.05;
+                var power = 5.4;
                 var pct = clampValue(displayValue / Math.max(1, maximumValue), 0, 1);
                 var liveColor = displayValue >= dangerAt ? warnColor : accentColor;
 
