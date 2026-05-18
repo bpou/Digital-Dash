@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR=${1:-/home/admin/digital-dash}
 VIEW=${2:-cluster}
 WS_URL=${3:-ws://127.0.0.1:8765}
+MODE=${4:-${DIGITAL_DASH_QT_MODE:-live}}
 LOG_DIR=${XDG_CACHE_HOME:-${HOME}/.cache}
 LOG_FILE="${LOG_DIR}/digital-dash-qt.log"
 APP_BIN="${ROOT_DIR}/qt-dash/build/digital-dash-qt"
@@ -17,6 +18,7 @@ echo "[$(date -Iseconds)] Starting Digital Dash Qt"
 echo "ROOT_DIR=${ROOT_DIR}"
 echo "VIEW=${VIEW}"
 echo "WS_URL=${WS_URL}"
+echo "MODE=${MODE}"
 echo "XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-}"
 echo "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"
 echo "DISPLAY=${DISPLAY:-}"
@@ -36,5 +38,9 @@ fi
 cd "${ROOT_DIR}"
 
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland;xcb}"
+
+if [ "${MODE}" = "simulate" ] || [ "${MODE}" = "--simulate" ]; then
+  exec "${APP_BIN}" --view "${VIEW}" --simulate
+fi
 
 exec "${APP_BIN}" --view "${VIEW}" --ws "${WS_URL}"

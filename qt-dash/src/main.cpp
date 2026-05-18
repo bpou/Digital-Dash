@@ -13,6 +13,7 @@ int main(int argc, char *argv[]) {
 
     QUrl vehicleUrl(QStringLiteral("ws://127.0.0.1:8765"));
     QString initialView(QStringLiteral("cluster"));
+    bool simulationOnly = false;
     const QStringList args = QCoreApplication::arguments();
     for (int i = 1; i < args.size(); ++i) {
         if (args[i] == QStringLiteral("--ws") && i + 1 < args.size()) {
@@ -22,11 +23,16 @@ int main(int argc, char *argv[]) {
             if (requestedView == QStringLiteral("cluster") || requestedView == QStringLiteral("center")) {
                 initialView = requestedView;
             }
+        } else if (args[i] == QStringLiteral("--simulate")) {
+            simulationOnly = true;
         }
     }
 
     VehicleClient vehicleClient;
-    vehicleClient.connectTo(vehicleUrl);
+    vehicleClient.setSimulationOnly(simulationOnly);
+    if (!simulationOnly) {
+        vehicleClient.connectTo(vehicleUrl);
+    }
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("vehicleClient", &vehicleClient);

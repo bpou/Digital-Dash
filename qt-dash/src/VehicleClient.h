@@ -20,6 +20,7 @@ public:
 
     Q_INVOKABLE void connectTo(const QUrl &url);
     Q_INVOKABLE void sendCommand(const QString &type, const QJsonObject &payload = {});
+    Q_INVOKABLE void setSimulationOnly(bool simulationOnly);
 
 signals:
     void stateChanged();
@@ -45,5 +46,6 @@ private:
     QUrl m_url;
     QJsonObject m_state;
     bool m_connected = false;
+    bool m_simulationOnly = false;
     double m_mockTick = 0.0;
 };

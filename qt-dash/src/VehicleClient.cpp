@@ -30,6 +30,10 @@ bool VehicleClient::connected() const {
 
 void VehicleClient::connectTo(const QUrl &url) {
     m_url = url;
+    if (m_simulationOnly) {
+        startMock();
+        return;
+    }
     reconnect();
 }
 
@@ -42,6 +46,22 @@ void VehicleClient::sendCommand(const QString &type, const QJsonObject &payload)
     message.insert(QStringLiteral("type"), type);
     message.insert(QStringLiteral("payload"), payload);
     m_socket.sendTextMessage(QString::fromUtf8(QJsonDocument(message).toJson(QJsonDocument::Compact)));
+}
+
+void VehicleClient::setSimulationOnly(bool simulationOnly) {
+    if (m_simulationOnly == simulationOnly) {
+        return;
+    }
+
+    m_simulationOnly = simulationOnly;
+    if (m_simulationOnly) {
+        m_reconnectTimer.stop();
+        m_socket.close();
+        setConnected(false);
+        startMock();
+    } else {
+        reconnect();
+    }
 }
 
 void VehicleClient::handleConnected() {
@@ -73,7 +93,7 @@ void VehicleClient::handleMessage(const QString &message) {
 }
 
 void VehicleClient::reconnect() {
-    if (!m_url.isValid() || m_socket.state() == QAbstractSocket::ConnectedState ||
+    if (m_simulationOnly || !m_url.isValid() || m_socket.state() == QAbstractSocket::ConnectedState ||
         m_socket.state() == QAbstractSocket::ConnectingState) {
         return;
     }
@@ -90,7 +110,7 @@ void VehicleClient::advanceMock() {
     next.insert(QStringLiteral("engine"), engine);
 
     QJsonObject vehicle = next.value(QStringLiteral("vehicle")).toObject();
-    vehicle.insert(QStringLiteral("speedKmh"), ((qSin(m_mockTick * 0.7 + 1.2) + 1) / 2) * 200);
+    vehicle.insert(QStringLiteral("speedKmh"), ((qSin(m_mockTick * 0.7 + 1.2) + 1) / 2) * 180);
     next.insert(QStringLiteral("vehicle"), vehicle);
 
     setState(next);
