@@ -137,7 +137,7 @@ Item {
     QtGauge {
         id: rpmGauge
         anchors.left: shell.left
-        anchors.leftMargin: parent.width * 0.08
+        anchors.leftMargin: parent.width * 0.04
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width * 0.30
         height: width
@@ -156,7 +156,7 @@ Item {
     QtGauge {
         id: speedGauge
         anchors.right: shell.right
-        anchors.rightMargin: parent.width * 0.08
+        anchors.rightMargin: parent.width * 0.04
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width * 0.30
         height: width
