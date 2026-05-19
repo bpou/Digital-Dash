@@ -409,73 +409,86 @@ Item {
             }
         }
 
-       MultiEffect {
-    anchors.centerIn: coverFrame
-    width: coverFrame.width
-    height: coverFrame.height
-    source: coverImage
-    autoPaddingEnabled: true
-
-    blurEnabled: true
-    blurMax: 78
-    blur: 1.0
-
-    saturation: 1.65
-    brightness: 0.05
-
-    shadowEnabled: true
-    shadowBlur: 2.0
-    shadowScale: 1.38
-    shadowOpacity: 0.18
-    shadowColor: "#ffffff"
-
-    opacity: coverImage.status === Image.Ready && root.artworkVisible
-             ? (root.nowPlaying.isPlaying ? 0.32 : 0.20)
-             : 0.0
-
-    Behavior on opacity {
-        NumberAnimation {
-            duration: 260
-            easing.type: Easing.OutCubic
-        }
-    }
-}
-
+        // Wide soft "TV ambient reactive backlight" glow
         MultiEffect {
             anchors.centerIn: coverFrame
-            width: coverFrame.width
-            height: coverFrame.height
+            width: coverFrame.width * 1.55
+            height: coverFrame.height * 1.55
             source: coverImage
             autoPaddingEnabled: true
+
             blurEnabled: true
-            blurMax: 48
-            blur: 0.86
-            saturation: 1.55
-            brightness: 0.04
-            shadowEnabled: true
-            shadowBlur: 0.86
-            shadowScale: 1.20
-            shadowOpacity: 0.16
-            shadowColor: "#ffffff"
-            opacity: coverImage.status === Image.Ready && root.artworkVisible ? (root.nowPlaying.isPlaying ? 0.28 : 0.18) : 0.0
+            blurMax: 96
+            blur: 1.0
 
-            Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+            saturation: 2.4
+            brightness: 0.10
+
+            shadowEnabled: false
+
+            opacity: coverImage.status === Image.Ready && root.artworkVisible
+                     ? (root.nowPlaying.isPlaying ? 0.34 : 0.20)
+                     : 0.0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 260
+                    easing.type: Easing.OutCubic
+                }
+            }
         }
 
+        // Tighter colorful halo close to the album cover
+        MultiEffect {
+            anchors.centerIn: coverFrame
+            width: coverFrame.width * 1.18
+            height: coverFrame.height * 1.18
+            source: coverImage
+            autoPaddingEnabled: true
+
+            blurEnabled: true
+            blurMax: 44
+            blur: 0.88
+
+            saturation: 2.1
+            brightness: 0.08
+
+            shadowEnabled: false
+
+            opacity: coverImage.status === Image.Ready && root.artworkVisible
+                     ? (root.nowPlaying.isPlaying ? 0.42 : 0.24)
+                     : 0.0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 260
+                    easing.type: Easing.OutCubic
+                }
+            }
+        }
+
+        // Black depth shadow behind the actual cover
         MultiEffect {
             anchors.centerIn: coverFrame
             width: coverFrame.width
             height: coverFrame.height
             source: coverImage
             autoPaddingEnabled: true
+
             shadowEnabled: true
             shadowBlur: 1.0
             shadowScale: 1.12
             shadowOpacity: 0.32
             shadowColor: "#000000"
+
             opacity: coverImage.status === Image.Ready && root.artworkVisible ? 1.0 : 0.0
 
-            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 220
+                    easing.type: Easing.OutCubic
+                }
+            }
         }
 
         Rectangle {
