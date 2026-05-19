@@ -181,24 +181,86 @@ Item {
         id: mediaPlayer
         anchors.fill: parent
 
-        Rectangle {
+        Item {
             anchors.centerIn: coverFrame
-            width: coverFrame.width + 34
-            height: coverFrame.height + 34
-            radius: 0
-            color: Qt.rgba(102 / 255, 229 / 255, 255 / 255, root.nowPlaying.isPlaying ? 0.045 : 0.020)
-            border.color: Qt.rgba(102 / 255, 229 / 255, 255 / 255, 0.08)
-            border.width: 1
-        }
+            width: coverFrame.width + 92
+            height: coverFrame.height + 92
+            opacity: coverGlowSource.status === Image.Ready ? 1.0 : 0.0
 
-        Rectangle {
-            anchors.centerIn: coverFrame
-            width: coverFrame.width + 10
-            height: coverFrame.height + 10
-            radius: 0
-            color: "transparent"
-            border.color: Qt.rgba(255, 255, 255, 0.06)
-            border.width: 1
+            Image {
+                id: coverGlowSource
+                anchors.centerIn: parent
+                width: parent.width
+                height: parent.height
+                source: root.artworkSource
+                fillMode: Image.PreserveAspectCrop
+                smooth: true
+                asynchronous: true
+                opacity: root.nowPlaying.isPlaying ? 0.14 : 0.09
+            }
+
+            Image {
+                anchors.centerIn: parent
+                width: parent.width * 0.72
+                height: parent.height * 0.72
+                source: root.artworkSource
+                fillMode: Image.PreserveAspectCrop
+                smooth: true
+                asynchronous: true
+                opacity: root.nowPlaying.isPlaying ? 0.20 : 0.12
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                color: "#020405"
+                opacity: 0.62
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: parent.width * 0.24
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.00; color: "#020405" }
+                    GradientStop { position: 1.00; color: Qt.rgba(2 / 255, 4 / 255, 5 / 255, 0.0) }
+                }
+            }
+
+            Rectangle {
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: parent.width * 0.24
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.00; color: Qt.rgba(2 / 255, 4 / 255, 5 / 255, 0.0) }
+                    GradientStop { position: 1.00; color: "#020405" }
+                }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: parent.height * 0.24
+                gradient: Gradient {
+                    GradientStop { position: 0.00; color: "#020405" }
+                    GradientStop { position: 1.00; color: Qt.rgba(2 / 255, 4 / 255, 5 / 255, 0.0) }
+                }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: parent.height * 0.24
+                gradient: Gradient {
+                    GradientStop { position: 0.00; color: Qt.rgba(2 / 255, 4 / 255, 5 / 255, 0.0) }
+                    GradientStop { position: 1.00; color: "#020405" }
+                }
+            }
         }
 
         Rectangle {
@@ -208,9 +270,8 @@ Item {
             width: Math.min(root.width * 0.125, root.height * 0.34)
             height: width
             radius: 0
-            color: "#0b1114"
-            border.color: "#263a40"
-            border.width: 1
+            color: "transparent"
+            border.width: 0
             clip: true
 
             Image {
