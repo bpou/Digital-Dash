@@ -289,9 +289,41 @@ const tokenizeBusctl = (raw) => {
   return tokens;
 };
 
+const decodeBusctlEscapes = (value) => {
+  const text = String(value ?? "");
+  const bytes = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === "\\" && i + 1 < text.length) {
+      const octal = text.slice(i + 1).match(/^[0-7]{1,3}/)?.[0] ?? "";
+      if (octal) {
+        bytes.push(parseInt(octal, 8));
+        i += octal.length;
+        continue;
+      }
+      const next = text[i + 1];
+      const mapped = {
+        n: "\n",
+        r: "\r",
+        t: "\t",
+        b: "\b",
+        f: "\f",
+        "\"": "\"",
+        "'": "'",
+        "\\": "\\",
+      }[next];
+      bytes.push(...Buffer.from(mapped ?? next, "utf8"));
+      i += 1;
+      continue;
+    }
+    bytes.push(...Buffer.from(char, "utf8"));
+  }
+  return Buffer.from(bytes).toString("utf8");
+};
+
 const normalizeBusctlValue = (value) => {
   if (value === undefined || value === null) return "";
-  const text = String(value).trim();
+  const text = decodeBusctlEscapes(value).trim();
   if (!text || text === "-" || /^none$/i.test(text) || /^null$/i.test(text)) {
     return "";
   }

@@ -263,6 +263,7 @@ Item {
                 fillMode: Image.PreserveAspectCrop
                 smooth: true
                 mipmap: true
+                cache: false
                 asynchronous: true
                 opacity: status === Image.Ready ? 1.0 : 0.0
             }
