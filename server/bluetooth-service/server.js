@@ -1488,6 +1488,7 @@ const publishAudioState = async () => {
   try {
     const nowPlaying = await getNowPlaying();
     const audio = await buildAudioState(nowPlaying);
+    console.log("[Bluetooth] Publishing audio state, artworkColors:", JSON.stringify(audio.nowPlaying.artworkColors));
     const payload = JSON.stringify(audio);
     if (payload === lastPublishedAudio) return;
     mqttClient.publish("car/state/audio", payload, { retain: true });
