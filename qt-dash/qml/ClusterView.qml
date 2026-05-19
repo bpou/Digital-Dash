@@ -182,6 +182,26 @@ Item {
         anchors.fill: parent
 
         Rectangle {
+            anchors.centerIn: coverFrame
+            width: coverFrame.width + 28
+            height: coverFrame.height + 28
+            radius: coverFrame.radius + 10
+            color: Qt.rgba(102 / 255, 229 / 255, 255 / 255, root.nowPlaying.isPlaying ? 0.055 : 0.025)
+            border.color: Qt.rgba(180 / 255, 248 / 255, 200 / 255, 0.10)
+            border.width: 1
+        }
+
+        Rectangle {
+            anchors.centerIn: coverFrame
+            width: coverFrame.width + 12
+            height: coverFrame.height + 12
+            radius: coverFrame.radius + 5
+            color: "transparent"
+            border.color: Qt.rgba(255, 255, 255, 0.075)
+            border.width: 1
+        }
+
+        Rectangle {
             id: coverFrame
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
@@ -270,16 +290,92 @@ Item {
                 font.pixelSize: parent.width * 0.34
                 font.weight: Font.Bold
             }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                width: parent.width * 0.22
+                height: 2
+                color: "#66e5ff"
+                opacity: 0.68
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                width: 2
+                height: parent.height * 0.22
+                color: "#66e5ff"
+                opacity: 0.68
+            }
+
+            Rectangle {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                width: parent.width * 0.22
+                height: 2
+                color: "#b4f8c8"
+                opacity: 0.62
+            }
+
+            Rectangle {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                width: 2
+                height: parent.height * 0.22
+                color: "#b4f8c8"
+                opacity: 0.62
+            }
         }
 
-        Column {
+        Item {
+            id: mediaCore
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: coverFrame.bottom
-            anchors.topMargin: 14
-            width: root.width * 0.30
-            spacing: 5
+            anchors.topMargin: 10
+            width: root.width * 0.36
+            height: 76
+
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                width: parent.width * 0.62
+                height: 1
+                color: "#304249"
+                opacity: 0.80
+            }
+
+            Row {
+                id: sourceRow
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 5
+                spacing: 8
+
+                Rectangle {
+                    width: 6
+                    height: 6
+                    radius: 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: root.nowPlaying.isPlaying ? "#8fffd0" : "#68757a"
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (root.audio.source || "bt").toUpperCase() + " AUDIO"
+                    color: "#7f9299"
+                    font.family: "sans-serif"
+                    font.pixelSize: 9
+                    font.weight: Font.Bold
+                    font.letterSpacing: 2
+                }
+            }
 
             Text {
+                id: trackTitle
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: sourceRow.bottom
+                anchors.topMargin: 4
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
@@ -291,100 +387,116 @@ Item {
             }
 
             Text {
-                width: parent.width
+                id: trackArtist
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: trackTitle.bottom
+                anchors.topMargin: 1
+                width: parent.width * 0.76
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
-                text: root.nowPlaying.artist || ""
-                color: "#94a2a8"
+                text: root.nowPlaying.artist || root.nowPlaying.album || ""
+                color: "#9daab0"
                 font.family: "sans-serif"
-                font.pixelSize: 13
-            }
-        }
-
-        Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: coverFrame.bottom
-            anchors.topMargin: 86
-            width: root.width * 0.30 * 0.78
-            height: 5
-            radius: 3
-            color: "#20282b"
-
-            Rectangle {
-                width: parent.width * root.musicProgress
-                height: parent.height
-                radius: parent.radius
-                color: "#c9eee1"
-            }
-        }
-
-        Row {
-            id: elapsedRow
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: coverFrame.bottom
-            anchors.topMargin: 48
-            spacing: 14
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: root.formatDuration(root.musicPosition)
-                color: "#a8b4ba"
-                font.family: "sans-serif"
-                font.pixelSize: 12
+                font.pixelSize: 10
                 font.weight: Font.DemiBold
             }
 
             Rectangle {
-                width: 36
-                height: 36
-                radius: 18
-                anchors.verticalCenter: parent.verticalCenter
-                color: root.nowPlaying.isPlaying ? "#18313a" : "#141b1e"
-                border.color: root.nowPlaying.isPlaying ? "#5ecfe9" : "#3a454a"
-                border.width: 1
+                id: progressTrack
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: trackArtist.bottom
+                anchors.topMargin: 5
+                anchors.leftMargin: parent.width * 0.12
+                anchors.rightMargin: parent.width * 0.12
+                height: 5
+                radius: 3
+                color: "#1d282c"
 
-                Canvas {
-                    id: playIconCanvas
-                    anchors.centerIn: parent
-                    width: 17
-                    height: 17
-                    onPaint: {
-                        var ctx = getContext("2d");
-                        ctx.reset();
-                        ctx.fillStyle = "#ffffff";
-                        if (root.nowPlaying.isPlaying) {
-                            ctx.fillRect(3, 2, 4, 13);
-                            ctx.fillRect(10, 2, 4, 13);
-                        } else {
-                            ctx.beginPath();
-                            ctx.moveTo(4, 2);
-                            ctx.lineTo(14, 8.5);
-                            ctx.lineTo(4, 15);
-                            ctx.closePath();
-                            ctx.fill();
+                Rectangle {
+                    width: parent.width * root.musicProgress
+                    height: parent.height
+                    radius: parent.radius
+                    color: "#c9eee1"
+                }
+
+                Rectangle {
+                    width: Math.max(6, parent.width * root.musicProgress)
+                    height: 1
+                    radius: 1
+                    color: "#ffffff"
+                    opacity: 0.58
+                }
+            }
+
+            Row {
+                id: elapsedRow
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: progressTrack.bottom
+                anchors.topMargin: 4
+                spacing: 14
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.formatDuration(root.musicPosition)
+                    color: "#b8c7cc"
+                    font.family: "sans-serif"
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                }
+
+                Rectangle {
+                    width: 20
+                    height: 20
+                    radius: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: root.nowPlaying.isPlaying ? "#17343d" : "#12191c"
+                    border.color: root.nowPlaying.isPlaying ? "#66e5ff" : "#3a454a"
+                    border.width: 1
+
+                    Canvas {
+                        id: playIconCanvas
+                        anchors.centerIn: parent
+                        width: 10
+                        height: 10
+                        onPaint: {
+                            var ctx = getContext("2d");
+                            ctx.reset();
+                            ctx.fillStyle = "#ffffff";
+                            if (root.nowPlaying.isPlaying) {
+                                ctx.fillRect(2, 1, 2, 8);
+                                ctx.fillRect(6, 1, 2, 8);
+                            } else {
+                                ctx.beginPath();
+                                ctx.moveTo(3, 1);
+                                ctx.lineTo(9, 5);
+                                ctx.lineTo(3, 9);
+                                ctx.closePath();
+                                ctx.fill();
+                            }
                         }
+
+                        Connections {
+                            target: root
+                            function onNowPlayingChanged() { playIconCanvas.requestPaint(); }
+                        }
+                        Component.onCompleted: requestPaint()
                     }
 
-                    Connections {
-                        target: root
-                        function onNowPlayingChanged() { playIconCanvas.requestPaint(); }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: root.mediaControl(root.nowPlaying.isPlaying ? "pause" : "play")
                     }
-                    Component.onCompleted: requestPaint()
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: root.mediaControl(root.nowPlaying.isPlaying ? "pause" : "play")
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "-" + root.formatDuration(root.musicDuration - root.musicPosition)
+                    color: "#68777d"
+                    font.family: "sans-serif"
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
                 }
-            }
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "-" + root.formatDuration(root.musicDuration - root.musicPosition)
-                color: "#657177"
-                font.family: "sans-serif"
-                font.pixelSize: 12
-                font.weight: Font.DemiBold
             }
         }
     }
