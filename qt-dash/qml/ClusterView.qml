@@ -27,12 +27,21 @@ Item {
     property int musicDuration: nowPlaying.durationSec || 0
     property int displayMusicPosition: Math.round(clamp(musicPosition, 0, musicDuration > 0 ? musicDuration : musicPosition))
     property real musicProgress: clamp(displayMusicPosition / Math.max(1, musicDuration), 0, 1)
-    property bool hasMedia: (nowPlaying.title || nowPlaying.artist || nowPlaying.album || nowPlaying.artworkUrl) ? true : false
-    property bool hasArtwork: (nowPlaying.artworkUrl || "").length > 0
-    property string artworkSource: {
-        var source = nowPlaying.artworkUrl || "";
-        return source.length > 0 ? source : "";
-    }
+    property string displayedTitle: ""
+    property string displayedArtist: ""
+    property string displayedAlbum: ""
+    property string displayedArtwork: ""
+    property string displayedTrackKey: ""
+    property string pendingTitle: ""
+    property string pendingArtist: ""
+    property string pendingAlbum: ""
+    property string pendingArtwork: ""
+    property string pendingTrackKey: ""
+    property bool pendingHasMedia: false
+    property bool mediaVisible: false
+    property bool artworkVisible: false
+    property bool defaultArtworkVisible: false
+    property string artworkSource: displayedArtwork
     property date clockTime: new Date()
 
     function clamp(value, minValue, maxValue) {
@@ -59,12 +68,98 @@ Item {
         vehicleClient.sendCommand("bt/media/control", { "action": action });
     }
 
+    function mediaKey(title, artist, album) {
+        return [title || "", artist || "", album || ""].join("\u001f");
+    }
+
+    function queueMediaUpdate() {
+        var nextTitle = nowPlaying.title || "";
+        var nextArtist = nowPlaying.artist || "";
+        var nextAlbum = nowPlaying.album || "";
+        var nextArtwork = nowPlaying.artworkUrl || "";
+        var nextHasMedia = (nextTitle || nextArtist || nextAlbum || nextArtwork) ? true : false;
+        var nextKey = nextHasMedia ? mediaKey(nextTitle, nextArtist, nextAlbum) : "";
+
+        pendingTitle = nextTitle;
+        pendingArtist = nextArtist;
+        pendingAlbum = nextAlbum;
+        pendingArtwork = nextArtwork;
+        pendingTrackKey = nextKey;
+        pendingHasMedia = nextHasMedia;
+
+        if (nextKey !== displayedTrackKey) {
+            fallbackArtworkTimer.stop();
+            artworkSwapTimer.stop();
+            mediaVisible = false;
+            artworkVisible = false;
+            defaultArtworkVisible = false;
+            mediaSwapTimer.restart();
+            return;
+        }
+
+        if (nextArtwork !== displayedArtwork) {
+            fallbackArtworkTimer.stop();
+            defaultArtworkVisible = false;
+            artworkVisible = false;
+            artworkSwapTimer.restart();
+        } else if (nextHasMedia && !nextArtwork && !defaultArtworkVisible) {
+            fallbackArtworkTimer.restart();
+        }
+    }
+
+    onNowPlayingChanged: queueMediaUpdate()
+
+    Timer {
+        id: mediaSwapTimer
+        interval: 280
+        repeat: false
+        onTriggered: {
+            displayedTitle = pendingTitle;
+            displayedArtist = pendingArtist;
+            displayedAlbum = pendingAlbum;
+            displayedArtwork = pendingArtwork;
+            displayedTrackKey = pendingTrackKey;
+            mediaVisible = pendingHasMedia;
+            artworkVisible = pendingHasMedia && pendingArtwork.length > 0;
+            defaultArtworkVisible = false;
+            if (pendingHasMedia && pendingArtwork.length === 0) {
+                fallbackArtworkTimer.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: artworkSwapTimer
+        interval: 240
+        repeat: false
+        onTriggered: {
+            displayedArtwork = pendingArtwork;
+            artworkVisible = pendingArtwork.length > 0;
+            if (pendingHasMedia && pendingArtwork.length === 0) {
+                fallbackArtworkTimer.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: fallbackArtworkTimer
+        interval: 5000
+        repeat: false
+        onTriggered: {
+            if (mediaVisible && displayedArtwork.length === 0) {
+                defaultArtworkVisible = true;
+            }
+        }
+    }
+
     Timer {
         interval: 1000
         running: true
         repeat: true
         onTriggered: root.clockTime = new Date()
     }
+
+    Component.onCompleted: queueMediaUpdate()
 
     Rectangle {
         anchors.fill: parent
@@ -212,7 +307,7 @@ Item {
             shadowScale: 1.34
             shadowOpacity: 0.12
             shadowColor: "#ffffff"
-            opacity: coverImage.status === Image.Ready && root.hasArtwork ? (root.nowPlaying.isPlaying ? 0.24 : 0.16) : 0.0
+            opacity: coverImage.status === Image.Ready && root.artworkVisible ? (root.nowPlaying.isPlaying ? 0.24 : 0.16) : 0.0
 
             Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
         }
@@ -233,7 +328,7 @@ Item {
             shadowScale: 1.20
             shadowOpacity: 0.16
             shadowColor: "#ffffff"
-            opacity: coverImage.status === Image.Ready && root.hasArtwork ? (root.nowPlaying.isPlaying ? 0.28 : 0.18) : 0.0
+            opacity: coverImage.status === Image.Ready && root.artworkVisible ? (root.nowPlaying.isPlaying ? 0.28 : 0.18) : 0.0
 
             Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
         }
@@ -249,7 +344,7 @@ Item {
             shadowScale: 1.12
             shadowOpacity: 0.32
             shadowColor: "#000000"
-            opacity: coverImage.status === Image.Ready && root.hasArtwork ? 1.0 : 0.0
+            opacity: coverImage.status === Image.Ready && root.artworkVisible ? 1.0 : 0.0
 
             Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         }
@@ -264,7 +359,7 @@ Item {
             color: "transparent"
             border.width: 0
             clip: true
-            opacity: coverImage.status === Image.Ready && root.hasArtwork ? 1.0 : 0.0
+            opacity: (coverImage.status === Image.Ready && root.artworkVisible) || root.defaultArtworkVisible ? 1.0 : 0.0
 
             Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
@@ -278,6 +373,38 @@ Item {
                 cache: false
                 asynchronous: true
                 opacity: status === Image.Ready ? 1.0 : 0.0
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                opacity: root.defaultArtworkVisible ? 1.0 : 0.0
+                gradient: Gradient {
+                    GradientStop { position: 0.00; color: "#172025" }
+                    GradientStop { position: 0.48; color: "#0b1114" }
+                    GradientStop { position: 1.00; color: "#05090b" }
+                }
+
+                Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width * 0.36
+                    height: width
+                    radius: width / 2
+                    color: Qt.rgba(255, 255, 255, 0.035)
+                    border.color: Qt.rgba(255, 255, 255, 0.11)
+                    border.width: 1
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "BT"
+                    color: "#738188"
+                    font.family: "sans-serif"
+                    font.pixelSize: parent.width * 0.16
+                    font.weight: Font.Bold
+                    font.letterSpacing: 3
+                }
             }
 
             Rectangle {
@@ -356,7 +483,7 @@ Item {
             anchors.topMargin: 18
             width: root.width * 0.30
             height: 84
-            opacity: root.hasMedia ? 1.0 : 0.0
+            opacity: root.mediaVisible ? 1.0 : 0.0
 
             Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
@@ -394,7 +521,7 @@ Item {
                 width: parent.width - 28
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
-                text: root.nowPlaying.title || ""
+                text: root.displayedTitle
                 color: "#ffffff"
                 font.family: "sans-serif"
                 font.pixelSize: 17
@@ -409,7 +536,7 @@ Item {
                 width: parent.width - 42
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
-                text: root.nowPlaying.artist || root.nowPlaying.album || ""
+                text: root.displayedArtist || root.displayedAlbum
                 color: "#9daab0"
                 font.family: "sans-serif"
                 font.pixelSize: 10
