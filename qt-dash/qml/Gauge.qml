@@ -248,7 +248,7 @@ Item {
 
         text: root.valueText
         color: "#f5f7fa"
-        font.family: "Inter"
+        font.family: "sans-serif"
         font.pixelSize: Math.max(34, parent.width * 0.17)
         font.weight: Font.ExtraLight
     }
@@ -260,7 +260,7 @@ Item {
 
         text: root.label
         color: "#7f8a96"
-        font.family: "Inter"
+        font.family: "sans-serif"
         font.pixelSize: 14
         font.letterSpacing: 2
         font.weight: Font.DemiBold

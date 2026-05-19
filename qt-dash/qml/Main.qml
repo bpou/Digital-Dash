@@ -9,13 +9,18 @@ Window {
     visibility: Window.FullScreen
     title: "Digital Dash Qt"
     color: "#020405"
-    flags: Qt.Window | Qt.FramelessWindowHint
+    flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
 
     property var state: vehicleClient.state
 
     Loader {
         anchors.fill: parent
         sourceComponent: initialView === "center" ? centerComponent : clusterComponent
+    }
+
+    Component.onCompleted: {
+        root.raise();
+        root.requestActivate();
     }
 
     Component {

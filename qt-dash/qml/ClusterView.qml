@@ -133,7 +133,7 @@ Item {
         Text {
             text: Qt.formatTime(root.clockTime, "HH:mm")
             color: "#d6dee4"
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: 13
             font.weight: Font.DemiBold
         }
@@ -285,7 +285,7 @@ Item {
                 elide: Text.ElideRight
                 text: root.nowPlaying.title || "No media playing"
                 color: "#ffffff"
-                font.family: "Inter"
+                font.family: "sans-serif"
                 font.pixelSize: 18
                 font.weight: Font.Bold
             }
@@ -296,7 +296,7 @@ Item {
                 elide: Text.ElideRight
                 text: root.nowPlaying.artist || ""
                 color: "#94a2a8"
-                font.family: "Inter"
+                font.family: "sans-serif"
                 font.pixelSize: 13
             }
         }
@@ -329,7 +329,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.formatDuration(root.musicPosition)
                 color: "#a8b4ba"
-                font.family: "Inter"
+                font.family: "sans-serif"
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
             }
@@ -382,7 +382,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "-" + root.formatDuration(root.musicDuration - root.musicPosition)
                 color: "#657177"
-                font.family: "Inter"
+                font.family: "sans-serif"
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
             }
@@ -408,7 +408,7 @@ Item {
         anchors.bottomMargin: 24
         text: "180000 km"
         color: "#455259"
-        font.family: "Inter"
+        font.family: "sans-serif"
         font.pixelSize: 12
     }
 
@@ -437,7 +437,7 @@ Item {
             Text {
                 text: label
                 color: "#6f858d"
-                font.family: "Inter"
+                font.family: "sans-serif"
                 font.pixelSize: 10
                 font.weight: Font.DemiBold
             }
@@ -447,7 +447,7 @@ Item {
                 elide: Text.ElideRight
                 text: value
                 color: accent
-                font.family: "Inter"
+                font.family: "sans-serif"
                 font.pixelSize: 22
                 font.weight: Font.Bold
             }
@@ -457,7 +457,7 @@ Item {
                 elide: Text.ElideRight
                 text: detail
                 color: "#748087"
-                font.family: "Inter"
+                font.family: "sans-serif"
                 font.pixelSize: 10
             }
         }
@@ -479,7 +479,7 @@ Item {
             anchors.centerIn: parent
             text: label
             color: active ? "#ffffff" : "#66747a"
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: 10
             font.weight: Font.Bold
         }
@@ -560,7 +560,7 @@ Item {
             anchors.left: parent.left
             text: label
             color: "#7b8a90"
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: 10
             font.weight: Font.Bold
         }
@@ -569,7 +569,7 @@ Item {
             anchors.right: parent.right
             text: Math.round(value) + suffix
             color: warn ? "#ffd166" : "#ffffff"
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: 10
             font.weight: Font.Bold
         }
@@ -801,7 +801,7 @@ Item {
                     var labelPct = labelValue / maximumValue;
                     var labelPoint = sampleAt(labelTrack, labelPct);
                     ctx.fillStyle = "rgba(255,255,255,0.42)";
-                    ctx.font = "bold 15px Inter";
+                    ctx.font = "bold 15px sans-serif";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
                     var shown = maximumValue > 1000 ? Math.round(labelValue / 1000).toString() : Math.round(labelValue).toString();
@@ -830,7 +830,7 @@ Item {
             anchors.verticalCenterOffset: -8
             text: valueText
             color: "#ffffff"
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: parent.width * 0.13
             font.weight: Font.Bold
         }
@@ -841,7 +841,7 @@ Item {
             anchors.verticalCenterOffset: parent.width * 0.12
             text: label
             color: "#bac3c8"
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: parent.width * 0.035
             font.letterSpacing: 5
             font.weight: Font.Bold
@@ -853,7 +853,7 @@ Item {
             anchors.verticalCenterOffset: parent.width * 0.19
             text: subLabel
             color: "#737f85"
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: parent.width * 0.032
             font.weight: Font.DemiBold
         }

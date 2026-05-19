@@ -20,7 +20,7 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         text: root.label
         color: "#7b8591"
-        font.family: "Inter"
+        font.family: "sans-serif"
         font.pixelSize: 14
         font.weight: Font.Medium
     }
@@ -31,7 +31,7 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         text: root.suffix.length > 0 ? root.value + " " + root.suffix : root.value
         color: root.accentColor
-        font.family: "Inter"
+        font.family: "sans-serif"
         font.pixelSize: 22
         font.weight: Font.DemiBold
     }

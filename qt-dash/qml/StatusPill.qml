@@ -20,7 +20,7 @@ Rectangle {
         Text {
             text: root.label
             color: "#727d89"
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: 11
             font.weight: Font.DemiBold
         }
@@ -28,7 +28,7 @@ Rectangle {
         Text {
             text: root.value
             color: root.accentColor
-            font.family: "Inter"
+            font.family: "sans-serif"
             font.pixelSize: 13
             font.weight: Font.DemiBold
         }

@@ -36,7 +36,7 @@ Item {
                 Text {
                     text: "MEDIA"
                     color: "#7b8591"
-                    font.family: "Inter"
+                    font.family: "sans-serif"
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
                 }
@@ -46,7 +46,7 @@ Item {
                     elide: Text.ElideRight
                     text: root.nowPlaying.title || "No track"
                     color: "#f4f7fb"
-                    font.family: "Inter"
+                    font.family: "sans-serif"
                     font.pixelSize: 34
                     font.weight: Font.Medium
                 }
@@ -56,7 +56,7 @@ Item {
                     elide: Text.ElideRight
                     text: root.nowPlaying.artist || ""
                     color: "#8b96a2"
-                    font.family: "Inter"
+                    font.family: "sans-serif"
                     font.pixelSize: 20
                 }
 
@@ -92,7 +92,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "CLIMATE"
                     color: "#7b8591"
-                    font.family: "Inter"
+                    font.family: "sans-serif"
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
                 }
@@ -101,7 +101,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: Math.round(root.climate.tempSetC || 0).toString()
                     color: "#f4f7fb"
-                    font.family: "Inter"
+                    font.family: "sans-serif"
                     font.pixelSize: 96
                     font.weight: Font.Light
                 }
@@ -110,7 +110,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "C  Fan " + (root.climate.fan || 0)
                     color: "#8b96a2"
-                    font.family: "Inter"
+                    font.family: "sans-serif"
                     font.pixelSize: 18
                 }
             }
@@ -131,7 +131,7 @@ Item {
                 Text {
                     text: "VEHICLE"
                     color: "#7b8591"
-                    font.family: "Inter"
+                    font.family: "sans-serif"
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
                 }
