@@ -200,11 +200,16 @@ Item {
             source: coverImage
             autoPaddingEnabled: true
             blurEnabled: true
-            blurMax: 48
+            blurMax: 72
             blur: 1.0
-            saturation: 1.65
-            brightness: 0.08
-            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.50 : 0.34) : 0.0
+            saturation: 1.80
+            brightness: 0.12
+            shadowEnabled: true
+            shadowBlur: 1.0
+            shadowScale: 1.35
+            shadowOpacity: 0.42
+            shadowColor: "#ffffff"
+            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.68 : 0.46) : 0.0
         }
 
         MultiEffect {
@@ -316,30 +321,9 @@ Item {
             id: mediaCore
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: coverFrame.bottom
-            anchors.topMargin: 14
+            anchors.topMargin: 28
             width: root.width * 0.30
             height: 84
-
-            MultiEffect {
-                anchors.fill: mediaCorePanel
-                source: mediaCorePanel
-                autoPaddingEnabled: true
-                shadowEnabled: true
-                shadowBlur: 0.74
-                shadowScale: 1.02
-                shadowOpacity: 0.34
-                shadowColor: "#000000"
-                opacity: 0.95
-            }
-
-            Rectangle {
-                id: mediaCorePanel
-                anchors.fill: parent
-                radius: 0
-                color: Qt.rgba(8 / 255, 16 / 255, 18 / 255, 0.52)
-                border.color: Qt.rgba(255, 255, 255, 0.035)
-                border.width: 1
-            }
 
             Rectangle {
                 anchors.left: parent.left
@@ -349,7 +333,7 @@ Item {
                 anchors.rightMargin: 24
                 height: 1
                 color: "#34505a"
-                opacity: 0.46
+                opacity: 0.34
             }
 
             Row {
@@ -839,7 +823,7 @@ Item {
                 var tickOuter = buildSquircleSamples(size, size * 0.057, power, fullStart, fullSweep, 260);
                 var tickInnerMajor = buildSquircleSamples(size, size * 0.155, power, fullStart, fullSweep, 260);
                 var tickInnerMinor = buildSquircleSamples(size, size * 0.125, power, fullStart, fullSweep, 260);
-                var labelTrack = buildSquircleSamples(size, size * 0.062, power, fullStart, scaleSweep, 210);
+                var labelTrack = buildSquircleSamples(size, size * 0.028, power, fullStart, scaleSweep, 210);
 
                 ctx.reset();
                 ctx.lineCap = "round";
