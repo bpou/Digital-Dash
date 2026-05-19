@@ -477,7 +477,7 @@ Item {
 
             shadowEnabled: true
             shadowBlur: 1.0
-            shadowScale: 1.12
+            shadowScale: 1.05
             shadowOpacity: 0.32
             shadowColor: "#000000"
 
