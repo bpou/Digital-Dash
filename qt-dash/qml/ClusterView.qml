@@ -133,40 +133,6 @@ Item {
 
 
 
-    MultiEffect {
-        anchors.fill: rpmGauge
-        source: rpmGauge
-        autoPaddingEnabled: true
-        blurEnabled: true
-        blurMax: 28
-        blur: 0.65
-        saturation: 1.35
-        brightness: 0.08
-        shadowEnabled: true
-        shadowBlur: 0.82
-        shadowScale: 1.03
-        shadowOpacity: 0.34
-        shadowColor: "#66e5ff"
-        opacity: 0.30
-    }
-
-    MultiEffect {
-        anchors.fill: speedGauge
-        source: speedGauge
-        autoPaddingEnabled: true
-        blurEnabled: true
-        blurMax: 28
-        blur: 0.65
-        saturation: 1.35
-        brightness: 0.08
-        shadowEnabled: true
-        shadowBlur: 0.82
-        shadowScale: 1.03
-        shadowOpacity: 0.30
-        shadowColor: "#b4f8c8"
-        opacity: 0.28
-    }
-
     Row {
         anchors.right: shell.right
         anchors.top: shell.top
@@ -880,14 +846,8 @@ Item {
                 ctx.lineJoin = "round";
                 ctx.translate(xOffset, yOffset);
 
-                ctx.lineWidth = Math.max(21, size * 0.061);
-                ctx.strokeStyle = "rgba(255,255,255,0.045)";
-                ctx.beginPath();
-                drawSamples(ctx, activeTrack, 1, false);
-                ctx.stroke();
-
-                ctx.lineWidth = Math.max(6, size * 0.018);
-                ctx.strokeStyle = "rgba(255,255,255,0.13)";
+                ctx.lineWidth = Math.max(7, size * 0.020);
+                ctx.strokeStyle = rgbaString(liveColor, 0.56);
                 ctx.beginPath();
                 drawSamples(ctx, activeTrack, 1, false);
                 ctx.stroke();
@@ -970,12 +930,6 @@ Item {
                 ctx.beginPath();
                 drawSamples(ctx, activeTrack, pct, false);
                 ctx.stroke();
-
-                ctx.lineWidth = Math.max(2, size * 0.006);
-                ctx.strokeStyle = "rgba(255,255,255,0.72)";
-                ctx.beginPath();
-                drawSamples(ctx, activeTrack, pct, false);
-                ctx.stroke();
             }
 
             Connections {
@@ -990,6 +944,24 @@ Item {
             }
 
             Component.onCompleted: requestPaint()
+        }
+
+        MultiEffect {
+            z: -1
+            anchors.fill: gaugeCanvas
+            source: gaugeCanvas
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 34
+            blur: 0.80
+            saturation: 1.45
+            brightness: 0.14
+            shadowEnabled: true
+            shadowBlur: 0.88
+            shadowScale: 1.03
+            shadowOpacity: 0.38
+            shadowColor: displayValue >= dangerAt ? warnColor : accentColor
+            opacity: 0.46
         }
 
         Text {
