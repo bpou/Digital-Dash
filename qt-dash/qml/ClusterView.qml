@@ -301,7 +301,7 @@ Item {
     id: boostModule
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: coverFrame.top
-    anchors.bottomMargin: 55
+    anchors.bottomMargin: 200
 
     width: Math.min(root.width * 0.16, 210)
     height: 46
