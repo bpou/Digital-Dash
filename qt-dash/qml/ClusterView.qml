@@ -297,22 +297,85 @@ Item {
         id: mediaPlayer
         anchors.fill: parent
 
-        QtGauge {
-            id: boostGauge
+        Item {
+            id: boostModule
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: coverFrame.top
-            anchors.bottomMargin: 18
-            width: Math.min(root.width * 0.105, root.height * 0.24)
-            height: width
-            value: root.boostBar
-            maximumValue: 2.0
-            majorStep: 0.5
-            label: "BAR"
-            valueText: root.boostBar.toFixed(1)
-            accentColor: "#ffd166"
-            warnColor: "#ff4d5e"
-            dangerAt: 1.6
-            reverse: false
+            anchors.bottomMargin: 20
+            width: Math.min(root.width * 0.18, 230)
+            height: 54
+
+            property real pct: root.clamp(root.boostBar / 2.0, 0, 1)
+            property color boostColor: root.boostBar >= 1.6 ? "#ff4d5e" : "#ffd166"
+
+            MultiEffect {
+                anchors.fill: boostBarFill
+                source: boostBarFill
+                autoPaddingEnabled: true
+                blurEnabled: true
+                blurMax: 24
+                blur: 0.86
+                shadowEnabled: true
+                shadowBlur: 0.82
+                shadowScale: 1.04
+                shadowOpacity: 0.45
+                shadowColor: boostModule.boostColor
+                opacity: 0.72
+            }
+
+            Row {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 30
+                spacing: 8
+
+                Text {
+                    anchors.baseline: boostValue.baseline
+                    text: "BOOST"
+                    color: "#7b8a90"
+                    font.family: "sans-serif"
+                    font.pixelSize: 10
+                    font.weight: Font.Bold
+                    font.letterSpacing: 2
+                }
+
+                Text {
+                    id: boostValue
+                    text: root.boostBar.toFixed(1)
+                    color: boostModule.boostColor
+                    font.family: "sans-serif"
+                    font.pixelSize: 26
+                    font.weight: Font.Bold
+                }
+
+                Text {
+                    anchors.baseline: boostValue.baseline
+                    text: "BAR"
+                    color: "#a1adb3"
+                    font.family: "sans-serif"
+                    font.pixelSize: 10
+                    font.weight: Font.Bold
+                    font.letterSpacing: 2
+                }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 5
+                radius: 3
+                color: "#1b2529"
+
+                Rectangle {
+                    id: boostBarFill
+                    width: parent.width * boostModule.pct
+                    height: parent.height
+                    radius: parent.radius
+                    color: boostModule.boostColor
+                }
+            }
         }
 
         MultiEffect {
@@ -1040,9 +1103,7 @@ Item {
                     ctx.font = "bold 15px sans-serif";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
-                    var shown = maximumValue > 1000
-                        ? Math.round(labelValue / 1000).toString()
-                        : (majorStep < 1 ? labelValue.toFixed(1) : Math.round(labelValue).toString());
+                    var shown = maximumValue > 1000 ? Math.round(labelValue / 1000).toString() : Math.round(labelValue).toString();
                     ctx.fillText(shown, labelPoint.x, labelPoint.y);
                 }
             }
