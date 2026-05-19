@@ -298,85 +298,118 @@ Item {
         anchors.fill: parent
 
         Item {
-            id: boostModule
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: coverFrame.top
-            anchors.bottomMargin: 20
-            width: Math.min(root.width * 0.18, 230)
-            height: 54
+    id: boostModule
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.bottom: coverFrame.top
+    anchors.bottomMargin: 22
 
-            property real pct: root.clamp(root.boostBar / 2.0, 0, 1)
-            property color boostColor: root.boostBar >= 1.6 ? "#ff4d5e" : "#ffd166"
+    width: Math.min(root.width * 0.16, 210)
+    height: 46
 
-            MultiEffect {
-                anchors.fill: boostBarFill
-                source: boostBarFill
-                autoPaddingEnabled: true
-                blurEnabled: true
-                blurMax: 24
-                blur: 0.86
-                shadowEnabled: true
-                shadowBlur: 0.82
-                shadowScale: 1.04
-                shadowOpacity: 0.45
-                shadowColor: boostModule.boostColor
-                opacity: 0.72
-            }
+    property real pct: root.clamp(root.boostBar / 2.0, 0, 1)
+    property color boostColor: root.boostBar >= 1.6 ? "#ff4d5e" : "#ffd166"
+    property color dimText: "#6f7f86"
+    property color brightText: "#dce8ee"
 
-            Row {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                height: 30
-                spacing: 8
+    Rectangle {
+        id: boostGlass
+        anchors.fill: parent
+        radius: 14
+        color: "#05090c"
+        opacity: 0.72
+        border.width: 1
+        border.color: "#10242b"
+    }
 
-                Text {
-                    anchors.baseline: boostValue.baseline
-                    text: "BOOST"
-                    color: "#7b8a90"
-                    font.family: "sans-serif"
-                    font.pixelSize: 10
-                    font.weight: Font.Bold
-                    font.letterSpacing: 2
-                }
+    MultiEffect {
+        anchors.fill: boostGlass
+        source: boostGlass
+        autoPaddingEnabled: true
+        shadowEnabled: true
+        shadowBlur: 0.45
+        shadowScale: 1.02
+        shadowOpacity: 0.28
+        shadowColor: "#2fe8ff"
+        opacity: 0.55
+    }
 
-                Text {
-                    id: boostValue
-                    text: root.boostBar.toFixed(1)
-                    color: boostModule.boostColor
-                    font.family: "sans-serif"
-                    font.pixelSize: 26
-                    font.weight: Font.Bold
-                }
+    Row {
+        id: boostTextRow
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: 7
+        spacing: 7
 
-                Text {
-                    anchors.baseline: boostValue.baseline
-                    text: "BAR"
-                    color: "#a1adb3"
-                    font.family: "sans-serif"
-                    font.pixelSize: 10
-                    font.weight: Font.Bold
-                    font.letterSpacing: 2
-                }
-            }
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                height: 5
-                radius: 3
-                color: "#1b2529"
-
-                Rectangle {
-                    id: boostBarFill
-                    width: parent.width * boostModule.pct
-                    height: parent.height
-                    radius: parent.radius
-                    color: boostModule.boostColor
-                }
-            }
+        Text {
+            anchors.baseline: boostValue.baseline
+            text: "BOOST"
+            color: boostModule.dimText
+            font.family: "sans-serif"
+            font.pixelSize: 8
+            font.weight: Font.Bold
+            font.letterSpacing: 2.2
         }
+
+        Text {
+            id: boostValue
+            text: root.boostBar.toFixed(1)
+            color: boostModule.boostColor
+            font.family: "sans-serif"
+            font.pixelSize: 21
+            font.weight: Font.Bold
+        }
+
+        Text {
+            anchors.baseline: boostValue.baseline
+            text: "BAR"
+            color: "#9aa8ae"
+            font.family: "sans-serif"
+            font.pixelSize: 8
+            font.weight: Font.Bold
+            font.letterSpacing: 2
+        }
+    }
+
+    Rectangle {
+        id: boostTrack
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
+        anchors.bottomMargin: 8
+
+        height: 3
+        radius: 2
+        color: "#152329"
+
+        Rectangle {
+            id: boostBarFill
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+
+            width: Math.max(6, parent.width * boostModule.pct)
+            height: parent.height
+            radius: parent.radius
+            color: boostModule.boostColor
+        }
+
+        MultiEffect {
+            anchors.fill: boostBarFill
+            source: boostBarFill
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 18
+            blur: 0.75
+            shadowEnabled: true
+            shadowBlur: 0.65
+            shadowScale: 1.08
+            shadowOpacity: 0.65
+            shadowColor: boostModule.boostColor
+            opacity: 0.85
+        }
+    }
+}
 
         MultiEffect {
             anchors.centerIn: coverFrame
