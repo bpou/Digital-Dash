@@ -42,6 +42,11 @@ export type VehicleState = {
       durationSec: number;
       positionSec: number;
       isPlaying: boolean;
+      artworkColors?: {
+        primary?: string;
+        secondary?: string;
+        warning?: string;
+      };
     };
   };
   car: {

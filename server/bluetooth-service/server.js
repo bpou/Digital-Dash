@@ -6,6 +6,7 @@ import { execFile, spawn } from "node:child_process";
 import { URL } from "node:url";
 import { systemBus, sessionBus, Variant } from "dbus-next";
 import mqtt from "mqtt";
+import { extractArtworkColors } from "./artwork-colors.js";
 
 const PORT = Number(process.env.BLUETOOTH_WS_PORT ?? 5175);
 const MQTT_URL = process.env.MQTT_URL ?? "mqtt://localhost:1883";
@@ -41,6 +42,7 @@ const MAX_ARTWORK_BYTES = Number(process.env.MAX_ARTWORK_BYTES ?? 5_000_000);
 const artworkCache = new Map();
 const webArtworkCache = new Map();
 const WEB_ARTWORK_TTL_MS = Number(process.env.WEB_ARTWORK_TTL_MS ?? 6 * 60 * 60 * 1000);
+const artworkColorsCache = new Map();
 let lastPublishedAudio = "";
 
 const runBtctl = (args, timeoutMs = 10000) => {
@@ -1049,20 +1051,27 @@ const getNowPlaying = async () => {
   }
 };
 
-const buildAudioState = (nowPlaying) => ({
-  volume: Number.isFinite(DEFAULT_BT_VOLUME) ? DEFAULT_BT_VOLUME : 100,
-  muted: false,
-  source: "bt",
-  nowPlaying: {
-    title: nowPlaying?.connected ? nowPlaying.title || "" : "",
-    artist: nowPlaying?.connected ? nowPlaying.artist || "" : "",
-    album: nowPlaying?.connected ? nowPlaying.album || "" : "",
-    artworkUrl: nowPlaying?.connected ? nowPlaying.artworkUrl || "" : "",
-    durationSec: Number(nowPlaying?.durationSec || 0),
-    positionSec: Number(nowPlaying?.positionSec || 0),
-    isPlaying: Boolean(nowPlaying?.connected && nowPlaying?.isPlaying),
-  },
-});
+const buildAudioState = async (nowPlaying) => {
+  const artworkColors = nowPlaying?.connected && nowPlaying.artworkUrl
+    ? await extractArtworkColors(nowPlaying.artworkUrl)
+    : null;
+  
+  return {
+    volume: Number.isFinite(DEFAULT_BT_VOLUME) ? DEFAULT_BT_VOLUME : 100,
+    muted: false,
+    source: "bt",
+    nowPlaying: {
+      title: nowPlaying?.connected ? nowPlaying.title || "" : "",
+      artist: nowPlaying?.connected ? nowPlaying.artist || "" : "",
+      album: nowPlaying?.connected ? nowPlaying.album || "" : "",
+      artworkUrl: nowPlaying?.connected ? nowPlaying.artworkUrl || "" : "",
+      durationSec: Number(nowPlaying?.durationSec || 0),
+      positionSec: Number(nowPlaying?.positionSec || 0),
+      isPlaying: Boolean(nowPlaying?.connected && nowPlaying?.isPlaying),
+      artworkColors: artworkColors ?? undefined,
+    },
+  };
+};
 
 const findBluezSink = async (mac) => {
   const sinksRaw = await runPactl(["list", "short", "sinks"]);
@@ -1478,7 +1487,7 @@ const publishAudioState = async () => {
   if (!mqttClient.connected) return;
   try {
     const nowPlaying = await getNowPlaying();
-    const audio = buildAudioState(nowPlaying);
+    const audio = await buildAudioState(nowPlaying);
     const payload = JSON.stringify(audio);
     if (payload === lastPublishedAudio) return;
     mqttClient.publish("car/state/audio", payload, { retain: true });

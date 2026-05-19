@@ -51,6 +51,10 @@ Item {
     property bool defaultArtworkVisible: false
     property string artworkSource: displayedArtwork
     property date clockTime: new Date()
+    property var artworkColors: nowPlaying.artworkColors || ({})
+    property color albumPrimaryColor: artworkColors.primary || "#66e5ff"
+    property color albumSecondaryColor: artworkColors.secondary || "#b4f8c8"
+    property color albumWarnColor: artworkColors.warning || "#ff4d5e"
 
     function clamp(value, minValue, maxValue) {
         return Math.max(minValue, Math.min(maxValue, value));
@@ -267,7 +271,7 @@ Item {
         majorStep: 2000
         label: "RPM"
         valueText: Math.round(root.rpm).toString()
-        accentColor: "#66e5ff"
+        accentColor: root.albumPrimaryColor
         warnColor: "#ff4d5e"
         dangerAt: 6500
         reverse: false
@@ -285,7 +289,7 @@ Item {
         majorStep: 30
         label: "KM/H"
         valueText: Math.round(root.speed).toString()
-        accentColor: "#b4f8c8"
+        accentColor: root.albumSecondaryColor
         warnColor: "#ff4d5e"
         dangerAt: 160
         reverse: false
@@ -1124,7 +1128,20 @@ Item {
         property real dangerAt: maximumValue + 1
         property bool reverse: false
         property real displayValue: value
+        
+Behavior on accentColor {
+    ColorAnimation {
+        duration: 500
+        easing.type: Easing.OutCubic
+    }
+}
 
+Behavior on warnColor {
+    ColorAnimation {
+        duration: 500
+        easing.type: Easing.OutCubic
+    }
+}
         function clampValue(input, minValue, maxValue) {
             return Math.max(minValue, Math.min(maxValue, input));
         }
