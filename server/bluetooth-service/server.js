@@ -5,8 +5,12 @@ import http from "node:http";
 import { execFile, spawn } from "node:child_process";
 import { URL } from "node:url";
 import { systemBus, sessionBus, Variant } from "dbus-next";
+import mqtt from "mqtt";
 
 const PORT = Number(process.env.BLUETOOTH_WS_PORT ?? 5175);
+const MQTT_URL = process.env.MQTT_URL ?? "mqtt://localhost:1883";
+const AUDIO_PUBLISH_INTERVAL_MS = Number(process.env.AUDIO_PUBLISH_INTERVAL_MS ?? 1000);
+const DEFAULT_BT_VOLUME = Number(process.env.DEFAULT_BT_VOLUME ?? 100);
 const SCAN_TIMEOUT_MS = 20000;
 const SCAN_TIMEOUT_SEC = Math.ceil(SCAN_TIMEOUT_MS / 1000);
 
@@ -37,6 +41,7 @@ const MAX_ARTWORK_BYTES = Number(process.env.MAX_ARTWORK_BYTES ?? 5_000_000);
 const artworkCache = new Map();
 const webArtworkCache = new Map();
 const WEB_ARTWORK_TTL_MS = Number(process.env.WEB_ARTWORK_TTL_MS ?? 6 * 60 * 60 * 1000);
+let lastPublishedAudio = "";
 
 const runBtctl = (args, timeoutMs = 10000) => {
   return new Promise((resolve, reject) => {
@@ -676,6 +681,13 @@ const getMediaPlayerStatus = async (playerPath) => {
   return raw.toLowerCase().includes("playing");
 };
 
+const getMediaPlayerPositionSec = async (playerPath) => {
+  const raw = await getMediaPlayerPropertyRaw(playerPath, "Position");
+  const match = raw.match(/\b(\d+)\b/);
+  if (!match) return 0;
+  return parseBusctlDurationSec(match[1]);
+};
+
 const callMediaPlayer = async (playerPath, method) => {
   if (!playerPath) throw new Error("No player path available");
   await runBusctl([
@@ -691,6 +703,49 @@ const playMedia = async (playerPath) => callMediaPlayer(playerPath, "Play");
 const pauseMedia = async (playerPath) => callMediaPlayer(playerPath, "Pause");
 const nextMedia = async (playerPath) => callMediaPlayer(playerPath, "Next");
 const previousMedia = async (playerPath) => callMediaPlayer(playerPath, "Previous");
+
+const normalizeMediaAction = (action) => {
+  const normalized = String(action ?? "").trim().toLowerCase();
+  if (normalized === "previous" || normalized === "rewind") return "prev";
+  return normalized;
+};
+
+const controlConnectedMedia = async (action) => {
+  const targetAction = normalizeMediaAction(action);
+  const device = await getConnectedDevice();
+  if (!device?.mac) {
+    throw new Error("No connected device");
+  }
+  const playerPath = (await getBluezPlayerPath(device.mac)) || (await getMediaControlPlayerPath(device.mac));
+  if (!playerPath) {
+    throw new Error("No media player");
+  }
+  switch (targetAction) {
+    case "play":
+      await playMedia(playerPath);
+      break;
+    case "pause":
+      await pauseMedia(playerPath);
+      break;
+    case "next":
+      await nextMedia(playerPath);
+      break;
+    case "prev":
+      await previousMedia(playerPath);
+      break;
+    case "toggle": {
+      const playing = await getMediaPlayerStatus(playerPath);
+      if (playing) {
+        await pauseMedia(playerPath);
+      } else {
+        await playMedia(playerPath);
+      }
+      break;
+    }
+    default:
+      throw new Error("Unknown action");
+  }
+};
 
 const detectImageMime = (buffer) => {
   if (!buffer || !buffer.length) return "application/octet-stream";
@@ -898,6 +953,7 @@ const getNowPlaying = async () => {
       "Track",
     ]);
     const status = await getMediaPlayerStatus(playerPath);
+    const positionSec = await getMediaPlayerPositionSec(playerPath);
     const track = parseBusctlDict(trackRaw);
     const obexPort = track.obexPort || (await getMediaPlayerObexPort(playerPath));
     if (!track.imgHandle) {
@@ -936,7 +992,7 @@ const getNowPlaying = async () => {
        artist: track.artist || "Bluetooth Audio",
        album: track.album || "",
        durationSec: track.durationSec || 0,
-       positionSec: 0,
+       positionSec,
        isPlaying: status,
        artworkUrl,
      };
@@ -954,6 +1010,21 @@ const getNowPlaying = async () => {
     };
   }
 };
+
+const buildAudioState = (nowPlaying) => ({
+  volume: Number.isFinite(DEFAULT_BT_VOLUME) ? DEFAULT_BT_VOLUME : 100,
+  muted: false,
+  source: "bt",
+  nowPlaying: {
+    title: nowPlaying?.connected ? nowPlaying.title || "" : "",
+    artist: nowPlaying?.connected ? nowPlaying.artist || "" : "",
+    album: nowPlaying?.connected ? nowPlaying.album || "" : "",
+    artworkUrl: nowPlaying?.connected ? nowPlaying.artworkUrl || "" : "",
+    durationSec: Number(nowPlaying?.durationSec || 0),
+    positionSec: Number(nowPlaying?.positionSec || 0),
+    isPlaying: Boolean(nowPlaying?.connected && nowPlaying?.isPlaying),
+  },
+});
 
 const findBluezSink = async (mac) => {
   const sinksRaw = await runPactl(["list", "short", "sinks"]);
@@ -1249,42 +1320,13 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && url.pathname === "/media/control") {
       const action = url.searchParams.get("action");
-      const mac = url.searchParams.get("mac");
-      const targetMac = mac || (await getConnectedDevice())?.mac;
-      if (!targetMac) {
-        json(res, 400, { error: "No connected device" });
+      try {
+        await controlConnectedMedia(action);
+      } catch (err) {
+        json(res, /Unknown action/.test(err?.message ?? "") ? 400 : 500, {
+          error: err instanceof Error ? err.message : "Media control failed",
+        });
         return;
-      }
-      const playerPath = (await getBluezPlayerPath(targetMac)) || (await getMediaControlPlayerPath(targetMac));
-      if (!playerPath) {
-        json(res, 400, { error: "No media player" });
-        return;
-      }
-      switch (action) {
-        case "play":
-          await playMedia(playerPath);
-          break;
-        case "pause":
-          await pauseMedia(playerPath);
-          break;
-        case "next":
-          await nextMedia(playerPath);
-          break;
-        case "prev":
-          await previousMedia(playerPath);
-          break;
-        case "toggle": {
-          const playing = await getMediaPlayerStatus(playerPath);
-          if (playing) {
-            await pauseMedia(playerPath);
-          } else {
-            await playMedia(playerPath);
-          }
-          break;
-        }
-        default:
-          json(res, 400, { error: "Unknown action" });
-          return;
       }
       json(res, 200, { ok: true });
       return;
@@ -1390,4 +1432,49 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[Bluetooth] Service listening on http://localhost:${PORT}`);
+});
+
+const mqttClient = mqtt.connect(MQTT_URL);
+
+const publishAudioState = async () => {
+  if (!mqttClient.connected) return;
+  try {
+    const nowPlaying = await getNowPlaying();
+    const audio = buildAudioState(nowPlaying);
+    const payload = JSON.stringify(audio);
+    if (payload === lastPublishedAudio) return;
+    mqttClient.publish("car/state/audio", payload, { retain: true });
+    lastPublishedAudio = payload;
+  } catch (err) {
+    console.warn("[Bluetooth] Failed to publish audio state:", err?.message ?? err);
+  }
+};
+
+mqttClient.on("connect", () => {
+  console.log(`[Bluetooth] MQTT connected: ${MQTT_URL}`);
+  mqttClient.subscribe("car/cmd/bt/media/control");
+  publishAudioState();
+});
+
+mqttClient.on("message", async (topic, raw) => {
+  if (topic !== "car/cmd/bt/media/control") return;
+  try {
+    const payload = JSON.parse(raw.toString() || "{}");
+    await controlConnectedMedia(payload?.action);
+    await publishAudioState();
+  } catch (err) {
+    console.warn("[Bluetooth] Media command failed:", err?.message ?? err);
+  }
+});
+
+setInterval(publishAudioState, AUDIO_PUBLISH_INTERVAL_MS);
+
+process.on("SIGINT", () => {
+  mqttClient.end(true);
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  mqttClient.end(true);
+  process.exit(0);
 });
