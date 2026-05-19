@@ -767,7 +767,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: shell.bottom
         anchors.bottomMargin: 22
-        width: parent.width * 0.72
+        width: parent.width * 0.3
         spacing: 20
 
         BarMeter { width: (parent.width - 40) / 3; label: "OIL"; value: root.oilTemp; minValue: 40; maxValue: 140; suffix: "C"; warn: root.oilTemp >= 110 }
