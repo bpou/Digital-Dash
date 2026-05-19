@@ -46,6 +46,7 @@ const getHex = (swatch) => {
 
   if (Array.isArray(swatch.rgb)) {
     const [r, g, b] = swatch.rgb;
+
     return (
       "#" +
       [r, g, b]
@@ -56,12 +57,67 @@ const getHex = (swatch) => {
 
   if (typeof swatch.getRgb === "function") {
     const [r, g, b] = swatch.getRgb();
+
     return (
       "#" +
       [r, g, b]
         .map((value) => Math.round(value).toString(16).padStart(2, "0"))
         .join("")
     );
+  }
+
+  return null;
+};
+
+const isBadGaugeColor = (hex) => {
+  if (!hex) return true;
+
+  const { r, g, b } = rgb(hex);
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const saturation = max - min;
+  const brightness = max;
+
+  // Too black / too dark
+  if (brightness < 55) return true;
+
+  // Too close to white
+  if (brightness > 235 && saturation < 45) return true;
+
+  // Grey / silver / low saturation
+  if (saturation < 30) return true;
+
+  // Beige / cream / tan
+  const looksBeige =
+    r > 145 &&
+    g > 115 &&
+    b > 75 &&
+    r >= g &&
+    g >= b &&
+    saturation < 95;
+
+  if (looksBeige) return true;
+
+  // Muddy brown
+  const looksBrown =
+    r > 90 &&
+    g > 55 &&
+    b < 80 &&
+    r > g &&
+    g >= b &&
+    brightness < 165;
+
+  if (looksBrown) return true;
+
+  return false;
+};
+
+const pickGoodColor = (...colors) => {
+  for (const color of colors) {
+    if (color && !isBadGaugeColor(color)) {
+      return color;
+    }
   }
 
   return null;
@@ -98,26 +154,28 @@ export async function extractArtworkColors(imageUrl) {
   try {
     const palette = await getPalette(imageUrl);
 
+    const vibrant = getHex(palette?.Vibrant);
+    const lightVibrant = getHex(palette?.LightVibrant);
+    const darkVibrant = getHex(palette?.DarkVibrant);
+    const muted = getHex(palette?.Muted);
+    const lightMuted = getHex(palette?.LightMuted);
+    const darkMuted = getHex(palette?.DarkMuted);
+
     console.log("[ArtworkColors] Raw palette:", {
-      Vibrant: getHex(palette?.Vibrant),
-      LightVibrant: getHex(palette?.LightVibrant),
-      DarkVibrant: getHex(palette?.DarkVibrant),
-      Muted: getHex(palette?.Muted),
-      LightMuted: getHex(palette?.LightMuted),
-      DarkMuted: getHex(palette?.DarkMuted),
+      Vibrant: vibrant,
+      LightVibrant: lightVibrant,
+      DarkVibrant: darkVibrant,
+      Muted: muted,
+      LightMuted: lightMuted,
+      DarkMuted: darkMuted,
     });
 
     const primary =
-      getHex(palette?.Vibrant) ||
-      getHex(palette?.DarkVibrant) ||
-      getHex(palette?.Muted) ||
+      pickGoodColor(vibrant, darkVibrant, muted, lightVibrant, darkMuted, lightMuted) ||
       FALLBACK_COLORS.primary;
 
     const secondary =
-      getHex(palette?.LightVibrant) ||
-      getHex(palette?.Muted) ||
-      getHex(palette?.LightMuted) ||
-      getHex(palette?.DarkMuted) ||
+      pickGoodColor(lightVibrant, muted, vibrant, darkMuted, lightMuted, darkVibrant) ||
       FALLBACK_COLORS.secondary;
 
     const warning =
