@@ -200,16 +200,35 @@ Item {
             source: coverImage
             autoPaddingEnabled: true
             blurEnabled: true
-            blurMax: 40
-            blur: 0.72
-            saturation: 1.45
+            blurMax: 72
+            blur: 1.0
+            saturation: 1.35
+            brightness: 0.02
+            shadowEnabled: true
+            shadowBlur: 1.0
+            shadowScale: 1.34
+            shadowOpacity: 0.12
+            shadowColor: "#ffffff"
+            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.24 : 0.16) : 0.0
+        }
+
+        MultiEffect {
+            anchors.centerIn: coverFrame
+            width: coverFrame.width
+            height: coverFrame.height
+            source: coverImage
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 48
+            blur: 0.86
+            saturation: 1.55
             brightness: 0.04
             shadowEnabled: true
-            shadowBlur: 0.80
-            shadowScale: 1.16
-            shadowOpacity: 0.22
+            shadowBlur: 0.86
+            shadowScale: 1.20
+            shadowOpacity: 0.16
             shadowColor: "#ffffff"
-            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.38 : 0.24) : 0.0
+            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.28 : 0.18) : 0.0
         }
 
         MultiEffect {
