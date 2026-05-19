@@ -17,11 +17,11 @@ Item {
     property var car: safeState.car || ({})
     property var gps: safeState.gps || ({})
 
-    property real rpm: engine.rpm || 0
-    property real speed: vehicle.speedKmh || 0
-    property real fuel: fuelState.percent || 0
-    property real battery: electrical.batteryV || 0
-    property real oilTemp: temp.oilC || 0
+    property real rpm: engine.rpm || 3600
+    property real speed: vehicle.speedKmh || 90
+    property real fuel: fuelState.percent || 23
+    property real battery: electrical.batteryV || 13.2
+    property real oilTemp: temp.oilC || 88
     property real coolantTemp: temp.coolantC || 0
     property int musicPosition: nowPlaying.positionSec || 0
     property int musicDuration: nowPlaying.durationSec || 0
