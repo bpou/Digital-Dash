@@ -596,6 +596,123 @@ Item {
             }
         }
 
+
+        Item {
+            id: leftTurnIndicator
+            anchors.verticalCenter: coverFrame.verticalCenter
+            anchors.right: coverFrame.left
+            anchors.rightMargin: 38
+            width: 54
+            height: 44
+
+            property bool active: root.turn.left === true ||
+                                  root.turn.leftActive === true ||
+                                  root.turn.leftSignal === true ||
+                                  root.turn.indicator === "left" ||
+                                  root.turn.indicator === "both" ||
+                                  root.turn.hazard === true
+            property real pulseOpacity: 1.0
+
+            onActiveChanged: {
+                if (active) {
+                    pulseOpacity = 1.0;
+                }
+            }
+
+            SequentialAnimation on pulseOpacity {
+                running: leftTurnIndicator.active
+                loops: Animation.Infinite
+                NumberAnimation { to: 1.0; duration: 150; easing.type: Easing.OutCubic }
+                PauseAnimation { duration: 260 }
+                NumberAnimation { to: 0.20; duration: 170; easing.type: Easing.InCubic }
+                PauseAnimation { duration: 230 }
+            }
+
+            MultiEffect {
+                z: -1
+                anchors.fill: leftTurnArrowGraphic
+                source: leftTurnArrowGraphic
+                autoPaddingEnabled: true
+                blurEnabled: true
+                blurMax: 34
+                blur: 0.90
+                shadowEnabled: true
+                shadowBlur: 0.90
+                shadowScale: 1.22
+                shadowOpacity: leftTurnIndicator.active ? 0.80 : 0.0
+                shadowColor: "#9fffd1"
+                opacity: leftTurnIndicator.active ? leftTurnIndicator.pulseOpacity : 0.0
+            }
+
+            TurnArrow {
+                id: leftTurnArrowGraphic
+                anchors.centerIn: parent
+                width: 46
+                height: 36
+                mirror: true
+                active: leftTurnIndicator.active
+                opacity: leftTurnIndicator.active ? leftTurnIndicator.pulseOpacity : 0.18
+            }
+        }
+
+        Item {
+            id: rightTurnIndicator
+            anchors.verticalCenter: coverFrame.verticalCenter
+            anchors.left: coverFrame.right
+            anchors.leftMargin: 38
+            width: 54
+            height: 44
+
+            property bool active: root.turn.right === true ||
+                                  root.turn.rightActive === true ||
+                                  root.turn.rightSignal === true ||
+                                  root.turn.indicator === "right" ||
+                                  root.turn.indicator === "both" ||
+                                  root.turn.hazard === true
+            property real pulseOpacity: 1.0
+
+            onActiveChanged: {
+                if (active) {
+                    pulseOpacity = 1.0;
+                }
+            }
+
+            SequentialAnimation on pulseOpacity {
+                running: rightTurnIndicator.active
+                loops: Animation.Infinite
+                NumberAnimation { to: 1.0; duration: 150; easing.type: Easing.OutCubic }
+                PauseAnimation { duration: 260 }
+                NumberAnimation { to: 0.20; duration: 170; easing.type: Easing.InCubic }
+                PauseAnimation { duration: 230 }
+            }
+
+            MultiEffect {
+                z: -1
+                anchors.fill: rightTurnArrowGraphic
+                source: rightTurnArrowGraphic
+                autoPaddingEnabled: true
+                blurEnabled: true
+                blurMax: 34
+                blur: 0.90
+                shadowEnabled: true
+                shadowBlur: 0.90
+                shadowScale: 1.22
+                shadowOpacity: rightTurnIndicator.active ? 0.80 : 0.0
+                shadowColor: "#9fffd1"
+                opacity: rightTurnIndicator.active ? rightTurnIndicator.pulseOpacity : 0.0
+            }
+
+            TurnArrow {
+                id: rightTurnArrowGraphic
+                anchors.centerIn: parent
+                width: 46
+                height: 36
+                mirror: false
+                active: rightTurnIndicator.active
+                opacity: rightTurnIndicator.active ? rightTurnIndicator.pulseOpacity : 0.18
+            }
+        }
+
         Item {
             id: mediaCore
             anchors.horizontalCenter: parent.horizontalCenter
