@@ -185,7 +185,7 @@ Item {
             anchors.centerIn: coverFrame
             width: coverFrame.width + 34
             height: coverFrame.height + 34
-            radius: coverFrame.radius + 15
+            radius: 0
             color: Qt.rgba(102 / 255, 229 / 255, 255 / 255, root.nowPlaying.isPlaying ? 0.045 : 0.020)
             border.color: Qt.rgba(102 / 255, 229 / 255, 255 / 255, 0.08)
             border.width: 1
@@ -195,7 +195,7 @@ Item {
             anchors.centerIn: coverFrame
             width: coverFrame.width + 10
             height: coverFrame.height + 10
-            radius: coverFrame.radius + 4
+            radius: 0
             color: "transparent"
             border.color: Qt.rgba(255, 255, 255, 0.06)
             border.width: 1
@@ -207,7 +207,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: Math.min(root.width * 0.125, root.height * 0.34)
             height: width
-            radius: 18
+            radius: 0
             color: "#0b1114"
             border.color: "#263a40"
             border.width: 1
@@ -302,7 +302,7 @@ Item {
 
             Rectangle {
                 anchors.fill: parent
-                radius: 14
+                radius: 0
                 color: Qt.rgba(8 / 255, 16 / 255, 18 / 255, 0.52)
                 border.color: Qt.rgba(255, 255, 255, 0.035)
                 border.width: 1
