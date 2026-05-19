@@ -342,6 +342,12 @@ const parseBusctlDurationSec = (value) => {
   return Math.round(duration);
 };
 
+const parseBusctlPositionSec = (value) => {
+  const position = Number(value);
+  if (!Number.isFinite(position) || position <= 0) return 0;
+  return Math.round(position / 1000);
+};
+
 const parseBusctlDict = (raw) => {
   const tokens = tokenizeBusctl(raw);
   const entries = {};
@@ -717,7 +723,7 @@ const getMediaPlayerPositionSec = async (playerPath) => {
   const raw = await getMediaPlayerPropertyRaw(playerPath, "Position");
   const match = raw.match(/\b(\d+)\b/);
   if (!match) return 0;
-  return parseBusctlDurationSec(match[1]);
+  return parseBusctlPositionSec(match[1]);
 };
 
 const callMediaPlayer = async (playerPath, method) => {

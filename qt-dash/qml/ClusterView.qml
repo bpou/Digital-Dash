@@ -25,7 +25,8 @@ Item {
     property real coolantTemp: temp.coolantC || 0
     property int musicPosition: nowPlaying.positionSec || 0
     property int musicDuration: nowPlaying.durationSec || 0
-    property real musicProgress: clamp(musicPosition / Math.max(1, musicDuration), 0, 1)
+    property int displayMusicPosition: Math.round(clamp(musicPosition, 0, musicDuration > 0 ? musicDuration : musicPosition))
+    property real musicProgress: clamp(displayMusicPosition / Math.max(1, musicDuration), 0, 1)
     property string artworkSource: {
         var source = nowPlaying.artworkUrl || "";
         return source.length > 0 ? source : "file:///home/admin/digital-dash/public/albumcover.jpg";
@@ -449,7 +450,7 @@ Item {
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.formatDuration(root.musicPosition)
+                    text: root.formatDuration(root.displayMusicPosition)
                     color: "#b8c7cc"
                     font.family: "sans-serif"
                     font.pixelSize: 11
@@ -502,7 +503,7 @@ Item {
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "-" + root.formatDuration(root.musicDuration - root.musicPosition)
+                    text: "-" + root.formatDuration(root.musicDuration - root.displayMusicPosition)
                     color: "#68777d"
                     font.family: "sans-serif"
                     font.pixelSize: 11
