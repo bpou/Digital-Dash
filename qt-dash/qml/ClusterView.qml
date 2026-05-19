@@ -734,7 +734,7 @@ Item {
                 ctx.translate(xOffset, yOffset);
 
                 ctx.shadowColor = rgbaString(liveColor, 1);
-                ctx.shadowBlur = size * 0.055;
+                ctx.shadowBlur = size * 0.5;
                 ctx.lineWidth = Math.max(28, size * 0.088);
                 ctx.strokeStyle = rgbaString(liveColor, 0.11);
                 ctx.beginPath();
