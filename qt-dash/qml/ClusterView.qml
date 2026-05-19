@@ -693,14 +693,10 @@ Item {
             }
         }
 
-        Behavior on displayValue {
-            NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-        }
-
         onValueChanged: displayValue = value
 
         Canvas {
-            id: gaugeCanvas
+            id: staticGaugeCanvas
             anchors.fill: parent
             antialiasing: true
 
@@ -717,10 +713,8 @@ Item {
                 var fullSweep = Math.PI * 2;
                 var scaleSweep = Math.PI * 1.5;
                 var power = 5.8;
-                var pct = clampValue(displayValue / Math.max(1, maximumValue), 0, 1);
                 var liveColor = displayValue >= dangerAt ? warnColor : accentColor;
                 var trackInset = size * 0.095;
-                var fullTrack = buildSquircleSamples(size, trackInset, power, fullStart, fullSweep, 260);
                 var activeTrack = buildSquircleSamples(size, trackInset, power, fullStart, scaleSweep, 210);
                 var innerFrame = buildSquircleSamples(size, size * 0.255, power, fullStart, fullSweep, 220);
                 var tickOuter = buildSquircleSamples(size, size * 0.057, power, fullStart, fullSweep, 260);
@@ -734,9 +728,9 @@ Item {
                 ctx.translate(xOffset, yOffset);
 
                 ctx.shadowColor = rgbaString(liveColor, 1);
-                ctx.shadowBlur = size * 0.06;
+                ctx.shadowBlur = size * 0.035;
                 ctx.lineWidth = Math.max(28, size * 0.088);
-                ctx.strokeStyle = rgbaString(liveColor, 0.11);
+                ctx.strokeStyle = rgbaString(liveColor, 0.08);
                 ctx.beginPath();
                 drawSamples(ctx, activeTrack, 1, false);
                 ctx.stroke();
@@ -752,27 +746,6 @@ Item {
                 ctx.strokeStyle = "rgba(255,255,255,0.13)";
                 ctx.beginPath();
                 drawSamples(ctx, activeTrack, 1, false);
-                ctx.stroke();
-
-                ctx.shadowColor = rgbaString(liveColor, 1);
-                ctx.shadowBlur = size * 0.06;
-                ctx.lineWidth = Math.max(18, size * 0.048);
-                ctx.strokeStyle = rgbaString(liveColor, 0.30);
-                ctx.beginPath();
-                drawSamples(ctx, activeTrack, pct, false);
-                ctx.stroke();
-
-                ctx.shadowBlur = 0;
-                ctx.lineWidth = Math.max(9, size * 0.026);
-                ctx.strokeStyle = rgbaString(liveColor, 1);
-                ctx.beginPath();
-                drawSamples(ctx, activeTrack, pct, false);
-                ctx.stroke();
-
-                ctx.lineWidth = Math.max(2, size * 0.006);
-                ctx.strokeStyle = "rgba(255,255,255,0.72)";
-                ctx.beginPath();
-                drawSamples(ctx, activeTrack, pct, false);
                 ctx.stroke();
 
                 ctx.lineWidth = 1;
@@ -811,13 +784,72 @@ Item {
 
             Connections {
                 target: gaugeRoot
+                function onDangerAtChanged() { staticGaugeCanvas.requestPaint(); }
+                function onReverseChanged() { staticGaugeCanvas.requestPaint(); }
+                function onAccentColorChanged() { staticGaugeCanvas.requestPaint(); }
+                function onWarnColorChanged() { staticGaugeCanvas.requestPaint(); }
+                function onMaximumValueChanged() { staticGaugeCanvas.requestPaint(); }
+                function onMajorStepChanged() { staticGaugeCanvas.requestPaint(); }
+                function onWidthChanged() { staticGaugeCanvas.requestPaint(); }
+                function onHeightChanged() { staticGaugeCanvas.requestPaint(); }
+            }
+
+            Component.onCompleted: requestPaint()
+        }
+
+        Canvas {
+            id: gaugeCanvas
+            anchors.fill: parent
+            antialiasing: true
+
+            onPaint: {
+                var ctx = getContext("2d");
+                var w = width;
+                var h = height;
+                var size = Math.min(w, h);
+                var xOffset = (w - size) / 2;
+                var yOffset = (h - size) / 2;
+                var fullStart = Math.PI * 0.75;
+                var scaleSweep = Math.PI * 1.5;
+                var power = 5.8;
+                var pct = clampValue(displayValue / Math.max(1, maximumValue), 0, 1);
+                var liveColor = displayValue >= dangerAt ? warnColor : accentColor;
+                var activeTrack = buildSquircleSamples(size, size * 0.095, power, fullStart, scaleSweep, 210);
+
+                ctx.reset();
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                ctx.translate(xOffset, yOffset);
+
+                ctx.shadowColor = rgbaString(liveColor, 1);
+                ctx.shadowBlur = size * 0.035;
+                ctx.lineWidth = Math.max(18, size * 0.048);
+                ctx.strokeStyle = rgbaString(liveColor, 0.24);
+                ctx.beginPath();
+                drawSamples(ctx, activeTrack, pct, false);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.lineWidth = Math.max(9, size * 0.026);
+                ctx.strokeStyle = rgbaString(liveColor, 1);
+                ctx.beginPath();
+                drawSamples(ctx, activeTrack, pct, false);
+                ctx.stroke();
+
+                ctx.lineWidth = Math.max(2, size * 0.006);
+                ctx.strokeStyle = "rgba(255,255,255,0.72)";
+                ctx.beginPath();
+                drawSamples(ctx, activeTrack, pct, false);
+                ctx.stroke();
+            }
+
+            Connections {
+                target: gaugeRoot
                 function onDisplayValueChanged() { gaugeCanvas.requestPaint(); }
                 function onDangerAtChanged() { gaugeCanvas.requestPaint(); }
-                function onReverseChanged() { gaugeCanvas.requestPaint(); }
                 function onAccentColorChanged() { gaugeCanvas.requestPaint(); }
                 function onWarnColorChanged() { gaugeCanvas.requestPaint(); }
                 function onMaximumValueChanged() { gaugeCanvas.requestPaint(); }
-                function onMajorStepChanged() { gaugeCanvas.requestPaint(); }
                 function onWidthChanged() { gaugeCanvas.requestPaint(); }
                 function onHeightChanged() { gaugeCanvas.requestPaint(); }
             }
