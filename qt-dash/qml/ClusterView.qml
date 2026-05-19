@@ -23,6 +23,12 @@ Item {
     property real battery: electrical.batteryV || 13.2
     property real oilTemp: temp.oilC || 88
     property real coolantTemp: temp.coolantC || 0
+    property real boostBar: {
+        if (engine.boostBar !== undefined) return Number(engine.boostBar);
+        if (engine.boostPsi !== undefined) return Number(engine.boostPsi) / 14.5038;
+        if (engine.mapKpa !== undefined) return Math.max(0, (Number(engine.mapKpa) - 101.325) / 100);
+        return 0;
+    }
     property int musicPosition: nowPlaying.positionSec || 0
     property int musicDuration: nowPlaying.durationSec || 0
     property int displayMusicPosition: Math.round(clamp(musicPosition, 0, musicDuration > 0 ? musicDuration : musicPosition))
@@ -290,6 +296,24 @@ Item {
     Item {
         id: mediaPlayer
         anchors.fill: parent
+
+        QtGauge {
+            id: boostGauge
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: coverFrame.top
+            anchors.bottomMargin: 18
+            width: Math.min(root.width * 0.105, root.height * 0.24)
+            height: width
+            value: root.boostBar
+            maximumValue: 2.0
+            majorStep: 0.5
+            label: "BAR"
+            valueText: root.boostBar.toFixed(1)
+            accentColor: "#ffd166"
+            warnColor: "#ff4d5e"
+            dangerAt: 1.6
+            reverse: false
+        }
 
         MultiEffect {
             anchors.centerIn: coverFrame
@@ -1016,7 +1040,9 @@ Item {
                     ctx.font = "bold 15px sans-serif";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
-                    var shown = maximumValue > 1000 ? Math.round(labelValue / 1000).toString() : Math.round(labelValue).toString();
+                    var shown = maximumValue > 1000
+                        ? Math.round(labelValue / 1000).toString()
+                        : (majorStep < 1 ? labelValue.toFixed(1) : Math.round(labelValue).toString());
                     ctx.fillText(shown, labelPoint.x, labelPoint.y);
                 }
             }
