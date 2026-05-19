@@ -409,25 +409,25 @@ Item {
             }
         }
 
-        // Wide soft "TV ambient reactive backlight" glow
+               // Wide soft TV ambient glow — very blurred, not readable as an image
         MultiEffect {
             anchors.centerIn: coverFrame
-            width: coverFrame.width * 1.55
-            height: coverFrame.height * 1.55
+            width: coverFrame.width * 1.75
+            height: coverFrame.height * 1.75
             source: coverImage
             autoPaddingEnabled: true
 
             blurEnabled: true
-            blurMax: 96
+            blurMax: 160
             blur: 1.0
 
-            saturation: 2.4
-            brightness: 0.10
+            saturation: 2.8
+            brightness: 0.16
 
             shadowEnabled: false
 
             opacity: coverImage.status === Image.Ready && root.artworkVisible
-                     ? (root.nowPlaying.isPlaying ? 0.34 : 0.20)
+                     ? (root.nowPlaying.isPlaying ? 0.20 : 0.11)
                      : 0.0
 
             Behavior on opacity {
@@ -438,25 +438,25 @@ Item {
             }
         }
 
-        // Tighter colorful halo close to the album cover
+        // Close colorful glow — still blurred enough to avoid ghost image
         MultiEffect {
             anchors.centerIn: coverFrame
-            width: coverFrame.width * 1.18
-            height: coverFrame.height * 1.18
+            width: coverFrame.width * 1.35
+            height: coverFrame.height * 1.35
             source: coverImage
             autoPaddingEnabled: true
 
             blurEnabled: true
-            blurMax: 44
-            blur: 0.88
+            blurMax: 110
+            blur: 1.0
 
-            saturation: 2.1
-            brightness: 0.08
+            saturation: 2.5
+            brightness: 0.12
 
             shadowEnabled: false
 
             opacity: coverImage.status === Image.Ready && root.artworkVisible
-                     ? (root.nowPlaying.isPlaying ? 0.42 : 0.24)
+                     ? (root.nowPlaying.isPlaying ? 0.24 : 0.14)
                      : 0.0
 
             Behavior on opacity {
