@@ -23,6 +23,24 @@ const rgb = (hex) => {
   return { r, g, b };
 };
 
+const toHex = (value) => {
+  return Math.max(0, Math.min(255, Math.round(value)))
+    .toString(16)
+    .padStart(2, "0");
+};
+
+const saturateHex = (hex, amount = 1.45) => {
+  const { r, g, b } = rgb(hex);
+
+  const avg = (r + g + b) / 3;
+
+  const nr = avg + (r - avg) * amount;
+  const ng = avg + (g - avg) * amount;
+  const nb = avg + (b - avg) * amount;
+
+  return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
+};
+
 const isRedDominant = (hex) => {
   const { r, g, b } = rgb(hex);
   return r > 150 && r > g * 1.5 && r > b * 1.5;
@@ -79,10 +97,10 @@ const isBadGaugeColor = (hex) => {
   const saturation = max - min;
   const brightness = max;
 
-  // Too black / too dark
+  // Too black / dark
   if (brightness < 55) return true;
 
-  // Too close to white
+  // Too white / near white
   if (brightness > 235 && saturation < 45) return true;
 
   // Grey / silver / low saturation
@@ -170,19 +188,22 @@ export async function extractArtworkColors(imageUrl) {
       DarkMuted: darkMuted,
     });
 
-    const primary =
+    const primaryRaw =
       pickGoodColor(vibrant, darkVibrant, muted, lightVibrant, darkMuted, lightMuted) ||
       FALLBACK_COLORS.primary;
 
-    const secondary =
+    const secondaryRaw =
       pickGoodColor(lightVibrant, muted, vibrant, darkMuted, lightMuted, darkVibrant) ||
       FALLBACK_COLORS.secondary;
 
+    const primary = saturateHex(primaryRaw, 1.55);
+    const secondary = saturateHex(secondaryRaw, 1.4);
+
     const warning =
-      isRedDominant(primary) || isYellowOrange(primary)
-        ? primary
-        : isRedDominant(secondary) || isYellowOrange(secondary)
-          ? secondary
+      isRedDominant(primaryRaw) || isYellowOrange(primaryRaw)
+        ? saturateHex(primaryRaw, 1.35)
+        : isRedDominant(secondaryRaw) || isYellowOrange(secondaryRaw)
+          ? saturateHex(secondaryRaw, 1.35)
           : FALLBACK_COLORS.warning;
 
     const colors = {
