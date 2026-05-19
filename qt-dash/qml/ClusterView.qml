@@ -880,15 +880,6 @@ Item {
                 ctx.lineJoin = "round";
                 ctx.translate(xOffset, yOffset);
 
-                ctx.shadowColor = rgbaString(liveColor, 1);
-                ctx.shadowBlur = size * 0.035;
-                ctx.lineWidth = Math.max(28, size * 0.088);
-                ctx.strokeStyle = rgbaString(liveColor, 0.08);
-                ctx.beginPath();
-                drawSamples(ctx, activeTrack, 1, false);
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-
                 ctx.lineWidth = Math.max(21, size * 0.061);
                 ctx.strokeStyle = "rgba(255,255,255,0.045)";
                 ctx.beginPath();
@@ -974,15 +965,6 @@ Item {
                 ctx.lineJoin = "round";
                 ctx.translate(xOffset, yOffset);
 
-                ctx.shadowColor = rgbaString(liveColor, 1);
-                ctx.shadowBlur = size * 0.035;
-                ctx.lineWidth = Math.max(18, size * 0.048);
-                ctx.strokeStyle = rgbaString(liveColor, 0.24);
-                ctx.beginPath();
-                drawSamples(ctx, activeTrack, pct, false);
-                ctx.stroke();
-
-                ctx.shadowBlur = 0;
                 ctx.lineWidth = Math.max(9, size * 0.026);
                 ctx.strokeStyle = rgbaString(liveColor, 1);
                 ctx.beginPath();
