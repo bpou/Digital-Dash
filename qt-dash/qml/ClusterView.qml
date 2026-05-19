@@ -409,26 +409,37 @@ Item {
             }
         }
 
-        MultiEffect {
-            anchors.centerIn: coverFrame
-            width: coverFrame.width
-            height: coverFrame.height
-            source: coverImage
-            autoPaddingEnabled: true
-            blurEnabled: true
-            blurMax: 72
-            blur: 1.0
-            saturation: 1.35
-            brightness: 0.02
-            shadowEnabled: true
-            shadowBlur: 1.0
-            shadowScale: 1.34
-            shadowOpacity: 0.12
-            shadowColor: "#ffffff"
-            opacity: coverImage.status === Image.Ready && root.artworkVisible ? (root.nowPlaying.isPlaying ? 0.24 : 0.16) : 0.0
+       MultiEffect {
+    anchors.centerIn: coverFrame
+    width: coverFrame.width
+    height: coverFrame.height
+    source: coverImage
+    autoPaddingEnabled: true
 
-            Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+    blurEnabled: true
+    blurMax: 110
+    blur: 1.0
+
+    saturation: 2.1
+    brightness: 0.12
+
+    shadowEnabled: true
+    shadowBlur: 1.0
+    shadowScale: 1.65
+    shadowOpacity: 0.32
+    shadowColor: "#ffffff"
+
+    opacity: coverImage.status === Image.Ready && root.artworkVisible
+             ? (root.nowPlaying.isPlaying ? 0.55 : 0.32)
+             : 0.0
+
+    Behavior on opacity {
+        NumberAnimation {
+            duration: 260
+            easing.type: Easing.OutCubic
         }
+    }
+}
 
         MultiEffect {
             anchors.centerIn: coverFrame
