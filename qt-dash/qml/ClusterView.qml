@@ -200,16 +200,16 @@ Item {
             source: coverImage
             autoPaddingEnabled: true
             blurEnabled: true
-            blurMax: 72
-            blur: 1.0
-            saturation: 1.80
-            brightness: 0.12
+            blurMax: 40
+            blur: 0.72
+            saturation: 1.45
+            brightness: 0.04
             shadowEnabled: true
-            shadowBlur: 1.0
-            shadowScale: 1.35
-            shadowOpacity: 0.42
+            shadowBlur: 0.80
+            shadowScale: 1.16
+            shadowOpacity: 0.22
             shadowColor: "#ffffff"
-            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.68 : 0.46) : 0.0
+            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.38 : 0.24) : 0.0
         }
 
         MultiEffect {
@@ -321,7 +321,7 @@ Item {
             id: mediaCore
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: coverFrame.bottom
-            anchors.topMargin: 28
+            anchors.topMargin: 18
             width: root.width * 0.30
             height: 84
 
