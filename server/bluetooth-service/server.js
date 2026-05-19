@@ -972,12 +972,12 @@ const getNowPlaying = async () => {
     await removeObexSession(connected.mac);
     return {
       connected: true,
-      title: connected.name || connected.alias || "Bluetooth",
-      artist: "Bluetooth Audio",
+      title: "",
+      artist: "",
       album: "",
       durationSec: 0,
       positionSec: 0,
-      isPlaying: true,
+      isPlaying: false,
     };
   }
 
@@ -1038,13 +1038,13 @@ const getNowPlaying = async () => {
     logObex("Failed to fetch now playing metadata", err?.message ?? err);
     return {
       connected: true,
-      title: connected.name || connected.alias || "Bluetooth",
-      artist: "Bluetooth Audio",
+      title: "",
+      artist: "",
       album: "",
       durationSec: 0,
       positionSec: 0,
-      isPlaying: true,
-      artworkUrl: session?.artworkUrl ?? undefined,
+      isPlaying: false,
+      artworkUrl: "",
     };
   }
 };

@@ -27,9 +27,11 @@ Item {
     property int musicDuration: nowPlaying.durationSec || 0
     property int displayMusicPosition: Math.round(clamp(musicPosition, 0, musicDuration > 0 ? musicDuration : musicPosition))
     property real musicProgress: clamp(displayMusicPosition / Math.max(1, musicDuration), 0, 1)
+    property bool hasMedia: (nowPlaying.title || nowPlaying.artist || nowPlaying.album || nowPlaying.artworkUrl) ? true : false
+    property bool hasArtwork: (nowPlaying.artworkUrl || "").length > 0
     property string artworkSource: {
         var source = nowPlaying.artworkUrl || "";
-        return source.length > 0 ? source : "file:///home/admin/digital-dash/public/albumcover.jpg";
+        return source.length > 0 ? source : "";
     }
     property date clockTime: new Date()
 
@@ -210,7 +212,9 @@ Item {
             shadowScale: 1.34
             shadowOpacity: 0.12
             shadowColor: "#ffffff"
-            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.24 : 0.16) : 0.0
+            opacity: coverImage.status === Image.Ready && root.hasArtwork ? (root.nowPlaying.isPlaying ? 0.24 : 0.16) : 0.0
+
+            Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
         }
 
         MultiEffect {
@@ -229,7 +233,9 @@ Item {
             shadowScale: 1.20
             shadowOpacity: 0.16
             shadowColor: "#ffffff"
-            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.28 : 0.18) : 0.0
+            opacity: coverImage.status === Image.Ready && root.hasArtwork ? (root.nowPlaying.isPlaying ? 0.28 : 0.18) : 0.0
+
+            Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
         }
 
         MultiEffect {
@@ -243,7 +249,9 @@ Item {
             shadowScale: 1.12
             shadowOpacity: 0.32
             shadowColor: "#000000"
-            opacity: coverImage.status === Image.Ready ? 1.0 : 0.0
+            opacity: coverImage.status === Image.Ready && root.hasArtwork ? 1.0 : 0.0
+
+            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         }
 
         Rectangle {
@@ -256,6 +264,9 @@ Item {
             color: "transparent"
             border.width: 0
             clip: true
+            opacity: coverImage.status === Image.Ready && root.hasArtwork ? 1.0 : 0.0
+
+            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
             Image {
                 id: coverImage
@@ -330,7 +341,7 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                visible: coverImage.status !== Image.Ready
+                visible: false
                 text: "M"
                 color: "#b9cbd1"
                 font.pixelSize: parent.width * 0.34
@@ -345,23 +356,15 @@ Item {
             anchors.topMargin: 18
             width: root.width * 0.30
             height: 84
+            opacity: root.hasMedia ? 1.0 : 0.0
 
-            Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.leftMargin: 24
-                anchors.rightMargin: 24
-                height: 1
-                color: "#34505a"
-                opacity: 0.34
-            }
+            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
             Row {
                 id: sourceRow
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top
-                anchors.topMargin: 8
+                anchors.topMargin: 0
                 spacing: 8
 
                 Rectangle {
@@ -391,7 +394,7 @@ Item {
                 width: parent.width - 28
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
-                text: root.nowPlaying.title || "No media playing"
+                text: root.nowPlaying.title || ""
                 color: "#ffffff"
                 font.family: "sans-serif"
                 font.pixelSize: 17
