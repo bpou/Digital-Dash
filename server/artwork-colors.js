@@ -1,126 +1,103 @@
-// server/bluetooth-service/artwork-colors.js
-import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
-import { Vibrant } from "node-vibrant/node";
+import Vibrant from "node-vibrant";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const CACHE_DIR = path.join(__dirname, "artwork-cache");
-
-const DEFAULT_COLORS = {
+export const FALLBACK_COLORS = {
   primary: "#66e5ff",
   secondary: "#b4f8c8",
-  warning: "#ff4d5e"
+  warning: "#ff4d5e",
 };
 
-const colorCache = new Map();
+const colorsCache = new Map();
+const COLORS_TTL_MS = 5 * 60 * 1000;
 
-function isHttpUrl(value) {
-  return typeof value === "string" && /^https?:\/\//i.test(value);
-}
-
-function isFileUrl(value) {
-  return typeof value === "string" && value.startsWith("file://");
-}
-
-function safeHex(swatch, fallback) {
+function swatchHex(swatch, fallback) {
   if (!swatch) return fallback;
-  return swatch.hex || fallback;
+
+  if (typeof swatch.getHex === "function") {
+    return swatch.getHex();
+  }
+
+  if (typeof swatch.hex === "string") {
+    return swatch.hex;
+  }
+
+  return fallback;
 }
 
-async function downloadArtwork(url) {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
+const rgb = (hex) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+};
 
-  const hash = crypto.createHash("sha1").update(url).digest("hex");
-  const filePath = path.join(CACHE_DIR, `${hash}.jpg`);
+const isRedDominant = (hex) => {
+  const { r, g, b } = rgb(hex);
+  return r > 150 && r > g * 1.5 && r > b * 1.5;
+};
 
-  if (fs.existsSync(filePath)) {
-    return filePath;
+const isYellowOrange = (hex) => {
+  const { r, g, b } = rgb(hex);
+  return r > 200 && g > 150 && b < 100 && r > b;
+};
+
+export async function extractArtworkColors(imageUrl) {
+  if (!imageUrl) {
+    return { ...FALLBACK_COLORS };
   }
 
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Artwork download failed: ${response.status}`);
+  const cached = colorsCache.get(imageUrl);
+  if (cached && Date.now() - cached.ts < COLORS_TTL_MS) {
+    return { ...cached.colors };
   }
 
-  const buffer = Buffer.from(await response.arrayBuffer());
-  fs.writeFileSync(filePath, buffer);
-
-  return filePath;
-}
-
-async function resolveArtworkPath(artworkUrlOrPath) {
-  if (!artworkUrlOrPath) return null;
-
-  if (isFileUrl(artworkUrlOrPath)) {
-    return artworkUrlOrPath.replace("file://", "");
-  }
-
-  if (isHttpUrl(artworkUrlOrPath)) {
-    return await downloadArtwork(artworkUrlOrPath);
-  }
-
-  return artworkUrlOrPath;
-}
-
-function getPaletteCompat(artworkPath) {
-  return new Promise((resolve, reject) => {
-    try {
-      Vibrant.from(artworkPath).getPalette((err, palette) => {
+  try {
+    const palette = await new Promise((resolve, reject) => {
+      Vibrant.from(imageUrl).getPalette((err, palette) => {
         if (err) {
           reject(err);
-          return;
+        } else {
+          resolve(palette);
         }
-
-        resolve(palette);
       });
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
+    });
 
-export async function extractArtworkColors(artworkUrlOrPath) {
-  try {
-    if (!artworkUrlOrPath) {
-      return DEFAULT_COLORS;
-    }
+    console.log("[ArtworkColors] Raw palette:", {
+      Vibrant: swatchHex(palette?.Vibrant, null),
+      LightVibrant: swatchHex(palette?.LightVibrant, null),
+      DarkVibrant: swatchHex(palette?.DarkVibrant, null),
+      Muted: swatchHex(palette?.Muted, null),
+      LightMuted: swatchHex(palette?.LightMuted, null),
+      DarkMuted: swatchHex(palette?.DarkMuted, null),
+    });
 
-    if (colorCache.has(artworkUrlOrPath)) {
-      return colorCache.get(artworkUrlOrPath);
-    }
+    const primary =
+      swatchHex(palette?.Vibrant, null) ||
+      swatchHex(palette?.DarkVibrant, null) ||
+      swatchHex(palette?.Muted, null) ||
+      FALLBACK_COLORS.primary;
 
-    const artworkPath = await resolveArtworkPath(artworkUrlOrPath);
+    const secondary =
+      swatchHex(palette?.LightVibrant, null) ||
+      swatchHex(palette?.Muted, null) ||
+      swatchHex(palette?.LightMuted, null) ||
+      FALLBACK_COLORS.secondary;
 
-    if (!artworkPath || !fs.existsSync(artworkPath)) {
-      console.warn("[ArtworkColors] Missing artwork file, using fallback:", artworkUrlOrPath);
-      return DEFAULT_COLORS;
-    }
+    const warning =
+      isRedDominant(primary) || isYellowOrange(primary)
+        ? primary
+        : isRedDominant(secondary) || isYellowOrange(secondary)
+          ? secondary
+          : FALLBACK_COLORS.warning;
 
-    const palette = await getPaletteCompat(artworkPath);
+    const colors = { primary, secondary, warning };
 
-    const colors = {
-      primary: safeHex(palette?.Vibrant || palette?.LightVibrant, DEFAULT_COLORS.primary),
-      secondary: safeHex(
-        palette?.LightVibrant || palette?.Muted || palette?.DarkVibrant,
-        DEFAULT_COLORS.secondary
-      ),
-      warning: safeHex(palette?.DarkVibrant || palette?.Vibrant, DEFAULT_COLORS.warning)
-    };
-
-    colorCache.set(artworkUrlOrPath, colors);
+    colorsCache.set(imageUrl, { colors, ts: Date.now() });
 
     console.log("[ArtworkColors] Extracted colors:", colors);
 
-    return colors;
-  } catch (error) {
-    console.error("[ArtworkColors] Failed, using fallback:", error?.message || error);
-    return DEFAULT_COLORS;
+    return { ...colors };
+  } catch (err) {
+    console.warn("[ArtworkColors] Failed:", err?.message ?? err);
+    return { ...FALLBACK_COLORS };
   }
 }
-
-export default extractArtworkColors;
