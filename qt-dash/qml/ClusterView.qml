@@ -417,20 +417,20 @@ Item {
     autoPaddingEnabled: true
 
     blurEnabled: true
-    blurMax: 110
+    blurMax: 78
     blur: 1.0
 
-    saturation: 2.1
-    brightness: 0.12
+    saturation: 1.65
+    brightness: 0.05
 
     shadowEnabled: true
     shadowBlur: 1.0
-    shadowScale: 1.65
-    shadowOpacity: 0.32
+    shadowScale: 1.38
+    shadowOpacity: 0.18
     shadowColor: "#ffffff"
 
     opacity: coverImage.status === Image.Ready && root.artworkVisible
-             ? (root.nowPlaying.isPlaying ? 0.55 : 0.32)
+             ? (root.nowPlaying.isPlaying ? 0.32 : 0.20)
              : 0.0
 
     Behavior on opacity {
