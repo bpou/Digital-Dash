@@ -29,10 +29,12 @@ Item {
         if (engine.mapKpa !== undefined) return Math.max(0, (Number(engine.mapKpa) - 101.325) / 100);
         return 0;
     }
+
     property int musicPosition: nowPlaying.positionSec || 0
     property int musicDuration: nowPlaying.durationSec || 0
     property int displayMusicPosition: Math.round(clamp(musicPosition, 0, musicDuration > 0 ? musicDuration : musicPosition))
     property real musicProgress: clamp(displayMusicPosition / Math.max(1, musicDuration), 0, 1)
+
     property string displayedTitle: ""
     property string displayedArtist: ""
     property string displayedAlbum: ""
@@ -183,6 +185,7 @@ Item {
         Canvas {
             anchors.fill: parent
             opacity: 0.48
+
             onPaint: {
                 var ctx = getContext("2d");
                 ctx.reset();
@@ -199,6 +202,7 @@ Item {
                 ctx.fillStyle = g;
                 ctx.fillRect(0, 0, width, height);
             }
+
             Component.onCompleted: requestPaint()
         }
     }
@@ -235,16 +239,12 @@ Item {
         opacity: 0.95
     }
 
-
-
     Row {
         anchors.right: shell.right
         anchors.top: shell.top
         anchors.rightMargin: 42
         anchors.topMargin: 26
         spacing: 12
-
-
 
         Text {
             text: Qt.formatTime(root.clockTime, "HH:mm")
@@ -266,7 +266,6 @@ Item {
         maximumValue: 8000
         majorStep: 2000
         label: "RPM"
-       
         valueText: Math.round(root.rpm).toString()
         accentColor: "#66e5ff"
         warnColor: "#ff4d5e"
@@ -285,7 +284,6 @@ Item {
         maximumValue: 180
         majorStep: 30
         label: "KM/H"
-       
         valueText: Math.round(root.speed).toString()
         accentColor: "#b4f8c8"
         warnColor: "#ff4d5e"
@@ -298,118 +296,118 @@ Item {
         anchors.fill: parent
 
         Item {
-    id: boostModule
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.bottom: coverFrame.top
-    anchors.bottomMargin: 150
+            id: boostModule
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: coverFrame.top
+            anchors.bottomMargin: 150
 
-    width: Math.min(root.width * 0.16, 210)
-    height: 46
+            width: Math.min(root.width * 0.16, 210)
+            height: 46
 
-    property real pct: root.clamp(root.boostBar / 2.0, 0, 1)
-    property color boostColor: root.boostBar >= 1.6 ? "#ff4d5e" : "#ffd166"
-    property color dimText: "#6f7f86"
-    property color brightText: "#dce8ee"
+            property real pct: root.clamp(root.boostBar / 2.0, 0, 1)
+            property color boostColor: root.boostBar >= 1.6 ? "#ff4d5e" : "#ffd166"
+            property color dimText: "#6f7f86"
+            property color brightText: "#dce8ee"
 
-    Rectangle {
-        id: boostGlass
-        anchors.fill: parent
-        radius: 14
-        color: "#05090c"
-        opacity: 0.72
-        border.width: 1
-        border.color: "#10242b"
-    }
+            Rectangle {
+                id: boostGlass
+                anchors.fill: parent
+                radius: 14
+                color: "#05090c"
+                opacity: 0.72
+                border.width: 1
+                border.color: "#10242b"
+            }
 
-    MultiEffect {
-        anchors.fill: boostGlass
-        source: boostGlass
-        autoPaddingEnabled: true
-        shadowEnabled: true
-        shadowBlur: 0.45
-        shadowScale: 1.02
-        shadowOpacity: 0.28
-        shadowColor: "#2fe8ff"
-        opacity: 0.55
-    }
+            MultiEffect {
+                anchors.fill: boostGlass
+                source: boostGlass
+                autoPaddingEnabled: true
+                shadowEnabled: true
+                shadowBlur: 0.45
+                shadowScale: 1.02
+                shadowOpacity: 0.28
+                shadowColor: "#2fe8ff"
+                opacity: 0.55
+            }
 
-    Row {
-        id: boostTextRow
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: 7
-        spacing: 7
+            Row {
+                id: boostTextRow
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 7
+                spacing: 7
 
-        Text {
-            anchors.baseline: boostValue.baseline
-            text: "BOOST"
-            color: boostModule.dimText
-            font.family: "sans-serif"
-            font.pixelSize: 8
-            font.weight: Font.Bold
-            font.letterSpacing: 2.2
+                Text {
+                    anchors.baseline: boostValue.baseline
+                    text: "BOOST"
+                    color: boostModule.dimText
+                    font.family: "sans-serif"
+                    font.pixelSize: 8
+                    font.weight: Font.Bold
+                    font.letterSpacing: 2.2
+                }
+
+                Text {
+                    id: boostValue
+                    text: root.boostBar.toFixed(1)
+                    color: boostModule.boostColor
+                    font.family: "sans-serif"
+                    font.pixelSize: 21
+                    font.weight: Font.Bold
+                }
+
+                Text {
+                    anchors.baseline: boostValue.baseline
+                    text: "BAR"
+                    color: "#9aa8ae"
+                    font.family: "sans-serif"
+                    font.pixelSize: 8
+                    font.weight: Font.Bold
+                    font.letterSpacing: 2
+                }
+            }
+
+            Rectangle {
+                id: boostTrack
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 18
+                anchors.rightMargin: 18
+                anchors.bottomMargin: 8
+
+                height: 3
+                radius: 2
+                color: "#152329"
+
+                Rectangle {
+                    id: boostBarFill
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    width: Math.max(6, parent.width * boostModule.pct)
+                    height: parent.height
+                    radius: parent.radius
+                    color: boostModule.boostColor
+                }
+
+                MultiEffect {
+                    anchors.fill: boostBarFill
+                    source: boostBarFill
+                    autoPaddingEnabled: true
+                    blurEnabled: true
+                    blurMax: 18
+                    blur: 0.75
+                    shadowEnabled: true
+                    shadowBlur: 0.65
+                    shadowScale: 1.08
+                    shadowOpacity: 0.65
+                    shadowColor: boostModule.boostColor
+                    opacity: 0.85
+                }
+            }
         }
-
-        Text {
-            id: boostValue
-            text: root.boostBar.toFixed(1)
-            color: boostModule.boostColor
-            font.family: "sans-serif"
-            font.pixelSize: 21
-            font.weight: Font.Bold
-        }
-
-        Text {
-            anchors.baseline: boostValue.baseline
-            text: "BAR"
-            color: "#9aa8ae"
-            font.family: "sans-serif"
-            font.pixelSize: 8
-            font.weight: Font.Bold
-            font.letterSpacing: 2
-        }
-    }
-
-    Rectangle {
-        id: boostTrack
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.leftMargin: 18
-        anchors.rightMargin: 18
-        anchors.bottomMargin: 8
-
-        height: 3
-        radius: 2
-        color: "#152329"
-
-        Rectangle {
-            id: boostBarFill
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-
-            width: Math.max(6, parent.width * boostModule.pct)
-            height: parent.height
-            radius: parent.radius
-            color: boostModule.boostColor
-        }
-
-        MultiEffect {
-            anchors.fill: boostBarFill
-            source: boostBarFill
-            autoPaddingEnabled: true
-            blurEnabled: true
-            blurMax: 18
-            blur: 0.75
-            shadowEnabled: true
-            shadowBlur: 0.65
-            shadowScale: 1.08
-            shadowOpacity: 0.65
-            shadowColor: boostModule.boostColor
-            opacity: 0.85
-        }
-    }
-}
 
         MultiEffect {
             anchors.centerIn: coverFrame
@@ -596,121 +594,116 @@ Item {
             }
         }
 
-
-        Item {
-            id: leftTurnIndicator
+        TurnArrow {
+            id: leftTurnArrow
             anchors.verticalCenter: coverFrame.verticalCenter
             anchors.right: coverFrame.left
-            anchors.rightMargin: 50
+            anchors.rightMargin: 70
+
             width: 30
             height: 30
+            mirror: true
 
-            property bool active: root.turn.left === true ||
-                                  root.turn.leftActive === true ||
-                                  root.turn.leftSignal === true ||
-                                  root.turn.indicator === "left" ||
-                                  root.turn.indicator === "both" ||
-                                  root.turn.hazard === true
-            property real pulseOpacity: 1.0
+            active: root.turn.left === true ||
+                    root.turn.leftActive === true ||
+                    root.turn.leftSignal === true ||
+                    root.turn.indicator === "left" ||
+                    root.turn.indicator === "both" ||
+                    root.turn.hazard === true
 
-            onActiveChanged: {
-                if (active) {
-                    pulseOpacity = 1.0;
-                }
-            }
+            opacity: active ? 1.0 : 0.16
 
-            SequentialAnimation on pulseOpacity {
-                running: leftTurnIndicator.active
+            SequentialAnimation on opacity {
+                running: leftTurnArrow.active
                 loops: Animation.Infinite
-                NumberAnimation { to: 1.0; duration: 150; easing.type: Easing.OutCubic }
+
+                NumberAnimation {
+                    to: 1.0
+                    duration: 180
+                    easing.type: Easing.OutCubic
+                }
+
                 PauseAnimation { duration: 260 }
-                NumberAnimation { to: 0.20; duration: 170; easing.type: Easing.InCubic }
-                PauseAnimation { duration: 230 }
-            }
 
-            MultiEffect {
-                z: -1
-                anchors.fill: leftTurnArrowGraphic
-                source: leftTurnArrowGraphic
-                autoPaddingEnabled: true
-                blurEnabled: true
-                blurMax: 34
-                blur: 0.90
-                shadowEnabled: true
-                shadowBlur: 0.90
-                shadowScale: 1.22
-                shadowOpacity: leftTurnIndicator.active ? 0.80 : 0.0
-                shadowColor: "#9fffd1"
-                opacity: leftTurnIndicator.active ? leftTurnIndicator.pulseOpacity : 0.0
-            }
+                NumberAnimation {
+                    to: 0.18
+                    duration: 180
+                    easing.type: Easing.InCubic
+                }
 
-            TurnArrow {
-                id: leftTurnArrowGraphic
-                anchors.centerIn: parent
-                width: 46
-                height: 36
-                mirror: true
-                active: leftTurnIndicator.active
-                opacity: leftTurnIndicator.active ? leftTurnIndicator.pulseOpacity : 0.18
+                PauseAnimation { duration: 260 }
             }
         }
 
-        Item {
-            id: rightTurnIndicator
+        MultiEffect {
+            anchors.fill: leftTurnArrow
+            source: leftTurnArrow
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 22
+            blur: 0.75
+            shadowEnabled: true
+            shadowBlur: 0.85
+            shadowScale: 1.15
+            shadowOpacity: leftTurnArrow.active ? 0.65 : 0.0
+            shadowColor: "#9fffd1"
+            opacity: leftTurnArrow.active ? 0.9 : 0.0
+        }
+
+        TurnArrow {
+            id: rightTurnArrow
             anchors.verticalCenter: coverFrame.verticalCenter
             anchors.left: coverFrame.right
-            anchors.leftMargin: 50
+            anchors.leftMargin: 70
+
             width: 30
             height: 30
+            mirror: false
 
-            property bool active: root.turn.right === true ||
-                                  root.turn.rightActive === true ||
-                                  root.turn.rightSignal === true ||
-                                  root.turn.indicator === "right" ||
-                                  root.turn.indicator === "both" ||
-                                  root.turn.hazard === true
-            property real pulseOpacity: 1.0
+            active: root.turn.right === true ||
+                    root.turn.rightActive === true ||
+                    root.turn.rightSignal === true ||
+                    root.turn.indicator === "right" ||
+                    root.turn.indicator === "both" ||
+                    root.turn.hazard === true
 
-            onActiveChanged: {
-                if (active) {
-                    pulseOpacity = 1.0;
-                }
-            }
+            opacity: active ? 1.0 : 0.16
 
-            SequentialAnimation on pulseOpacity {
-                running: rightTurnIndicator.active
+            SequentialAnimation on opacity {
+                running: rightTurnArrow.active
                 loops: Animation.Infinite
-                NumberAnimation { to: 1.0; duration: 150; easing.type: Easing.OutCubic }
+
+                NumberAnimation {
+                    to: 1.0
+                    duration: 180
+                    easing.type: Easing.OutCubic
+                }
+
                 PauseAnimation { duration: 260 }
-                NumberAnimation { to: 0.20; duration: 170; easing.type: Easing.InCubic }
-                PauseAnimation { duration: 230 }
-            }
 
-            MultiEffect {
-                z: -1
-                anchors.fill: rightTurnArrowGraphic
-                source: rightTurnArrowGraphic
-                autoPaddingEnabled: true
-                blurEnabled: true
-                blurMax: 34
-                blur: 0.90
-                shadowEnabled: true
-                shadowBlur: 0.90
-                shadowScale: 1.22
-                shadowOpacity: rightTurnIndicator.active ? 0.80 : 0.0
-                shadowColor: "#9fffd1"
-                opacity: rightTurnIndicator.active ? rightTurnIndicator.pulseOpacity : 0.0
-            }
+                NumberAnimation {
+                    to: 0.18
+                    duration: 180
+                    easing.type: Easing.InCubic
+                }
 
-            TurnArrow {
-                id: rightTurnArrowGraphic
-                anchors.centerIn: parent
-                width: 46
-                height: 36
-                mirror: false
-                active: rightTurnIndicator.active
-                opacity: rightTurnIndicator.active ? rightTurnIndicator.pulseOpacity : 0.18
+                PauseAnimation { duration: 260 }
             }
+        }
+
+        MultiEffect {
+            anchors.fill: rightTurnArrow
+            source: rightTurnArrow
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 22
+            blur: 0.75
+            shadowEnabled: true
+            shadowBlur: 0.85
+            shadowScale: 1.15
+            shadowOpacity: rightTurnArrow.active ? 0.65 : 0.0
+            shadowColor: "#9fffd1"
+            opacity: rightTurnArrow.active ? 0.9 : 0.0
         }
 
         Item {
@@ -838,6 +831,7 @@ Item {
                         anchors.centerIn: parent
                         width: 10
                         height: 10
+
                         onPaint: {
                             var ctx = getContext("2d");
                             ctx.reset();
@@ -859,6 +853,7 @@ Item {
                             target: root
                             function onNowPlayingChanged() { playIconCanvas.requestPaint(); }
                         }
+
                         Component.onCompleted: requestPaint()
                     }
 
@@ -981,28 +976,37 @@ Item {
         property bool mirror: false
 
         width: 30
-        height: 24
+        height: 30
         opacity: active ? 1.0 : 0.24
 
         onPaint: {
             var ctx = getContext("2d");
             ctx.reset();
-            ctx.fillStyle = "#9fffd1";
+
+            ctx.strokeStyle = "#9fffd1";
+            ctx.lineWidth = 3;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
             ctx.beginPath();
+
             if (mirror) {
-                ctx.moveTo(width, 0);
-                ctx.lineTo(0, height / 2);
-                ctx.lineTo(width, height);
+                ctx.moveTo(width * 0.78, height * 0.18);
+                ctx.lineTo(width * 0.25, height * 0.50);
+                ctx.lineTo(width * 0.78, height * 0.82);
             } else {
-                ctx.moveTo(0, 0);
-                ctx.lineTo(width, height / 2);
-                ctx.lineTo(0, height);
+                ctx.moveTo(width * 0.22, height * 0.18);
+                ctx.lineTo(width * 0.75, height * 0.50);
+                ctx.lineTo(width * 0.22, height * 0.82);
             }
-            ctx.closePath();
-            ctx.fill();
+
+            ctx.stroke();
         }
 
         onActiveChanged: requestPaint()
+        onMirrorChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
         Component.onCompleted: requestPaint()
     }
 
@@ -1127,27 +1131,33 @@ Item {
             var points = [];
             var total = 0;
             var previous = null;
+
             for (var si = 0; si <= steps; si++) {
                 var normalized = si / steps;
                 var point = squirclePoint(size, inset, power, normalized, startAngle, sweep);
+
                 if (previous !== null) {
                     var dx = point.x - previous.x;
                     var dy = point.y - previous.y;
                     total += Math.sqrt(dx * dx + dy * dy);
                 }
+
                 point.distance = total;
                 points.push(point);
                 previous = point;
             }
+
             return { points: points, length: total };
         }
 
         function sampleAt(samples, normalized) {
             var target = samples.length * clampValue(normalized, 0, 1);
             var points = samples.points;
+
             if (target <= 0) {
                 return points[0];
             }
+
             if (target >= samples.length) {
                 return points[points.length - 1];
             }
@@ -1158,6 +1168,7 @@ Item {
                     var after = points[si];
                     var span = Math.max(0.001, after.distance - before.distance);
                     var local = (target - before.distance) / span;
+
                     return {
                         x: before.x + (after.x - before.x) * local,
                         y: before.y + (after.y - before.y) * local,
@@ -1165,20 +1176,25 @@ Item {
                     };
                 }
             }
+
             return points[points.length - 1];
         }
 
         function drawSamples(ctx, samples, normalizedEnd, closePath) {
             var target = samples.length * clampValue(normalizedEnd, 0, 1);
             var points = samples.points;
+
             ctx.moveTo(points[0].x, points[0].y);
+
             for (var si = 1; si < points.length && points[si].distance <= target; si++) {
                 ctx.lineTo(points[si].x, points[si].y);
             }
+
             if (target > 0 && target < samples.length) {
                 var point = sampleAt(samples, normalizedEnd);
                 ctx.lineTo(point.x, point.y);
             }
+
             if (closePath) {
                 ctx.closePath();
             }
@@ -1195,8 +1211,6 @@ Item {
                 var ctx = getContext("2d");
                 var w = width;
                 var h = height;
-                var cx = w / 2;
-                var cy = h / 2;
                 var size = Math.min(w, h);
                 var xOffset = (w - size) / 2;
                 var yOffset = (h - size) / 2;
@@ -1204,7 +1218,6 @@ Item {
                 var fullSweep = Math.PI * 2;
                 var scaleSweep = Math.PI * 1.5;
                 var power = 5.8;
-                var liveColor = displayValue >= dangerAt ? warnColor : accentColor;
                 var trackInset = size * 0.095;
                 var activeTrack = buildSquircleSamples(size, trackInset, power, fullStart, scaleSweep, 210);
                 var innerFrame = buildSquircleSamples(size, size * 0.255, power, fullStart, fullSweep, 220);
@@ -1233,11 +1246,13 @@ Item {
                 var minorPerMajor = 5;
                 var majorIntervals = Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
                 var tickIntervals = Math.max(40, majorIntervals * minorPerMajor * 4);
+
                 for (var i = 0; i <= tickIntervals; i++) {
                     var amount = i / tickIntervals;
                     var major = i % (minorPerMajor * 2) === 0;
                     var outerPoint = sampleAt(tickOuter, amount);
                     var innerPoint = sampleAt(major ? tickInnerMajor : tickInnerMinor, amount);
+
                     ctx.lineWidth = major ? 2 : 1;
                     ctx.strokeStyle = major ? "rgba(255,255,255,0.58)" : "rgba(255,255,255,0.24)";
                     ctx.beginPath();
@@ -1249,10 +1264,12 @@ Item {
                 for (var labelValue = 0; labelValue <= maximumValue; labelValue += majorStep) {
                     var labelPct = labelValue / maximumValue;
                     var labelPoint = sampleAt(labelTrack, labelPct);
+
                     ctx.fillStyle = "rgba(255,255,255,0.42)";
                     ctx.font = "bold 15px sans-serif";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
+
                     var shown = maximumValue > 1000 ? Math.round(labelValue / 1000).toString() : Math.round(labelValue).toString();
                     ctx.fillText(shown, labelPoint.x, labelPoint.y);
                 }
