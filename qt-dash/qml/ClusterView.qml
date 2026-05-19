@@ -183,21 +183,21 @@ Item {
 
         Rectangle {
             anchors.centerIn: coverFrame
-            width: coverFrame.width + 28
-            height: coverFrame.height + 28
-            radius: coverFrame.radius + 10
-            color: Qt.rgba(102 / 255, 229 / 255, 255 / 255, root.nowPlaying.isPlaying ? 0.055 : 0.025)
-            border.color: Qt.rgba(180 / 255, 248 / 255, 200 / 255, 0.10)
+            width: coverFrame.width + 34
+            height: coverFrame.height + 34
+            radius: coverFrame.radius + 15
+            color: Qt.rgba(102 / 255, 229 / 255, 255 / 255, root.nowPlaying.isPlaying ? 0.045 : 0.020)
+            border.color: Qt.rgba(102 / 255, 229 / 255, 255 / 255, 0.08)
             border.width: 1
         }
 
         Rectangle {
             anchors.centerIn: coverFrame
-            width: coverFrame.width + 12
-            height: coverFrame.height + 12
-            radius: coverFrame.radius + 5
+            width: coverFrame.width + 10
+            height: coverFrame.height + 10
+            radius: coverFrame.radius + 4
             color: "transparent"
-            border.color: Qt.rgba(255, 255, 255, 0.075)
+            border.color: Qt.rgba(255, 255, 255, 0.06)
             border.width: 1
         }
 
@@ -205,9 +205,9 @@ Item {
             id: coverFrame
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(root.width * 0.145, root.height * 0.40)
-            height: width * 0.86
-            radius: 22
+            width: Math.min(root.width * 0.125, root.height * 0.34)
+            height: width
+            radius: 18
             color: "#0b1114"
             border.color: "#263a40"
             border.width: 1
@@ -236,11 +236,11 @@ Item {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: parent.width * 0.24
+                width: parent.width * 0.30
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.76) }
-                    GradientStop { position: 0.52; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.28) }
+                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.72) }
+                    GradientStop { position: 0.48; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.24) }
                     GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
                 }
             }
@@ -249,12 +249,12 @@ Item {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                width: parent.width * 0.24
+                width: parent.width * 0.30
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
-                    GradientStop { position: 0.48; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.28) }
-                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.76) }
+                    GradientStop { position: 0.52; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.24) }
+                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.72) }
                 }
             }
 
@@ -262,10 +262,10 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                height: parent.height * 0.24
+                height: parent.height * 0.26
                 gradient: Gradient {
-                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.62) }
-                    GradientStop { position: 0.54; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.20) }
+                    GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.60) }
+                    GradientStop { position: 0.52; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.18) }
                     GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
                 }
             }
@@ -274,11 +274,11 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                height: parent.height * 0.24
+                height: parent.height * 0.26
                 gradient: Gradient {
                     GradientStop { position: 0.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.00) }
-                    GradientStop { position: 0.46; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.20) }
-                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.62) }
+                    GradientStop { position: 0.48; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.18) }
+                    GradientStop { position: 1.00; color: Qt.rgba(5 / 255, 9 / 255, 11 / 255, 0.60) }
                 }
             }
 
@@ -290,66 +290,40 @@ Item {
                 font.pixelSize: parent.width * 0.34
                 font.weight: Font.Bold
             }
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                width: parent.width * 0.22
-                height: 2
-                color: "#66e5ff"
-                opacity: 0.68
-            }
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                width: 2
-                height: parent.height * 0.22
-                color: "#66e5ff"
-                opacity: 0.68
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width: parent.width * 0.22
-                height: 2
-                color: "#b4f8c8"
-                opacity: 0.62
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width: 2
-                height: parent.height * 0.22
-                color: "#b4f8c8"
-                opacity: 0.62
-            }
         }
 
         Item {
             id: mediaCore
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: coverFrame.bottom
-            anchors.topMargin: 10
-            width: root.width * 0.36
-            height: 76
+            anchors.topMargin: 14
+            width: root.width * 0.30
+            height: 84
 
             Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.fill: parent
+                radius: 14
+                color: Qt.rgba(8 / 255, 16 / 255, 18 / 255, 0.52)
+                border.color: Qt.rgba(255, 255, 255, 0.035)
+                border.width: 1
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
                 anchors.top: parent.top
-                width: parent.width * 0.62
+                anchors.leftMargin: 24
+                anchors.rightMargin: 24
                 height: 1
-                color: "#304249"
-                opacity: 0.80
+                color: "#34505a"
+                opacity: 0.46
             }
 
             Row {
                 id: sourceRow
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top
-                anchors.topMargin: 5
+                anchors.topMargin: 8
                 spacing: 8
 
                 Rectangle {
@@ -362,7 +336,7 @@ Item {
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: (root.audio.source || "bt").toUpperCase() + " AUDIO"
+                    text: (root.audio.source || "bt").toUpperCase()
                     color: "#7f9299"
                     font.family: "sans-serif"
                     font.pixelSize: 9
@@ -375,14 +349,14 @@ Item {
                 id: trackTitle
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: sourceRow.bottom
-                anchors.topMargin: 4
-                width: parent.width
+                anchors.topMargin: 6
+                width: parent.width - 28
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 text: root.nowPlaying.title || "No media playing"
                 color: "#ffffff"
                 font.family: "sans-serif"
-                font.pixelSize: 18
+                font.pixelSize: 17
                 font.weight: Font.Bold
             }
 
@@ -390,8 +364,8 @@ Item {
                 id: trackArtist
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: trackTitle.bottom
-                anchors.topMargin: 1
-                width: parent.width * 0.76
+                anchors.topMargin: 2
+                width: parent.width - 42
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 text: root.nowPlaying.artist || root.nowPlaying.album || ""
@@ -406,12 +380,12 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: trackArtist.bottom
-                anchors.topMargin: 5
-                anchors.leftMargin: parent.width * 0.12
-                anchors.rightMargin: parent.width * 0.12
-                height: 5
+                anchors.topMargin: 7
+                anchors.leftMargin: 28
+                anchors.rightMargin: 28
+                height: 4
                 radius: 3
-                color: "#1d282c"
+                color: "#162226"
 
                 Rectangle {
                     width: parent.width * root.musicProgress
@@ -433,8 +407,8 @@ Item {
                 id: elapsedRow
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: progressTrack.bottom
-                anchors.topMargin: 4
-                spacing: 14
+                anchors.topMargin: 6
+                spacing: 16
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
