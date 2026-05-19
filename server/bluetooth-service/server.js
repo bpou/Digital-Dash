@@ -6,7 +6,7 @@ import { execFile, spawn } from "node:child_process";
 import { URL } from "node:url";
 import { systemBus, sessionBus, Variant } from "dbus-next";
 import mqtt from "mqtt";
-import { extractArtworkColors } from "./artwork-colors.js";
+import { extractArtworkColors, FALLBACK_COLORS } from "./artwork-colors.js";
 
 const PORT = Number(process.env.BLUETOOTH_WS_PORT ?? 5175);
 const MQTT_URL = process.env.MQTT_URL ?? "mqtt://localhost:1883";
@@ -1054,7 +1054,7 @@ const getNowPlaying = async () => {
 const buildAudioState = async (nowPlaying) => {
   const artworkColors = nowPlaying?.connected && nowPlaying.artworkUrl
     ? await extractArtworkColors(nowPlaying.artworkUrl)
-    : null;
+    : FALLBACK_COLORS;
   
   return {
     volume: Number.isFinite(DEFAULT_BT_VOLUME) ? DEFAULT_BT_VOLUME : 100,
@@ -1068,7 +1068,7 @@ const buildAudioState = async (nowPlaying) => {
       durationSec: Number(nowPlaying?.durationSec || 0),
       positionSec: Number(nowPlaying?.positionSec || 0),
       isPlaying: Boolean(nowPlaying?.connected && nowPlaying?.isPlaying),
-      artworkColors: artworkColors ?? undefined,
+      artworkColors,
     },
   };
 };

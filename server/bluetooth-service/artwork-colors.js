@@ -1,9 +1,9 @@
 import Vibrant from "node-vibrant";
 
-export const DEFAULT_COLORS = {
-  primary: "#7EE3FF",
-  secondary: "#7EE3FF",
-  warning: "#FFD700"
+export const FALLBACK_COLORS = {
+  primary: "#66e5ff",
+  secondary: "#b4f8c8",
+  warning: "#ff4d5e",
 };
 
 const colorsCache = new Map();
@@ -27,30 +27,41 @@ const isYellowOrange = (hex) => {
 };
 
 export async function extractArtworkColors(imageUrl) {
-  if (!imageUrl) return null;
-  
+  if (!imageUrl) {
+    return { ...FALLBACK_COLORS };
+  }
+
   const cached = colorsCache.get(imageUrl);
   if (cached && Date.now() - cached.ts < COLORS_TTL_MS) {
-    return cached.colors;
+    return { ...cached.colors };
   }
-  
+
   try {
-    const palette = await Vibrant.from(imageUrl).getPalette();
-    
-    const primary = palette.Vibrant?.hex || palette.DarkVibrant?.hex || DEFAULT_COLORS.primary;
-    const secondary = palette.LightVibrant?.hex || palette.Muted?.hex || DEFAULT_COLORS.secondary;
-    
-    const warning = isRedDominant(primary) || isYellowOrange(primary) 
-      ? primary 
-      : isRedDominant(secondary) || isYellowOrange(secondary) 
-        ? secondary 
-        : DEFAULT_COLORS.warning;
-    
+    const palette = await new Promise((resolve, reject) => {
+      Vibrant.from(imageUrl).getPalette((err, palette) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(palette);
+        }
+      });
+    });
+
+    const primary = palette.Vibrant?.hex || palette.DarkVibrant?.hex || FALLBACK_COLORS.primary;
+    const secondary = palette.LightVibrant?.hex || palette.Muted?.hex || FALLBACK_COLORS.secondary;
+
+    const warning = isRedDominant(primary) || isYellowOrange(primary)
+      ? primary
+      : isRedDominant(secondary) || isYellowOrange(secondary)
+        ? secondary
+        : FALLBACK_COLORS.warning;
+
     const colors = { primary, secondary, warning };
     colorsCache.set(imageUrl, { colors, ts: Date.now() });
-    return colors;
+    console.log(`[ArtworkColors] Extracted colors from ${imageUrl}`);
+    return { ...colors };
   } catch (err) {
-    console.warn("[ArtworkColors] Extraction failed:", err.message);
-    return null;
+    console.warn("[ArtworkColors] Failed:", err?.message ?? err);
+    return { ...FALLBACK_COLORS };
   }
 }
