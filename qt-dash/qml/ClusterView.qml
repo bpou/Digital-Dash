@@ -424,7 +424,7 @@ Item {
     brightness: 0.05
 
     shadowEnabled: true
-    shadowBlur: 1.0
+    shadowBlur: 2.0
     shadowScale: 1.38
     shadowOpacity: 0.18
     shadowColor: "#ffffff"
