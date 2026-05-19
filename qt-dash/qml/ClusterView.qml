@@ -847,7 +847,7 @@ Item {
                 ctx.translate(xOffset, yOffset);
 
                 ctx.lineWidth = Math.max(7, size * 0.020);
-                ctx.strokeStyle = rgbaString(liveColor, 0.56);
+                ctx.strokeStyle = "rgba(190,205,212,0.32)";
                 ctx.beginPath();
                 drawSamples(ctx, activeTrack, 1, false);
                 ctx.stroke();
@@ -952,16 +952,16 @@ Item {
             source: gaugeCanvas
             autoPaddingEnabled: true
             blurEnabled: true
-            blurMax: 34
-            blur: 0.80
-            saturation: 1.45
-            brightness: 0.14
+            blurMax: 52
+            blur: 1.0
+            saturation: 1.70
+            brightness: 0.22
             shadowEnabled: true
-            shadowBlur: 0.88
-            shadowScale: 1.03
-            shadowOpacity: 0.38
+            shadowBlur: 1.0
+            shadowScale: 1.10
+            shadowOpacity: 0.62
             shadowColor: displayValue >= dangerAt ? warnColor : accentColor
-            opacity: 0.46
+            opacity: 0.72
         }
 
         Text {
