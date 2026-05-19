@@ -601,9 +601,9 @@ Item {
             id: leftTurnIndicator
             anchors.verticalCenter: coverFrame.verticalCenter
             anchors.right: coverFrame.left
-            anchors.rightMargin: 38
-            width: 54
-            height: 44
+            anchors.rightMargin: 50
+            width: 30
+            height: 30
 
             property bool active: root.turn.left === true ||
                                   root.turn.leftActive === true ||
@@ -659,9 +659,9 @@ Item {
             id: rightTurnIndicator
             anchors.verticalCenter: coverFrame.verticalCenter
             anchors.left: coverFrame.right
-            anchors.leftMargin: 38
-            width: 54
-            height: 44
+            anchors.leftMargin: 50
+            width: 30
+            height: 30
 
             property bool active: root.turn.right === true ||
                                   root.turn.rightActive === true ||
