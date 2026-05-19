@@ -5,7 +5,7 @@ project(DigitalDashQt VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Quick WebSockets)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Quick QuickEffects WebSockets)
 
 qt_standard_project_setup(REQUIRES 6.4)
 
@@ -30,6 +30,7 @@ qt_add_qml_module(digital-dash-qt
 target_link_libraries(digital-dash-qt
     PRIVATE
         Qt6::Quick
+        Qt6::QuickEffects
         Qt6::WebSockets
 )
 

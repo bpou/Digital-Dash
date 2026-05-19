@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 
 Item {
     id: root
@@ -98,6 +99,17 @@ Item {
         }
     }
 
+    MultiEffect {
+        anchors.fill: shell
+        source: shell
+        autoPaddingEnabled: true
+        shadowEnabled: true
+        shadowBlur: 0.70
+        shadowScale: 1.015
+        shadowOpacity: 0.38
+        shadowColor: "#000000"
+    }
+
     Rectangle {
         id: shell
         anchors.fill: parent
@@ -120,6 +132,40 @@ Item {
     }
 
 
+
+    MultiEffect {
+        anchors.fill: rpmGauge
+        source: rpmGauge
+        autoPaddingEnabled: true
+        blurEnabled: true
+        blurMax: 28
+        blur: 0.65
+        saturation: 1.35
+        brightness: 0.08
+        shadowEnabled: true
+        shadowBlur: 0.82
+        shadowScale: 1.03
+        shadowOpacity: 0.34
+        shadowColor: "#66e5ff"
+        opacity: 0.30
+    }
+
+    MultiEffect {
+        anchors.fill: speedGauge
+        source: speedGauge
+        autoPaddingEnabled: true
+        blurEnabled: true
+        blurMax: 28
+        blur: 0.65
+        saturation: 1.35
+        brightness: 0.08
+        shadowEnabled: true
+        shadowBlur: 0.82
+        shadowScale: 1.03
+        shadowOpacity: 0.30
+        shadowColor: "#b4f8c8"
+        opacity: 0.28
+    }
 
     Row {
         anchors.right: shell.right
@@ -181,86 +227,32 @@ Item {
         id: mediaPlayer
         anchors.fill: parent
 
-        Item {
+        MultiEffect {
             anchors.centerIn: coverFrame
-            width: coverFrame.width + 92
-            height: coverFrame.height + 92
-            opacity: coverGlowSource.status === Image.Ready ? 1.0 : 0.0
+            width: coverFrame.width
+            height: coverFrame.height
+            source: coverImage
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blurMax: 48
+            blur: 1.0
+            saturation: 1.65
+            brightness: 0.08
+            opacity: coverImage.status === Image.Ready ? (root.nowPlaying.isPlaying ? 0.50 : 0.34) : 0.0
+        }
 
-            Image {
-                id: coverGlowSource
-                anchors.centerIn: parent
-                width: parent.width
-                height: parent.height
-                source: root.artworkSource
-                fillMode: Image.PreserveAspectCrop
-                smooth: true
-                asynchronous: true
-                opacity: root.nowPlaying.isPlaying ? 0.14 : 0.09
-            }
-
-            Image {
-                anchors.centerIn: parent
-                width: parent.width * 0.72
-                height: parent.height * 0.72
-                source: root.artworkSource
-                fillMode: Image.PreserveAspectCrop
-                smooth: true
-                asynchronous: true
-                opacity: root.nowPlaying.isPlaying ? 0.20 : 0.12
-            }
-
-            Rectangle {
-                anchors.fill: parent
-                color: "#020405"
-                opacity: 0.62
-            }
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                width: parent.width * 0.24
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.00; color: "#020405" }
-                    GradientStop { position: 1.00; color: Qt.rgba(2 / 255, 4 / 255, 5 / 255, 0.0) }
-                }
-            }
-
-            Rectangle {
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                width: parent.width * 0.24
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.00; color: Qt.rgba(2 / 255, 4 / 255, 5 / 255, 0.0) }
-                    GradientStop { position: 1.00; color: "#020405" }
-                }
-            }
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                height: parent.height * 0.24
-                gradient: Gradient {
-                    GradientStop { position: 0.00; color: "#020405" }
-                    GradientStop { position: 1.00; color: Qt.rgba(2 / 255, 4 / 255, 5 / 255, 0.0) }
-                }
-            }
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                height: parent.height * 0.24
-                gradient: Gradient {
-                    GradientStop { position: 0.00; color: Qt.rgba(2 / 255, 4 / 255, 5 / 255, 0.0) }
-                    GradientStop { position: 1.00; color: "#020405" }
-                }
-            }
+        MultiEffect {
+            anchors.centerIn: coverFrame
+            width: coverFrame.width
+            height: coverFrame.height
+            source: coverImage
+            autoPaddingEnabled: true
+            shadowEnabled: true
+            shadowBlur: 1.0
+            shadowScale: 1.12
+            shadowOpacity: 0.32
+            shadowColor: "#000000"
+            opacity: coverImage.status === Image.Ready ? 1.0 : 0.0
         }
 
         Rectangle {
@@ -280,6 +272,7 @@ Item {
                 source: root.artworkSource
                 fillMode: Image.PreserveAspectCrop
                 smooth: true
+                mipmap: true
                 asynchronous: true
                 opacity: status === Image.Ready ? 1.0 : 0.0
             }
@@ -361,7 +354,20 @@ Item {
             width: root.width * 0.30
             height: 84
 
+            MultiEffect {
+                anchors.fill: mediaCorePanel
+                source: mediaCorePanel
+                autoPaddingEnabled: true
+                shadowEnabled: true
+                shadowBlur: 0.74
+                shadowScale: 1.02
+                shadowOpacity: 0.34
+                shadowColor: "#000000"
+                opacity: 0.95
+            }
+
             Rectangle {
+                id: mediaCorePanel
                 anchors.fill: parent
                 radius: 0
                 color: Qt.rgba(8 / 255, 16 / 255, 18 / 255, 0.52)
