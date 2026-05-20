@@ -1083,7 +1083,7 @@ Item {
             var ctx = getContext("2d");
             ctx.reset();
 
-            ctx.strokeStyle = "#9fffd1";
+            ctx.strokeStyle = "#20ff7a";
             ctx.lineWidth = 3;
             ctx.lineCap = "round";
             ctx.lineJoin = "round";
