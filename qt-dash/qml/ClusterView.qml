@@ -274,7 +274,10 @@ Item {
         value: root.speed
         maximumValue: 160
         majorStep: 30
+        majorTickIntervalCount: 8
+        showMinorTicks: false
         guideMarks: [
+            { "value": 0, "label": "0" },
             { "value": 20, "label": "20" },
             { "value": 40, "label": "40" },
             { "value": 60, "label": "60" },
@@ -1116,6 +1119,8 @@ Item {
         property real value: 0
         property real maximumValue: 100
         property real majorStep: 20
+        property int majorTickIntervalCount: 0
+        property bool showMinorTicks: true
         property var guideMarks: []
         property string label: ""
         property string subLabel: ""
@@ -1283,12 +1288,23 @@ Behavior on warnColor {
 
                 var marks = guideMarks && guideMarks.length > 0 ? guideMarks : [];
                 var minorPerMajor = 5;
-                var majorIntervals = Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
-                var tickIntervals = Math.max(40, majorIntervals * minorPerMajor * 4);
+                var majorIntervals = majorTickIntervalCount > 0
+                    ? majorTickIntervalCount
+                    : Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
+                var tickIntervals = majorTickIntervalCount > 0
+                    ? majorIntervals * (showMinorTicks ? minorPerMajor : 1)
+                    : Math.max(40, majorIntervals * minorPerMajor * 4);
 
                 for (var i = 0; i <= tickIntervals; i++) {
                     var amount = i / tickIntervals;
-                    var major = i % (minorPerMajor * 2) === 0;
+                    var major = majorTickIntervalCount > 0
+                        ? (!showMinorTicks || i % minorPerMajor === 0)
+                        : i % (minorPerMajor * 2) === 0;
+
+                    if (!showMinorTicks && !major) {
+                        continue;
+                    }
+
                     var outerPoint = sampleAt(tickOuter, amount);
                     var innerPoint = sampleAt(major ? tickInnerMajor : tickInnerMinor, amount);
 
@@ -1337,6 +1353,8 @@ Behavior on warnColor {
                 function onWarnColorChanged() { staticGaugeCanvas.requestPaint(); }
                 function onMaximumValueChanged() { staticGaugeCanvas.requestPaint(); }
                 function onMajorStepChanged() { staticGaugeCanvas.requestPaint(); }
+                function onMajorTickIntervalCountChanged() { staticGaugeCanvas.requestPaint(); }
+                function onShowMinorTicksChanged() { staticGaugeCanvas.requestPaint(); }
                 function onGuideMarksChanged() { staticGaugeCanvas.requestPaint(); }
                 function onWidthChanged() { staticGaugeCanvas.requestPaint(); }
                 function onHeightChanged() { staticGaugeCanvas.requestPaint(); }
