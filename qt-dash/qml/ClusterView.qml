@@ -246,8 +246,16 @@ Item {
         value: root.rpm
         maximumValue: 8000
         majorStep: 2000
-        guideLabels: ["0", "1", "2", "3", "4", "5", "6", "7"]
-        guideIntervalCount: 8
+        guideMarks: [
+            { "value": 0, "label": "0" },
+            { "value": 1000, "label": "1" },
+            { "value": 2000, "label": "2" },
+            { "value": 3000, "label": "3" },
+            { "value": 4000, "label": "4" },
+            { "value": 5000, "label": "5" },
+            { "value": 6000, "label": "6" },
+            { "value": 7000, "label": "7" }
+        ]
         label: "RPM"
         valueText: Math.round(root.rpm).toString()
         accentColor: root.albumPrimaryColor
@@ -266,8 +274,16 @@ Item {
         value: root.speed
         maximumValue: 180
         majorStep: 30
-        guideLabels: ["0", "40", "60", "80", "100", "120", "140", "160"]
-        guideIntervalCount: 8
+        guideMarks: [
+            { "value": 0, "label": "0" },
+            { "value": 40, "label": "40" },
+            { "value": 60, "label": "60" },
+            { "value": 80, "label": "80" },
+            { "value": 100, "label": "100" },
+            { "value": 120, "label": "120" },
+            { "value": 140, "label": "140" },
+            { "value": 160, "label": "160" }
+        ]
         label: "KM/H"
         valueText: Math.round(root.speed).toString()
         accentColor: root.albumSecondaryColor
@@ -1101,8 +1117,7 @@ Item {
         property real value: 0
         property real maximumValue: 100
         property real majorStep: 20
-        property var guideLabels: []
-        property int guideIntervalCount: 0
+        property var guideMarks: []
         property string label: ""
         property string subLabel: ""
         property string valueText: ""
@@ -1267,21 +1282,14 @@ Behavior on warnColor {
                 drawSamples(ctx, innerFrame, 1, true);
                 ctx.stroke();
 
-                var labels = guideLabels && guideLabels.length > 0 ? guideLabels : [];
+                var marks = guideMarks && guideMarks.length > 0 ? guideMarks : [];
                 var minorPerMajor = 5;
-                var guideIntervals = guideIntervalCount > 0 ? guideIntervalCount : labels.length + 1;
-                var majorIntervals = labels.length > 0
-                    ? guideIntervals
-                    : Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
-                var tickIntervals = labels.length > 0
-                    ? majorIntervals * minorPerMajor
-                    : Math.max(40, majorIntervals * minorPerMajor * 4);
+                var majorIntervals = Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
+                var tickIntervals = Math.max(40, majorIntervals * minorPerMajor * 4);
 
                 for (var i = 0; i <= tickIntervals; i++) {
                     var amount = i / tickIntervals;
-                    var major = labels.length > 0
-                        ? i % minorPerMajor === 0
-                        : i % (minorPerMajor * 2) === 0;
+                    var major = i % (minorPerMajor * 2) === 0;
                     var outerPoint = sampleAt(tickOuter, amount);
                     var innerPoint = sampleAt(major ? tickInnerMajor : tickInnerMinor, amount);
 
@@ -1293,17 +1301,17 @@ Behavior on warnColor {
                     ctx.stroke();
                 }
 
-                if (labels.length > 0) {
-                    var labelIntervals = guideIntervalCount > 0 ? guideIntervalCount : labels.length + 1;
-                    for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
-                        var customLabelPct = labelIndex / labelIntervals;
-                        var customLabelPoint = sampleAt(labelTrack, customLabelPct);
+                if (marks.length > 0) {
+                    for (var markIndex = 0; markIndex < marks.length; markIndex++) {
+                        var mark = marks[markIndex];
+                        var markPct = clampValue(Number(mark.value) / Math.max(1, maximumValue), 0, 1);
+                        var customLabelPoint = sampleAt(labelTrack, markPct);
 
                         ctx.fillStyle = "rgba(255,255,255,0.42)";
                         ctx.font = "bold 15px sans-serif";
                         ctx.textAlign = "center";
                         ctx.textBaseline = "middle";
-                        ctx.fillText(labels[labelIndex].toString(), customLabelPoint.x, customLabelPoint.y);
+                        ctx.fillText(mark.label.toString(), customLabelPoint.x, customLabelPoint.y);
                     }
                     return;
                 }
@@ -1330,8 +1338,7 @@ Behavior on warnColor {
                 function onWarnColorChanged() { staticGaugeCanvas.requestPaint(); }
                 function onMaximumValueChanged() { staticGaugeCanvas.requestPaint(); }
                 function onMajorStepChanged() { staticGaugeCanvas.requestPaint(); }
-                function onGuideLabelsChanged() { staticGaugeCanvas.requestPaint(); }
-                function onGuideIntervalCountChanged() { staticGaugeCanvas.requestPaint(); }
+                function onGuideMarksChanged() { staticGaugeCanvas.requestPaint(); }
                 function onWidthChanged() { staticGaugeCanvas.requestPaint(); }
                 function onHeightChanged() { staticGaugeCanvas.requestPaint(); }
             }
