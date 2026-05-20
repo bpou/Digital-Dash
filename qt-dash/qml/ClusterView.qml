@@ -211,36 +211,13 @@ Item {
         }
     }
 
-    MultiEffect {
-        anchors.fill: shell
-        source: shell
-        autoPaddingEnabled: true
-        shadowEnabled: true
-        shadowBlur: 0.70
-        shadowScale: 1.015
-        shadowOpacity: 0.38
-        shadowColor: "#000000"
-    }
-
     Rectangle {
         id: shell
         anchors.fill: parent
-        anchors.margins: 10
-        radius: 28
-        color: "#05090b"
-        opacity: 0.92
-        border.color: "#1c2a2e"
-        border.width: 1
-    }
-
-    Rectangle {
-        anchors.fill: shell
-        anchors.margins: 10
-        radius: 22
+        anchors.margins: 0
+        radius: 0
         color: "transparent"
-        border.color: "#132428"
-        border.width: 1
-        opacity: 0.95
+        border.width: 0
     }
 
     Row {
