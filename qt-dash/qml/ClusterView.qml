@@ -244,9 +244,9 @@ Item {
         width: parent.width * 0.30
         height: width
         value: root.rpm
-        maximumValue: 6000
+        maximumValue: 7000
         majorStep: 2000
-        guideLabels: ["1", "2", "3", "4", "5"]
+        guideLabels: ["0", "1", "2", "3", "4", "5", "6", "7"]
         guideIntervalCount: 8
         label: "RPM"
         valueText: Math.round(root.rpm).toString()
@@ -264,9 +264,9 @@ Item {
         width: parent.width * 0.30
         height: width
         value: root.speed
-        maximumValue: 140
+        maximumValue: 160
         majorStep: 30
-        guideLabels: ["40", "60", "80", "100", "120"]
+        guideLabels: ["0", "40", "60", "80", "100", "120", "140", "160"]
         guideIntervalCount: 8
         label: "KM/H"
         valueText: Math.round(root.speed).toString()
@@ -1295,7 +1295,9 @@ Behavior on warnColor {
                 if (labels.length > 0) {
                     var labelIntervals = Math.max(labels.length + 1, guideIntervalCount);
                     for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
-                        var customLabelPct = (labelIndex + 1) / labelIntervals;
+                        var customLabelPct = labels.length >= labelIntervals
+                            ? labelIndex / labelIntervals
+                            : (labelIndex + 1) / labelIntervals;
                         var customLabelPoint = sampleAt(labelTrack, customLabelPct);
 
                         ctx.fillStyle = "rgba(255,255,255,0.42)";
