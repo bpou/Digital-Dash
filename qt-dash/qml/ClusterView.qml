@@ -236,6 +236,17 @@ Item {
         }
     }
 
+    MultiEffect {
+        anchors.fill: rpmGauge
+        source: rpmGauge
+        autoPaddingEnabled: true
+        shadowEnabled: true
+        shadowBlur: 0.9
+        shadowScale: 1.08
+        shadowOpacity: 0.42
+        shadowColor: "#000000"
+    }
+
     QtGauge {
         id: rpmGauge
         anchors.left: shell.left
@@ -263,6 +274,17 @@ Item {
         warnColor: "#ff4d5e"
         dangerAt: 6500
         reverse: false
+    }
+
+    MultiEffect {
+        anchors.fill: speedGauge
+        source: speedGauge
+        autoPaddingEnabled: true
+        shadowEnabled: true
+        shadowBlur: 0.9
+        shadowScale: 1.08
+        shadowOpacity: 0.42
+        shadowColor: "#000000"
     }
 
     QtGauge {
