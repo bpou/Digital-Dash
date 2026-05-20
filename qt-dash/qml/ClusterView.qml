@@ -246,6 +246,7 @@ Item {
         value: root.rpm
         maximumValue: 8000
         majorStep: 2000
+        guideLabels: ["1", "2", "3", "4", "5"]
         label: "RPM"
         valueText: Math.round(root.rpm).toString()
         accentColor: root.albumPrimaryColor
@@ -264,6 +265,7 @@ Item {
         value: root.speed
         maximumValue: 180
         majorStep: 30
+        guideLabels: ["40", "60", "80", "100", "120"]
         label: "KM/H"
         valueText: Math.round(root.speed).toString()
         accentColor: root.albumSecondaryColor
@@ -1097,6 +1099,7 @@ Item {
         property real value: 0
         property real maximumValue: 100
         property real majorStep: 20
+        property var guideLabels: []
         property string label: ""
         property string subLabel: ""
         property string valueText: ""
@@ -1279,6 +1282,22 @@ Behavior on warnColor {
                     ctx.stroke();
                 }
 
+                var labels = guideLabels && guideLabels.length > 0 ? guideLabels : [];
+
+                if (labels.length > 0) {
+                    for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
+                        var customLabelPct = (labelIndex + 1) / (labels.length + 1);
+                        var customLabelPoint = sampleAt(labelTrack, customLabelPct);
+
+                        ctx.fillStyle = "rgba(255,255,255,0.42)";
+                        ctx.font = "bold 15px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(labels[labelIndex].toString(), customLabelPoint.x, customLabelPoint.y);
+                    }
+                    return;
+                }
+
                 for (var labelValue = 0; labelValue <= maximumValue; labelValue += majorStep) {
                     var labelPct = labelValue / maximumValue;
                     var labelPoint = sampleAt(labelTrack, labelPct);
@@ -1301,6 +1320,7 @@ Behavior on warnColor {
                 function onWarnColorChanged() { staticGaugeCanvas.requestPaint(); }
                 function onMaximumValueChanged() { staticGaugeCanvas.requestPaint(); }
                 function onMajorStepChanged() { staticGaugeCanvas.requestPaint(); }
+                function onGuideLabelsChanged() { staticGaugeCanvas.requestPaint(); }
                 function onWidthChanged() { staticGaugeCanvas.requestPaint(); }
                 function onHeightChanged() { staticGaugeCanvas.requestPaint(); }
             }
