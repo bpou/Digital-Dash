@@ -1242,9 +1242,9 @@ Behavior on warnColor {
                 var trackInset = size * 0.095;
                 var activeTrack = buildSquircleSamples(size, trackInset, power, fullStart, scaleSweep, 210);
                 var innerFrame = buildSquircleSamples(size, size * 0.255, power, fullStart, fullSweep, 220);
-                var tickOuter = buildSquircleSamples(size, size * 0.057, power, fullStart, fullSweep, 260);
-                var tickInnerMajor = buildSquircleSamples(size, size * 0.155, power, fullStart, fullSweep, 260);
-                var tickInnerMinor = buildSquircleSamples(size, size * 0.125, power, fullStart, fullSweep, 260);
+                var tickOuter = buildSquircleSamples(size, size * 0.057, power, fullStart, scaleSweep, 260);
+                var tickInnerMajor = buildSquircleSamples(size, size * 0.155, power, fullStart, scaleSweep, 260);
+                var tickInnerMinor = buildSquircleSamples(size, size * 0.125, power, fullStart, scaleSweep, 260);
                 var labelTrack = buildSquircleSamples(size, size * 0.028, power, fullStart, scaleSweep, 210);
 
                 ctx.reset();
@@ -1264,13 +1264,20 @@ Behavior on warnColor {
                 drawSamples(ctx, innerFrame, 1, true);
                 ctx.stroke();
 
+                var labels = guideLabels && guideLabels.length > 0 ? guideLabels : [];
                 var minorPerMajor = 5;
-                var majorIntervals = Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
-                var tickIntervals = Math.max(40, majorIntervals * minorPerMajor * 4);
+                var majorIntervals = labels.length > 0
+                    ? labels.length + 1
+                    : Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
+                var tickIntervals = labels.length > 0
+                    ? majorIntervals * minorPerMajor
+                    : Math.max(40, majorIntervals * minorPerMajor * 4);
 
                 for (var i = 0; i <= tickIntervals; i++) {
                     var amount = i / tickIntervals;
-                    var major = i % (minorPerMajor * 2) === 0;
+                    var major = labels.length > 0
+                        ? i % minorPerMajor === 0
+                        : i % (minorPerMajor * 2) === 0;
                     var outerPoint = sampleAt(tickOuter, amount);
                     var innerPoint = sampleAt(major ? tickInnerMajor : tickInnerMinor, amount);
 
@@ -1281,8 +1288,6 @@ Behavior on warnColor {
                     ctx.lineTo(outerPoint.x, outerPoint.y);
                     ctx.stroke();
                 }
-
-                var labels = guideLabels && guideLabels.length > 0 ? guideLabels : [];
 
                 if (labels.length > 0) {
                     for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
