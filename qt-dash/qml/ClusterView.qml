@@ -16,6 +16,7 @@ Item {
     property var turn: safeState.turn || ({})
     property var car: safeState.car || ({})
     property var gps: safeState.gps || ({})
+    property bool previewTurnSignals: true
 
     property real rpm: engine.rpm || 3600
     property real speed: vehicle.speedKmh || 90
@@ -645,6 +646,7 @@ Item {
 
         TurnArrow {
             id: leftTurnArrow
+            z: 2
             anchors.verticalCenter: coverFrame.verticalCenter
             anchors.right: coverFrame.left
             anchors.rightMargin: 70
@@ -658,7 +660,8 @@ Item {
                     root.turn.leftSignal === true ||
                     root.turn.indicator === "left" ||
                     root.turn.indicator === "both" ||
-                    root.turn.hazard === true
+                    root.turn.hazard === true ||
+                    root.previewTurnSignals
 
             opacity: active ? 1.0 : 0.16
 
@@ -685,22 +688,46 @@ Item {
         }
 
         MultiEffect {
+            id: leftTurnBloom
+            z: 1
             anchors.fill: leftTurnArrow
             source: leftTurnArrow
             autoPaddingEnabled: true
             blurEnabled: true
-            blurMax: 22
-            blur: 0.75
+            blurMax: 44
+            blur: 1.0
             shadowEnabled: true
-            shadowBlur: 0.85
-            shadowScale: 1.15
-            shadowOpacity: leftTurnArrow.active ? 0.65 : 0.0
-            shadowColor: "#9fffd1"
-            opacity: leftTurnArrow.active ? 0.9 : 0.0
+            shadowBlur: 1.0
+            shadowScale: 1.42
+            shadowOpacity: leftTurnArrow.active ? 0.95 : 0.0
+            shadowColor: "#20ff7a"
+            opacity: leftTurnArrow.active ? 1.0 : 0.0
+
+            SequentialAnimation on opacity {
+                running: leftTurnArrow.active
+                loops: Animation.Infinite
+
+                NumberAnimation {
+                    to: 1.0
+                    duration: 180
+                    easing.type: Easing.OutCubic
+                }
+
+                PauseAnimation { duration: 260 }
+
+                NumberAnimation {
+                    to: 0.08
+                    duration: 180
+                    easing.type: Easing.InCubic
+                }
+
+                PauseAnimation { duration: 260 }
+            }
         }
 
         TurnArrow {
             id: rightTurnArrow
+            z: 2
             anchors.verticalCenter: coverFrame.verticalCenter
             anchors.left: coverFrame.right
             anchors.leftMargin: 70
@@ -714,7 +741,8 @@ Item {
                     root.turn.rightSignal === true ||
                     root.turn.indicator === "right" ||
                     root.turn.indicator === "both" ||
-                    root.turn.hazard === true
+                    root.turn.hazard === true ||
+                    root.previewTurnSignals
 
             opacity: active ? 1.0 : 0.16
 
@@ -741,18 +769,41 @@ Item {
         }
 
         MultiEffect {
+            id: rightTurnBloom
+            z: 1
             anchors.fill: rightTurnArrow
             source: rightTurnArrow
             autoPaddingEnabled: true
             blurEnabled: true
-            blurMax: 22
-            blur: 0.75
+            blurMax: 44
+            blur: 1.0
             shadowEnabled: true
-            shadowBlur: 0.85
-            shadowScale: 1.15
-            shadowOpacity: rightTurnArrow.active ? 0.65 : 0.0
-            shadowColor: "#9fffd1"
-            opacity: rightTurnArrow.active ? 0.9 : 0.0
+            shadowBlur: 1.0
+            shadowScale: 1.42
+            shadowOpacity: rightTurnArrow.active ? 0.95 : 0.0
+            shadowColor: "#20ff7a"
+            opacity: rightTurnArrow.active ? 1.0 : 0.0
+
+            SequentialAnimation on opacity {
+                running: rightTurnArrow.active
+                loops: Animation.Infinite
+
+                NumberAnimation {
+                    to: 1.0
+                    duration: 180
+                    easing.type: Easing.OutCubic
+                }
+
+                PauseAnimation { duration: 260 }
+
+                NumberAnimation {
+                    to: 0.08
+                    duration: 180
+                    easing.type: Easing.InCubic
+                }
+
+                PauseAnimation { duration: 260 }
+            }
         }
 
         Item {
