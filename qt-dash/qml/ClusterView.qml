@@ -244,7 +244,7 @@ Item {
         width: parent.width * 0.30
         height: width
         value: root.rpm
-        maximumValue: 7000
+        maximumValue: 8000
         majorStep: 2000
         guideLabels: ["0", "1", "2", "3", "4", "5", "6", "7"]
         guideIntervalCount: 8
@@ -264,7 +264,7 @@ Item {
         width: parent.width * 0.30
         height: width
         value: root.speed
-        maximumValue: 160
+        maximumValue: 180
         majorStep: 30
         guideLabels: ["0", "40", "60", "80", "100", "120", "140", "160"]
         guideIntervalCount: 8
@@ -1269,8 +1269,9 @@ Behavior on warnColor {
 
                 var labels = guideLabels && guideLabels.length > 0 ? guideLabels : [];
                 var minorPerMajor = 5;
+                var guideIntervals = guideIntervalCount > 0 ? guideIntervalCount : labels.length + 1;
                 var majorIntervals = labels.length > 0
-                    ? Math.max(labels.length + 1, guideIntervalCount)
+                    ? guideIntervals
                     : Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
                 var tickIntervals = labels.length > 0
                     ? majorIntervals * minorPerMajor
@@ -1293,11 +1294,9 @@ Behavior on warnColor {
                 }
 
                 if (labels.length > 0) {
-                    var labelIntervals = Math.max(labels.length + 1, guideIntervalCount);
+                    var labelIntervals = guideIntervalCount > 0 ? guideIntervalCount : labels.length + 1;
                     for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
-                        var customLabelPct = labels.length >= labelIntervals
-                            ? labelIndex / labelIntervals
-                            : (labelIndex + 1) / labelIntervals;
+                        var customLabelPct = labelIndex / labelIntervals;
                         var customLabelPoint = sampleAt(labelTrack, customLabelPct);
 
                         ctx.fillStyle = "rgba(255,255,255,0.42)";
