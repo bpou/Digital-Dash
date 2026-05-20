@@ -247,6 +247,7 @@ Item {
         maximumValue: 6000
         majorStep: 2000
         guideLabels: ["1", "2", "3", "4", "5"]
+        guideIntervalCount: 8
         label: "RPM"
         valueText: Math.round(root.rpm).toString()
         accentColor: root.albumPrimaryColor
@@ -266,6 +267,7 @@ Item {
         maximumValue: 140
         majorStep: 30
         guideLabels: ["40", "60", "80", "100", "120"]
+        guideIntervalCount: 8
         label: "KM/H"
         valueText: Math.round(root.speed).toString()
         accentColor: root.albumSecondaryColor
@@ -1100,6 +1102,7 @@ Item {
         property real maximumValue: 100
         property real majorStep: 20
         property var guideLabels: []
+        property int guideIntervalCount: 0
         property string label: ""
         property string subLabel: ""
         property string valueText: ""
@@ -1237,7 +1240,7 @@ Behavior on warnColor {
                 var yOffset = (h - size) / 2;
                 var fullStart = Math.PI * 0.75;
                 var fullSweep = Math.PI * 2;
-                var scaleSweep = Math.PI * 1.5;
+                var scaleSweep = fullSweep;
                 var power = 5.8;
                 var trackInset = size * 0.095;
                 var activeTrack = buildSquircleSamples(size, trackInset, power, fullStart, scaleSweep, 210);
@@ -1267,7 +1270,7 @@ Behavior on warnColor {
                 var labels = guideLabels && guideLabels.length > 0 ? guideLabels : [];
                 var minorPerMajor = 5;
                 var majorIntervals = labels.length > 0
-                    ? labels.length + 1
+                    ? Math.max(labels.length + 1, guideIntervalCount)
                     : Math.max(1, Math.round(maximumValue / Math.max(1, majorStep)));
                 var tickIntervals = labels.length > 0
                     ? majorIntervals * minorPerMajor
@@ -1290,8 +1293,9 @@ Behavior on warnColor {
                 }
 
                 if (labels.length > 0) {
+                    var labelIntervals = Math.max(labels.length + 1, guideIntervalCount);
                     for (var labelIndex = 0; labelIndex < labels.length; labelIndex++) {
-                        var customLabelPct = (labelIndex + 1) / (labels.length + 1);
+                        var customLabelPct = (labelIndex + 1) / labelIntervals;
                         var customLabelPoint = sampleAt(labelTrack, customLabelPct);
 
                         ctx.fillStyle = "rgba(255,255,255,0.42)";
@@ -1326,6 +1330,7 @@ Behavior on warnColor {
                 function onMaximumValueChanged() { staticGaugeCanvas.requestPaint(); }
                 function onMajorStepChanged() { staticGaugeCanvas.requestPaint(); }
                 function onGuideLabelsChanged() { staticGaugeCanvas.requestPaint(); }
+                function onGuideIntervalCountChanged() { staticGaugeCanvas.requestPaint(); }
                 function onWidthChanged() { staticGaugeCanvas.requestPaint(); }
                 function onHeightChanged() { staticGaugeCanvas.requestPaint(); }
             }
@@ -1346,7 +1351,7 @@ Behavior on warnColor {
                 var xOffset = (w - size) / 2;
                 var yOffset = (h - size) / 2;
                 var fullStart = Math.PI * 0.75;
-                var scaleSweep = Math.PI * 1.5;
+                var scaleSweep = Math.PI * 2;
                 var power = 5.8;
                 var pct = clampValue(displayValue / Math.max(1, maximumValue), 0, 1);
                 var liveColor = displayValue >= dangerAt ? warnColor : accentColor;
