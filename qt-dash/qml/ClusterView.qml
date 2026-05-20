@@ -246,6 +246,7 @@ Item {
         value: root.rpm
         maximumValue: 8000
         majorStep: 2000
+        majorTickIntervalCount: 8
         guideMarks: [
             { "value": 0, "label": "0" },
             { "value": 1000, "label": "1" },
