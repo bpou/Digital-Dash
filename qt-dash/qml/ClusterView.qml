@@ -275,7 +275,6 @@ Item {
         maximumValue: 160
         majorStep: 30
         majorTickIntervalCount: 8
-        showMinorTicks: false
         guideMarks: [
             { "value": 0, "label": "0" },
             { "value": 20, "label": "20" },
