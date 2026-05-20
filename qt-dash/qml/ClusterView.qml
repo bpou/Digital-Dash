@@ -244,7 +244,7 @@ Item {
         width: parent.width * 0.30
         height: width
         value: root.rpm
-        maximumValue: 8000
+        maximumValue: 6000
         majorStep: 2000
         guideLabels: ["1", "2", "3", "4", "5"]
         label: "RPM"
@@ -263,7 +263,7 @@ Item {
         width: parent.width * 0.30
         height: width
         value: root.speed
-        maximumValue: 180
+        maximumValue: 140
         majorStep: 30
         guideLabels: ["40", "60", "80", "100", "120"]
         label: "KM/H"
