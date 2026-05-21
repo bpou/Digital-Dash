@@ -8,10 +8,11 @@
 #include "VehicleClient.h"
 
 int main(int argc, char *argv[]) {
+    QtWebEngineQuick::initialize();
+
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName("Digital Dash Qt");
     QGuiApplication::setOrganizationName("DigitalDash");
-    QtWebEngineQuick::initialize();
 
     QUrl vehicleUrl(QStringLiteral("ws://127.0.0.1:8765"));
     QString initialView(QStringLiteral("cluster"));
