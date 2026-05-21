@@ -316,9 +316,9 @@ Item {
             autoPaddingEnabled: true
             shadowEnabled: true
             shadowBlur: 1.0
-            shadowScale: 1.42
+            shadowScale: 1.78
             shadowOpacity: root.highBeamActive ? 0.95 : 0.0
-            shadowColor: "#4db8ff"
+            shadowColor: "#8fd8ff"
             opacity: root.highBeamActive ? 1.0 : 0.0
         }
 
@@ -331,7 +331,7 @@ Item {
             fillMode: Image.PreserveAspectFit
             smooth: true
             mipmap: true
-            opacity: root.highBeamActive ? 1.0 : 0.28
+            opacity: root.highBeamActive ? 1.0 : 0.32
         }
     }
 
