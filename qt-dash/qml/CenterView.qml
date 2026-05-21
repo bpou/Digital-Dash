@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Effects
+import QtWebEngine
 
 Item {
     id: root
@@ -27,6 +28,8 @@ Item {
     property string activePage: "MEDIA"
     property string dialNumber: ""
     property string contactSearch: ""
+    property url mediaWebUrl: ""
+    property url navigationWebUrl: "https://www.google.com/maps"
 
     function postBluetooth(path) {
         var request = new XMLHttpRequest();
@@ -286,19 +289,22 @@ Item {
                         PillButton {
                             label: "SPOTIFY"
                             width: 96
-                            onClicked: Qt.openUrlExternally("https://open.spotify.com")
+                            active: root.mediaWebUrl.toString().indexOf("spotify") !== -1
+                            onClicked: root.mediaWebUrl = "https://open.spotify.com"
                         }
 
                         PillButton {
                             label: "YOUTUBE MUSIC"
                             width: 132
-                            onClicked: Qt.openUrlExternally("https://music.youtube.com")
+                            active: root.mediaWebUrl.toString().indexOf("music.youtube.com") !== -1
+                            onClicked: root.mediaWebUrl = "https://music.youtube.com"
                         }
 
                         PillButton {
                             label: "PI YTM"
                             width: 78
-                            onClicked: Qt.openUrlExternally("http://127.0.0.1:5174")
+                            active: root.mediaWebUrl.toString().indexOf("127.0.0.1:5174") !== -1
+                            onClicked: root.mediaWebUrl = "http://127.0.0.1:5174"
                         }
                     }
                 }
@@ -395,34 +401,37 @@ Item {
                 spacing: 18
 
                 Text {
-                    text: "VEHICLE"
+                    text: "APPS"
                     color: "#7b8591"
                     font.family: "sans-serif"
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
                 }
 
-                InfoRow { label: "Battery"; value: Number(root.electrical.batteryV || 0).toFixed(1) + " V" }
-                InfoRow { label: "Oil"; value: Math.round(root.temp.oilC || 0) + " C" }
-                InfoRow { label: "Coolant"; value: Math.round(root.temp.coolantC || 0) + " C" }
-                InfoRow { label: "Ambient"; value: Math.round(root.ambient.brightness || 0) + "%" }
-
                 Rectangle {
                     width: parent.width
-                    height: 118
+                    height: parent.height - 36
                     radius: 18
                     color: Qt.rgba(1, 1, 1, 0.045)
                     border.color: Qt.rgba(1, 1, 1, 0.08)
                     border.width: 1
+                    clip: true
 
                     Text {
                         anchors.centerIn: parent
-                        text: "NAV READY"
+                        visible: root.mediaWebUrl.toString().length === 0
+                        text: "SELECT APP"
                         color: "#f4f7fb"
                         font.family: "sans-serif"
                         font.pixelSize: 22
                         font.weight: Font.Medium
                         font.letterSpacing: 2
+                    }
+
+                    WebEngineView {
+                        anchors.fill: parent
+                        visible: root.mediaWebUrl.toString().length > 0
+                        url: root.mediaWebUrl
                     }
                 }
             }
@@ -589,49 +598,24 @@ Item {
 
                 Rectangle {
                     width: parent.width
-                    height: 232
+                    height: parent.height - 82
                     radius: 20
                     color: Qt.rgba(1, 1, 1, 0.045)
                     border.color: Qt.rgba(1, 1, 1, 0.08)
                     border.width: 1
+                    clip: true
 
-                    Canvas {
+                    WebEngineView {
                         anchors.fill: parent
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.reset();
-                            ctx.strokeStyle = "rgba(126,227,255,0.32)";
-                            ctx.lineWidth = 2;
-                            for (var x = 28; x < width; x += 48) {
-                                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 80, height); ctx.stroke();
-                            }
-                            for (var y = 28; y < height; y += 48) {
-                                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y + 40); ctx.stroke();
-                            }
-                            ctx.strokeStyle = "#7ee3ff";
-                            ctx.lineWidth = 5;
-                            ctx.beginPath();
-                            ctx.moveTo(width * 0.18, height * 0.72);
-                            ctx.bezierCurveTo(width * 0.34, height * 0.35, width * 0.55, height * 0.55, width * 0.78, height * 0.25);
-                            ctx.stroke();
-                        }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "GOOGLE MAPS"
-                        color: "#f4f7fb"
-                        font.pixelSize: 28
-                        font.weight: Font.Medium
-                        font.letterSpacing: 2
+                        url: root.navigationWebUrl
                     }
                 }
 
                 Row {
                     spacing: 14
-                    PillButton { width: 180; label: "OPEN MAPS"; onClicked: Qt.openUrlExternally("https://www.google.com/maps/dir/?api=1") }
-                    PillButton { width: 180; label: "HOME"; onClicked: Qt.openUrlExternally("https://www.google.com/maps/dir/?api=1&destination=Home") }
-                    PillButton { width: 180; label: "RECENTER"; active: true }
+                    PillButton { width: 180; label: "OPEN MAPS"; active: true; onClicked: root.navigationWebUrl = "https://www.google.com/maps/dir/?api=1" }
+                    PillButton { width: 180; label: "HOME"; onClicked: root.navigationWebUrl = "https://www.google.com/maps/dir/?api=1&destination=Home" }
+                    PillButton { width: 180; label: "RECENTER"; onClicked: root.navigationWebUrl = "https://www.google.com/maps" }
                 }
             }
         }
