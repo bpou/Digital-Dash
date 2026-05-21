@@ -38,6 +38,14 @@ Item {
     property real fuel: fuelState.percent || 23
     property real battery: electrical.batteryV || 13.2
     property real oilTemp: temp.oilC || 88
+    property real oilPressureBar: {
+        if (engine.oilBar !== undefined) return Number(engine.oilBar);
+        if (engine.oilPressureBar !== undefined) return Number(engine.oilPressureBar);
+        if (engine.oilPressurePsi !== undefined) return Number(engine.oilPressurePsi) / 14.5038;
+        if (temp.oilBar !== undefined) return Number(temp.oilBar);
+        if (temp.oilPressureBar !== undefined) return Number(temp.oilPressureBar);
+        return 3.2;
+    }
     property real coolantTemp: temp.coolantC || 0
     property real boostBar: {
         if (engine.boostBar !== undefined) return Number(engine.boostBar);
@@ -243,10 +251,34 @@ Item {
         anchors.topMargin: 26
         spacing: 12
 
-        LampChip {
-            label: "HIGH"
-            active: root.highBeamActive
-            colorOn: "#7ee3ff"
+        Item {
+            width: 34
+            height: 28
+            anchors.verticalCenter: parent.verticalCenter
+
+            MultiEffect {
+                anchors.fill: highBeamIcon
+                source: highBeamIcon
+                autoPaddingEnabled: true
+                shadowEnabled: true
+                shadowBlur: 1.0
+                shadowScale: 1.34
+                shadowOpacity: root.highBeamActive ? 0.95 : 0.0
+                shadowColor: "#4db8ff"
+                opacity: root.highBeamActive ? 1.0 : 0.0
+            }
+
+            Image {
+                id: highBeamIcon
+                anchors.centerIn: parent
+                width: 28
+                height: 22
+                source: "file:///home/admin/digital-dash/public/highbeam.png"
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+                opacity: root.highBeamActive ? 1.0 : 0.28
+            }
         }
 
         Text {
@@ -345,11 +377,11 @@ Item {
 
         Item {
             id: boostModule
-            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.left: coverFrame.left
             anchors.bottom: coverFrame.top
             anchors.bottomMargin: 150
 
-            width: Math.min(root.width * 0.16, 210)
+            width: coverFrame.width - gearIndicator.width - 8
             height: 46
 
             property real pct: root.clamp(root.boostBar / 2.0, 0, 1)
@@ -384,16 +416,16 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top
                 anchors.topMargin: 7
-                spacing: 7
+                spacing: 4
 
                 Text {
                     anchors.baseline: boostValue.baseline
                     text: "BOOST"
                     color: boostModule.dimText
                     font.family: "sans-serif"
-                    font.pixelSize: 8
+                    font.pixelSize: 7
                     font.weight: Font.Bold
-                    font.letterSpacing: 2.2
+                    font.letterSpacing: 1.3
                 }
 
                 Text {
@@ -401,7 +433,7 @@ Item {
                     text: root.boostBar.toFixed(1)
                     color: boostModule.boostColor
                     font.family: "sans-serif"
-                    font.pixelSize: 21
+                    font.pixelSize: 18
                     font.weight: Font.Bold
                 }
 
@@ -410,9 +442,9 @@ Item {
                     text: "BAR"
                     color: "#9aa8ae"
                     font.family: "sans-serif"
-                    font.pixelSize: 8
+                    font.pixelSize: 7
                     font.weight: Font.Bold
-                    font.letterSpacing: 2
+                    font.letterSpacing: 1.2
                 }
             }
 
@@ -679,11 +711,11 @@ Item {
 
         Rectangle {
             id: gearIndicator
-            anchors.horizontalCenter: coverFrame.horizontalCenter
-            anchors.bottom: coverFrame.top
-            anchors.bottomMargin: 18
-            width: 74
-            height: 50
+            anchors.left: boostModule.right
+            anchors.leftMargin: 8
+            anchors.verticalCenter: boostModule.verticalCenter
+            width: 48
+            height: 46
             radius: 8
             color: Qt.rgba(5 / 255, 9 / 255, 12 / 255, 0.78)
             border.color: Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.28)
@@ -692,23 +724,23 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top
-                anchors.topMargin: 7
+                anchors.topMargin: 6
                 text: "GEAR"
                 color: "#71838a"
                 font.family: "sans-serif"
-                font.pixelSize: 8
+                font.pixelSize: 7
                 font.weight: Font.Bold
-                font.letterSpacing: 1.8
+                font.letterSpacing: 1.1
             }
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 5
+                anchors.bottomMargin: 4
                 text: root.gearText
                 color: "#ffffff"
                 font.family: "sans-serif"
-                font.pixelSize: 27
+                font.pixelSize: 25
                 font.weight: Font.Bold
             }
         }
@@ -1048,13 +1080,14 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: shell.bottom
         anchors.bottomMargin: 22
-        width: parent.width * 0.38
-        spacing: 20
+        width: parent.width * 0.48
+        spacing: 16
 
-        BarMeter { width: (parent.width - 60) / 4; label: "OIL"; value: root.oilTemp; minValue: 40; maxValue: 140; suffix: "C"; warn: root.oilTemp >= 110 }
-        BarMeter { width: (parent.width - 60) / 4; label: "COOLANT"; value: root.coolantTemp; minValue: 40; maxValue: 120; suffix: "C"; warn: root.coolantTemp >= 100 }
-        BarMeter { width: (parent.width - 60) / 4; label: "FUEL"; value: root.fuel; minValue: 0; maxValue: 100; suffix: "%"; warn: root.fuel <= 15 }
-        BarMeter { width: (parent.width - 60) / 4; label: "BATTERY"; value: root.battery; minValue: 11.5; maxValue: 15.0; suffix: "V"; decimals: 1; warn: root.battery < 12.2 || root.battery > 15.0 }
+        BarMeter { width: (parent.width - 64) / 5; label: "OIL TEMP"; value: root.oilTemp; minValue: 40; maxValue: 140; suffix: "C"; warn: root.oilTemp >= 110 }
+        BarMeter { width: (parent.width - 64) / 5; label: "OIL BAR"; value: root.oilPressureBar; minValue: 0; maxValue: 6; suffix: " BAR"; decimals: 1; warn: root.oilPressureBar < 1.0 }
+        BarMeter { width: (parent.width - 64) / 5; label: "COOLANT"; value: root.coolantTemp; minValue: 40; maxValue: 120; suffix: "C"; warn: root.coolantTemp >= 100 }
+        BarMeter { width: (parent.width - 64) / 5; label: "FUEL"; value: root.fuel; minValue: 0; maxValue: 100; suffix: "%"; warn: root.fuel <= 15 }
+        BarMeter { width: (parent.width - 64) / 5; label: "BATTERY"; value: root.battery; minValue: 11.5; maxValue: 15.0; suffix: "V"; decimals: 1; warn: root.battery < 12.2 || root.battery > 15.0 }
     }
 
     Text {
