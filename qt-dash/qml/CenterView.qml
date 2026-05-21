@@ -1,7 +1,5 @@
 import QtQuick
 import QtQuick.Effects
-import QtLocation
-import QtPositioning
 import QtWebEngine
 
 Item {
@@ -31,9 +29,7 @@ Item {
     property string dialNumber: ""
     property string contactSearch: ""
     property url mediaWebUrl: ""
-    property string navSearchText: ""
-    property bool navKeyboardOpen: true
-    property var navDefaultCoordinate: QtPositioning.coordinate(59.3293, 18.0686)
+    property url navigationWebUrl: "https://www.google.com/maps"
 
     function postBluetooth(path) {
         var request = new XMLHttpRequest();
@@ -45,31 +41,11 @@ Item {
         vehicleClient.sendCommand("climate/set", next);
     }
 
-    function openNavigationSearch() {
-        if (root.navSearchText.length > 0) {
-            geocodeModel.query = root.navSearchText;
-            geocodeModel.update();
-        }
-    }
-
-    Plugin {
-        id: mapPlugin
-        name: "osm"
-    }
-
-    GeocodeModel {
-        id: geocodeModel
-        plugin: mapPlugin
-        autoUpdate: false
-        limit: 1
-
-        onLocationsChanged: {
-            if (count > 0) {
-                var result = get(0);
-                navMap.center = result.coordinate;
-                navMap.zoomLevel = 15;
-            }
-        }
+    WebEngineProfile {
+        id: androidMapsProfile
+        storageName: "digitaldash-google-maps"
+        httpAcceptLanguage: "en-US,en"
+        httpUserAgent: "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
     }
 
     Timer {
@@ -616,186 +592,42 @@ Item {
         anchors.fill: mainPanel
         visible: root.activePage === "NAVIGATION"
 
-        Map {
-            id: navMap
+        WebEngineView {
+            id: googleMapsView
             anchors.fill: parent
-            plugin: mapPlugin
-            center: root.navDefaultCoordinate
-            zoomLevel: 13
-            color: "#071012"
-            copyrightsVisible: true
-
-            property var startCentroid
-
-            MapQuickItem {
-                id: mapMarker
-                coordinate: navMap.center
-                anchorPoint.x: 26
-                anchorPoint.y: 26
-
-                sourceItem: Item {
-                    width: 52
-                    height: 52
-
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 52
-                        height: 52
-                        radius: 26
-                        color: Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.16)
-                    }
-
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: 24
-                        height: 24
-                        radius: 12
-                        color: "#7ee3ff"
-                        border.color: "#f4f7fb"
-                        border.width: 3
-                    }
-                }
-            }
-
-            PinchHandler {
-                id: mapPinch
-                target: null
-                onActiveChanged: if (active) {
-                    navMap.startCentroid = navMap.toCoordinate(mapPinch.centroid.position, false);
-                }
-                onScaleChanged: (delta) => {
-                    navMap.zoomLevel += Math.log2(delta);
-                    navMap.alignCoordinateToPoint(navMap.startCentroid, mapPinch.centroid.position);
-                }
-                onRotationChanged: (delta) => {
-                    navMap.bearing -= delta;
-                    navMap.alignCoordinateToPoint(navMap.startCentroid, mapPinch.centroid.position);
-                }
-                grabPermissions: PointerHandler.TakeOverForbidden
-            }
-
-            WheelHandler {
-                id: mapWheel
-                acceptedDevices: Qt.platform.pluginName === "cocoa" || Qt.platform.pluginName === "wayland"
-                                 ? PointerDevice.Mouse | PointerDevice.TouchPad
-                                 : PointerDevice.Mouse
-                rotationScale: 1 / 120
-                property: "zoomLevel"
-            }
-
-            DragHandler {
-                id: mapDrag
-                target: null
-                onTranslationChanged: (delta) => navMap.pan(-delta.x, -delta.y)
-            }
+            url: root.navigationWebUrl
+            profile: androidMapsProfile
         }
 
         Rectangle {
-            anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.leftMargin: 18
             anchors.rightMargin: 18
             anchors.topMargin: 16
-            height: 62
-            radius: 18
-            color: Qt.rgba(3 / 255, 7 / 255, 9 / 255, 0.86)
+            width: 166
+            height: 46
+            radius: 13
+            color: Qt.rgba(3 / 255, 7 / 255, 9 / 255, 0.72)
             border.color: Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.22)
             border.width: 1
 
             Row {
-                anchors.fill: parent
-                anchors.leftMargin: 18
-                anchors.rightMargin: 12
-                spacing: 12
-
-                Text {
-                    width: parent.width - 346
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: root.navSearchText.length > 0 ? root.navSearchText : "Search Google Maps"
-                    color: root.navSearchText.length > 0 ? "#f4f7fb" : "#8b96a2"
-                    font.family: "sans-serif"
-                    font.pixelSize: 22
-                    font.weight: Font.Medium
-                    elide: Text.ElideRight
-                }
-
-                PillButton {
-                    width: 96
-                    label: "GO"
-                    active: true
-                    onClicked: root.openNavigationSearch()
-                }
-
-                PillButton {
-                    width: 112
-                    label: root.navKeyboardOpen ? "HIDE" : "KEYS"
-                    onClicked: root.navKeyboardOpen = !root.navKeyboardOpen
-                }
-
-                PillButton {
-                    width: 102
-                    label: "CLEAR"
-                    onClicked: {
-                        root.navSearchText = "";
-                        geocodeModel.reset();
-                        navMap.center = root.navDefaultCoordinate;
-                        navMap.zoomLevel = 13;
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            anchors.leftMargin: 18
-            anchors.rightMargin: 18
-            anchors.bottomMargin: 16
-            height: 196
-            radius: 18
-            visible: root.navKeyboardOpen
-            color: Qt.rgba(3 / 255, 7 / 255, 9 / 255, 0.88)
-            border.color: Qt.rgba(1, 1, 1, 0.10)
-            border.width: 1
-
-            Column {
                 anchors.centerIn: parent
-                spacing: 10
+                spacing: 8
 
-                Row {
-                    spacing: 8
-                    Repeater {
-                        model: ["Q","W","E","R","T","Y","U","I","O","P"]
-                        NavKey { label: modelData; onClicked: root.navSearchText += label }
-                    }
+                PillButton {
+                    width: 72
+                    height: 30
+                    label: "BACK"
+                    onClicked: googleMapsView.goBack()
                 }
 
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 8
-                    Repeater {
-                        model: ["A","S","D","F","G","H","J","K","L"]
-                        NavKey { label: modelData; onClicked: root.navSearchText += label }
-                    }
-                }
-
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 8
-                    Repeater {
-                        model: ["Z","X","C","V","B","N","M"]
-                        NavKey { label: modelData; onClicked: root.navSearchText += label }
-                    }
-                }
-
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 8
-                    NavKey { width: 86; label: "DEL"; onClicked: root.navSearchText = root.navSearchText.slice(0, -1) }
-                    NavKey { width: 330; label: "SPACE"; onClicked: root.navSearchText += " " }
-                    NavKey { width: 86; label: "GO"; active: true; onClicked: root.openNavigationSearch() }
+                PillButton {
+                    width: 72
+                    height: 30
+                    label: "HOME"
+                    active: true
+                    onClicked: googleMapsView.url = root.navigationWebUrl
                 }
             }
         }
@@ -1261,34 +1093,6 @@ Item {
             font.family: "sans-serif"
             font.pixelSize: 22
             font.weight: Font.Medium
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: parent.clicked()
-        }
-    }
-
-    component NavKey: Rectangle {
-        signal clicked()
-        property string label: ""
-        property bool active: false
-
-        width: 54
-        height: 36
-        radius: 9
-        color: active ? Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.20) : Qt.rgba(1, 1, 1, 0.08)
-        border.color: active ? "#7ee3ff" : Qt.rgba(1, 1, 1, 0.12)
-        border.width: 1
-
-        Text {
-            anchors.centerIn: parent
-            text: label
-            color: active ? "#f4f7fb" : "#dce6ec"
-            font.family: "sans-serif"
-            font.pixelSize: 13
-            font.weight: Font.Bold
-            font.letterSpacing: 1
         }
 
         MouseArea {
