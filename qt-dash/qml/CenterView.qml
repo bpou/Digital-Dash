@@ -55,6 +55,45 @@ Item {
         return "https://www.google.com/maps/@" + Number(root.gps.lat).toFixed(6) + "," + Number(root.gps.lng).toFixed(6) + ",16z";
     }
 
+    function googleMapsGeolocationScript() {
+        if (!root.hasGpsLocation()) {
+            return "";
+        }
+
+        var lat = Number(root.gps.lat);
+        var lng = Number(root.gps.lng);
+        var heading = Number.isFinite(Number(root.gps.heading)) ? Number(root.gps.heading) : 0;
+        var speed = Number.isFinite(Number(root.gps.speedMps)) ? Number(root.gps.speedMps) : 0;
+
+        return "(function() {"
+             + "var position = {"
+             + "coords: {"
+             + "latitude: " + lat + ","
+             + "longitude: " + lng + ","
+             + "accuracy: 8,"
+             + "altitude: null,"
+             + "altitudeAccuracy: null,"
+             + "heading: " + heading + ","
+             + "speed: " + speed
+             + "},"
+             + "timestamp: Date.now()"
+             + "};"
+             + "var geo = {"
+             + "getCurrentPosition: function(success, error, options) { if (success) setTimeout(function() { success(position); }, 0); },"
+             + "watchPosition: function(success, error, options) { if (success) { setTimeout(function() { success(position); }, 0); return setInterval(function() { position.timestamp = Date.now(); success(position); }, 1000); } return 1; },"
+             + "clearWatch: function(id) { clearInterval(id); }"
+             + "};"
+             + "try { Object.defineProperty(navigator, 'geolocation', { value: geo, configurable: true }); } catch (e) { navigator.geolocation = geo; }"
+             + "try { Object.defineProperty(window, '__digitalDashGps', { value: position, configurable: true }); } catch (e) { window.__digitalDashGps = position; }"
+             + "})();";
+    }
+
+    function injectGoogleMapsGeolocation() {
+        if (googleMapsView && root.hasGpsLocation()) {
+            googleMapsView.runJavaScript(root.googleMapsGeolocationScript(), WebEngineScript.MainWorld);
+        }
+    }
+
     function loadGoogleMapsLocation(force) {
         if (!force && root.googleMapsLocationLoaded) {
             return;
@@ -62,11 +101,19 @@ Item {
         root.navigationWebUrl = root.googleMapsLocationUrl();
         root.googleMapsLocationLoaded = root.hasGpsLocation();
         if (googleMapsView) {
+            googleMapsView.userScripts.collection = [ {
+                name: "DigitalDashGps",
+                injectionPoint: WebEngineScript.DocumentCreation,
+                worldId: WebEngineScript.MainWorld,
+                runsOnSubFrames: true,
+                sourceCode: root.googleMapsGeolocationScript()
+            } ];
             googleMapsView.url = root.navigationWebUrl;
         }
     }
 
     onGpsChanged: {
+        root.injectGoogleMapsGeolocation();
         if (root.activePage === "NAVIGATION" && !root.googleMapsLocationLoaded) {
             root.loadGoogleMapsLocation(false);
         }
@@ -634,10 +681,23 @@ Item {
             anchors.fill: parent
             url: root.navigationWebUrl
             profile: androidMapsProfile
+            userScripts.collection: [ {
+                name: "DigitalDashGps",
+                injectionPoint: WebEngineScript.DocumentCreation,
+                worldId: WebEngineScript.MainWorld,
+                runsOnSubFrames: true,
+                sourceCode: root.googleMapsGeolocationScript()
+            } ]
 
             onFeaturePermissionRequested: function(securityOrigin, feature) {
                 if (feature === WebEngineView.Geolocation) {
                     grantFeaturePermission(securityOrigin, feature, true);
+                }
+            }
+
+            onLoadingChanged: function(loadRequest) {
+                if (loadRequest.status === WebEngineView.LoadSucceededStatus) {
+                    root.injectGoogleMapsGeolocation();
                 }
             }
         }
@@ -698,6 +758,7 @@ Item {
                     onClicked: {
                         root.googleMapsLocationLoaded = false;
                         root.loadGoogleMapsLocation(true);
+                        root.injectGoogleMapsGeolocation();
                     }
                 }
             }
