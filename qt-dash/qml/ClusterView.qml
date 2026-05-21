@@ -17,6 +17,21 @@ Item {
     property var car: safeState.car || ({})
     property var gps: safeState.gps || ({})
     property bool previewTurnSignals: true
+    property bool highBeamActive: car.highBeam === true ||
+                                  car.highbeam === true ||
+                                  car.highBeams === true ||
+                                  car.high_beam === true ||
+                                  car.high_beams === true
+    property string gearText: {
+        var drivetrain = safeState.drivetrain || safeState.transmission || vehicle || {};
+        var gear = drivetrain.gear !== undefined ? drivetrain.gear : drivetrain.currentGear;
+
+        if (gear === undefined || gear === null || gear === "") {
+            return "3";
+        }
+
+        return gear.toString().toUpperCase();
+    }
 
     property real rpm: engine.rpm || 3600
     property real speed: vehicle.speedKmh || 90
@@ -228,7 +243,14 @@ Item {
         anchors.topMargin: 26
         spacing: 12
 
+        LampChip {
+            label: "HIGH"
+            active: root.highBeamActive
+            colorOn: "#7ee3ff"
+        }
+
         Text {
+            anchors.verticalCenter: parent.verticalCenter
             text: Qt.formatTime(root.clockTime, "HH:mm")
             color: "#d6dee4"
             font.family: "sans-serif"
@@ -644,6 +666,53 @@ Item {
             }
         }
 
+        MultiEffect {
+            anchors.fill: gearIndicator
+            source: gearIndicator
+            autoPaddingEnabled: true
+            shadowEnabled: true
+            shadowBlur: 0.72
+            shadowScale: 1.04
+            shadowOpacity: 0.34
+            shadowColor: "#000000"
+        }
+
+        Rectangle {
+            id: gearIndicator
+            anchors.horizontalCenter: coverFrame.horizontalCenter
+            anchors.bottom: coverFrame.top
+            anchors.bottomMargin: 18
+            width: 74
+            height: 50
+            radius: 8
+            color: Qt.rgba(5 / 255, 9 / 255, 12 / 255, 0.78)
+            border.color: Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.28)
+            border.width: 1
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 7
+                text: "GEAR"
+                color: "#71838a"
+                font.family: "sans-serif"
+                font.pixelSize: 8
+                font.weight: Font.Bold
+                font.letterSpacing: 1.8
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 5
+                text: root.gearText
+                color: "#ffffff"
+                font.family: "sans-serif"
+                font.pixelSize: 27
+                font.weight: Font.Bold
+            }
+        }
+
         TurnArrow {
             id: leftTurnArrow
             z: 2
@@ -979,12 +1048,13 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: shell.bottom
         anchors.bottomMargin: 22
-        width: parent.width * 0.3
+        width: parent.width * 0.38
         spacing: 20
 
-        BarMeter { width: (parent.width - 40) / 3; label: "OIL"; value: root.oilTemp; minValue: 40; maxValue: 140; suffix: "C"; warn: root.oilTemp >= 110 }
-        BarMeter { width: (parent.width - 40) / 3; label: "COOLANT"; value: root.coolantTemp; minValue: 40; maxValue: 120; suffix: "C"; warn: root.coolantTemp >= 100 }
-        BarMeter { width: (parent.width - 40) / 3; label: "FUEL"; value: root.fuel; minValue: 0; maxValue: 100; suffix: "%"; warn: root.fuel <= 15 }
+        BarMeter { width: (parent.width - 60) / 4; label: "OIL"; value: root.oilTemp; minValue: 40; maxValue: 140; suffix: "C"; warn: root.oilTemp >= 110 }
+        BarMeter { width: (parent.width - 60) / 4; label: "COOLANT"; value: root.coolantTemp; minValue: 40; maxValue: 120; suffix: "C"; warn: root.coolantTemp >= 100 }
+        BarMeter { width: (parent.width - 60) / 4; label: "FUEL"; value: root.fuel; minValue: 0; maxValue: 100; suffix: "%"; warn: root.fuel <= 15 }
+        BarMeter { width: (parent.width - 60) / 4; label: "BATTERY"; value: root.battery; minValue: 11.5; maxValue: 15.0; suffix: "V"; decimals: 1; warn: root.battery < 12.2 || root.battery > 15.0 }
     }
 
     Text {
@@ -1143,6 +1213,7 @@ Item {
         property real maxValue: 100
         property string suffix: ""
         property bool warn: false
+        property int decimals: 0
 
         function clampValue(input, minValue, maxValue) {
             return Math.max(minValue, Math.min(maxValue, input));
@@ -1162,7 +1233,7 @@ Item {
 
         Text {
             anchors.right: parent.right
-            text: Math.round(value) + suffix
+            text: decimals > 0 ? Number(value).toFixed(decimals) + suffix : Math.round(value) + suffix
             color: warn ? "#ffd166" : "#ffffff"
             font.family: "sans-serif"
             font.pixelSize: 10
