@@ -61,6 +61,9 @@ Item {
         }
         root.navigationWebUrl = root.googleMapsLocationUrl();
         root.googleMapsLocationLoaded = root.hasGpsLocation();
+        if (googleMapsView) {
+            googleMapsView.url = root.navigationWebUrl;
+        }
     }
 
     onGpsChanged: {
@@ -71,7 +74,7 @@ Item {
 
     onActivePageChanged: {
         if (root.activePage === "NAVIGATION") {
-            root.loadGoogleMapsLocation(false);
+            root.loadGoogleMapsLocation(true);
         }
     }
 
@@ -640,6 +643,31 @@ Item {
         }
 
         Rectangle {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.leftMargin: 18
+            anchors.topMargin: 16
+            width: 256
+            height: 46
+            radius: 13
+            color: Qt.rgba(3 / 255, 7 / 255, 9 / 255, 0.72)
+            border.color: root.hasGpsLocation() ? Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.22) : Qt.rgba(255 / 255, 91 / 255, 91 / 255, 0.35)
+            border.width: 1
+
+            Text {
+                anchors.centerIn: parent
+                text: root.hasGpsLocation()
+                      ? Number(root.gps.lat).toFixed(5) + ", " + Number(root.gps.lng).toFixed(5)
+                      : "NO GPS IN STATE"
+                color: root.hasGpsLocation() ? "#dff5ff" : "#ffb3b3"
+                font.family: "sans-serif"
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: 0.8
+            }
+        }
+
+        Rectangle {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.rightMargin: 18
@@ -670,7 +698,6 @@ Item {
                     onClicked: {
                         root.googleMapsLocationLoaded = false;
                         root.loadGoogleMapsLocation(true);
-                        googleMapsView.url = root.navigationWebUrl;
                     }
                 }
             }
