@@ -18,12 +18,20 @@ Item {
     property var gps: safeState.gps || ({})
     property bool previewTurnSignals: true
     property bool previewHighBeam: true
+    property bool previewEngineLight: true
     property bool highBeamActive: car.highBeam === true ||
                                   car.highbeam === true ||
                                   car.highBeams === true ||
                                   car.high_beam === true ||
                                   car.high_beams === true ||
                                   previewHighBeam
+    property bool engineLightActive: engine.warning === true ||
+                                     engine.checkEngine === true ||
+                                     engine.check_engine === true ||
+                                     engine.mil === true ||
+                                     car.engineLight === true ||
+                                     car.checkEngine === true ||
+                                     previewEngineLight
     property string gearText: {
         var drivetrain = safeState.drivetrain || safeState.transmission || vehicle || {};
         var gear = drivetrain.gear !== undefined ? drivetrain.gear : drivetrain.currentGear;
@@ -303,42 +311,29 @@ Item {
         reverse: false
     }
 
-    Item {
-        width: 96
+    Row {
+        width: 206
         height: 40
         anchors.horizontalCenter: rpmGauge.horizontalCenter
         anchors.top: rpmGauge.bottom
         anchors.topMargin: -4
+        spacing: 10
 
-        MultiEffect {
-            anchors.fill: highBeamIndicator
-            source: highBeamIndicator
-            autoPaddingEnabled: true
-            shadowEnabled: true
-            shadowBlur: 0.9
-            shadowScale: 1.16
-            shadowOpacity: root.highBeamActive ? 0.78 : 0.0
-            shadowColor: "#8fd8ff"
-            opacity: root.highBeamActive ? 1.0 : 0.0
+        StatusIndicator {
+            width: 98
+            height: 40
+            label: "HIGH BEAM"
+            active: root.highBeamActive
+            activeColor: "#8fd8ff"
         }
 
-        Rectangle {
-            id: highBeamIndicator
-            anchors.fill: parent
-            radius: 10
-            color: root.highBeamActive ? Qt.rgba(143 / 255, 216 / 255, 255 / 255, 0.18) : Qt.rgba(16 / 255, 23 / 255, 25 / 255, 0.72)
-            border.color: root.highBeamActive ? "#8fd8ff" : "#2a363b"
-            border.width: 1
-
-            Text {
-                anchors.centerIn: parent
-                text: "HIGH BEAM"
-                color: root.highBeamActive ? "#dff5ff" : "#5f7078"
-                font.family: "sans-serif"
-                font.pixelSize: 11
-                font.weight: Font.Bold
-                font.letterSpacing: 1.4
-            }
+        StatusIndicator {
+            width: 98
+            height: 40
+            label: "ENGINE"
+            active: root.engineLightActive
+            activeColor: "#ffd166"
+            activeTextColor: "#fff4d7"
         }
     }
 
@@ -403,11 +398,10 @@ Item {
             Rectangle {
                 id: boostGlass
                 anchors.fill: parent
-                radius: 14
-                color: "#05090c"
-                opacity: 0.72
+                radius: 8
+                color: Qt.rgba(5 / 255, 9 / 255, 12 / 255, 0.78)
                 border.width: 1
-                border.color: "#10242b"
+                border.color: Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.28)
             }
 
             MultiEffect {
@@ -415,87 +409,48 @@ Item {
                 source: boostGlass
                 autoPaddingEnabled: true
                 shadowEnabled: true
-                shadowBlur: 0.45
-                shadowScale: 1.02
-                shadowOpacity: 0.28
-                shadowColor: "#2fe8ff"
-                opacity: 0.55
+                shadowBlur: 0.72
+                shadowScale: 1.04
+                shadowOpacity: 0.34
+                shadowColor: "#000000"
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 6
+                text: "BOOST"
+                color: "#71838a"
+                font.family: "sans-serif"
+                font.pixelSize: 7
+                font.weight: Font.Bold
+                font.letterSpacing: 1.1
             }
 
             Row {
-                id: boostTextRow
                 anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.top
-                anchors.topMargin: 7
-                spacing: 4
-
-                Text {
-                    anchors.baseline: boostValue.baseline
-                    text: "BOOST"
-                    color: boostModule.dimText
-                    font.family: "sans-serif"
-                    font.pixelSize: 7
-                    font.weight: Font.Bold
-                    font.letterSpacing: 1.3
-                }
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 4
+                spacing: 3
 
                 Text {
                     id: boostValue
+                    anchors.baseline: boostUnit.baseline
                     text: root.boostBar.toFixed(1)
-                    color: boostModule.boostColor
+                    color: "#ffffff"
                     font.family: "sans-serif"
-                    font.pixelSize: 18
+                    font.pixelSize: 25
                     font.weight: Font.Bold
                 }
 
                 Text {
-                    anchors.baseline: boostValue.baseline
+                    id: boostUnit
                     text: "BAR"
                     color: "#9aa8ae"
                     font.family: "sans-serif"
                     font.pixelSize: 7
                     font.weight: Font.Bold
-                    font.letterSpacing: 1.2
-                }
-            }
-
-            Rectangle {
-                id: boostTrack
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.leftMargin: 18
-                anchors.rightMargin: 18
-                anchors.bottomMargin: 8
-
-                height: 3
-                radius: 2
-                color: "#152329"
-
-                Rectangle {
-                    id: boostBarFill
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    width: Math.max(6, parent.width * boostModule.pct)
-                    height: parent.height
-                    radius: parent.radius
-                    color: boostModule.boostColor
-                }
-
-                MultiEffect {
-                    anchors.fill: boostBarFill
-                    source: boostBarFill
-                    autoPaddingEnabled: true
-                    blurEnabled: true
-                    blurMax: 18
-                    blur: 0.75
-                    shadowEnabled: true
-                    shadowBlur: 0.65
-                    shadowScale: 1.08
-                    shadowOpacity: 0.65
-                    shadowColor: boostModule.boostColor
-                    opacity: 0.85
+                    font.letterSpacing: 1.1
                 }
             }
         }
@@ -1182,6 +1137,44 @@ Item {
             font.family: "sans-serif"
             font.pixelSize: 10
             font.weight: Font.Bold
+        }
+    }
+
+    component StatusIndicator: Item {
+        property string label: ""
+        property bool active: false
+        property color activeColor: "#8fd8ff"
+        property color activeTextColor: "#dff5ff"
+
+        Rectangle {
+            id: indicatorBody
+            anchors.fill: parent
+            radius: 10
+            color: active ? Qt.rgba(activeColor.r, activeColor.g, activeColor.b, 0.18) : Qt.rgba(16 / 255, 23 / 255, 25 / 255, 0.72)
+            border.color: active ? activeColor : "#2a363b"
+            border.width: 1
+
+            Text {
+                anchors.centerIn: parent
+                text: label
+                color: active ? activeTextColor : "#5f7078"
+                font.family: "sans-serif"
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: 1.2
+            }
+        }
+
+        MultiEffect {
+            anchors.fill: indicatorBody
+            source: indicatorBody
+            autoPaddingEnabled: true
+            shadowEnabled: true
+            shadowBlur: 0.9
+            shadowScale: 1.16
+            shadowOpacity: active ? 0.78 : 0.0
+            shadowColor: activeColor
+            opacity: active ? 1.0 : 0.0
         }
     }
 
