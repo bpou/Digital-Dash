@@ -4,6 +4,8 @@ import QtQuick.Effects
 Item {
     id: root
 
+    signal requestView(string viewName)
+
     property var state
     property var safeState: state || ({})
     property var engine: safeState.engine || ({})
@@ -252,6 +254,35 @@ Item {
         radius: 0
         color: "transparent"
         border.width: 0
+    }
+
+    Rectangle {
+        id: headUnitTestButton
+        anchors.left: shell.left
+        anchors.top: shell.top
+        anchors.leftMargin: 42
+        anchors.topMargin: 24
+        width: 112
+        height: 34
+        radius: 9
+        color: Qt.rgba(5 / 255, 9 / 255, 12 / 255, 0.76)
+        border.color: Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.32)
+        border.width: 1
+
+        Text {
+            anchors.centerIn: parent
+            text: "HEAD UNIT"
+            color: "#dff5ff"
+            font.family: "sans-serif"
+            font.pixelSize: 10
+            font.weight: Font.Bold
+            font.letterSpacing: 1.2
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.requestView("center")
+        }
     }
 
     Row {

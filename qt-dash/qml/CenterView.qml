@@ -2,6 +2,12 @@ import QtQuick
 
 Item {
     id: root
+
+    signal requestView(string viewName)
+
+    implicitWidth: 1280
+    implicitHeight: 640
+
     property var state
     property var safeState: state || ({})
     property var climate: safeState.climate || ({})
@@ -13,6 +19,36 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: "#050608"
+    }
+
+    Rectangle {
+        id: clusterTestButton
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: 34
+        anchors.topMargin: 28
+        width: 96
+        height: 34
+        radius: 9
+        z: 10
+        color: Qt.rgba(10 / 255, 15 / 255, 18 / 255, 0.86)
+        border.color: Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.32)
+        border.width: 1
+
+        Text {
+            anchors.centerIn: parent
+            text: "CLUSTER"
+            color: "#dff5ff"
+            font.family: "sans-serif"
+            font.pixelSize: 10
+            font.weight: Font.Bold
+            font.letterSpacing: 1.2
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.requestView("cluster")
+        }
     }
 
     Row {

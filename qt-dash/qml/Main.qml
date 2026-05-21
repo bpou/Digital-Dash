@@ -4,7 +4,7 @@ import QtQuick.Window
 Window {
     id: root
     width: 1280
-    height: 480
+    height: currentView === "center" ? 640 : 480
     visible: true
     visibility: Window.FullScreen
     title: "Digital Dash Qt"
@@ -12,10 +12,11 @@ Window {
     flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
 
     property var state: vehicleClient.state
+    property string currentView: initialView
 
     Loader {
         anchors.fill: parent
-        sourceComponent: initialView === "center" ? centerComponent : clusterComponent
+        sourceComponent: root.currentView === "center" ? centerComponent : clusterComponent
     }
 
     Component.onCompleted: {
@@ -28,6 +29,9 @@ Window {
 
         ClusterView {
             state: root.state
+            onRequestView: function(viewName) {
+                root.currentView = viewName
+            }
         }
     }
 
@@ -36,6 +40,9 @@ Window {
 
         CenterView {
             state: root.state
+            onRequestView: function(viewName) {
+                root.currentView = viewName
+            }
         }
     }
 }
