@@ -5,7 +5,7 @@ project(DigitalDashQt VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Quick WebSockets WebEngineQuick)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Quick WebSockets WebEngineQuick Location Positioning)
 
 qt_standard_project_setup(REQUIRES 6.4)
 
@@ -32,6 +32,8 @@ target_link_libraries(digital-dash-qt
         Qt6::Quick
         Qt6::WebSockets
         Qt6::WebEngineQuick
+        Qt6::Location
+        Qt6::Positioning
 )
 
 install(TARGETS digital-dash-qt

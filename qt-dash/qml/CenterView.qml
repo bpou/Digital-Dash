@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Effects
+import QtLocation
+import QtPositioning
 import QtWebEngine
 
 Item {
@@ -29,9 +31,9 @@ Item {
     property string dialNumber: ""
     property string contactSearch: ""
     property url mediaWebUrl: ""
-    property url navigationWebUrl: "https://www.google.com/maps"
     property string navSearchText: ""
     property bool navKeyboardOpen: true
+    property var navDefaultCoordinate: QtPositioning.coordinate(59.3293, 18.0686)
 
     function postBluetooth(path) {
         var request = new XMLHttpRequest();
@@ -45,15 +47,29 @@ Item {
 
     function openNavigationSearch() {
         if (root.navSearchText.length > 0) {
-            root.navigationWebUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(root.navSearchText);
+            geocodeModel.query = root.navSearchText;
+            geocodeModel.update();
         }
     }
 
-    WebEngineProfile {
-        id: androidMapsProfile
-        storageName: "digitaldash-android-maps"
-        httpAcceptLanguage: "en-US,en"
-        httpUserAgent: "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    Plugin {
+        id: mapPlugin
+        name: "osm"
+    }
+
+    GeocodeModel {
+        id: geocodeModel
+        plugin: mapPlugin
+        autoUpdate: false
+        limit: 1
+
+        onLocationsChanged: {
+            if (count > 0) {
+                var result = get(0);
+                navMap.center = result.coordinate;
+                navMap.zoomLevel = 15;
+            }
+        }
     }
 
     Timer {
@@ -600,10 +616,78 @@ Item {
         anchors.fill: mainPanel
         visible: root.activePage === "NAVIGATION"
 
-        WebEngineView {
+        Map {
+            id: navMap
             anchors.fill: parent
-            url: root.navigationWebUrl
-            profile: androidMapsProfile
+            plugin: mapPlugin
+            center: root.navDefaultCoordinate
+            zoomLevel: 13
+            color: "#071012"
+            copyrightsVisible: true
+
+            property var startCentroid
+
+            MapQuickItem {
+                id: mapMarker
+                coordinate: navMap.center
+                anchorPoint.x: 26
+                anchorPoint.y: 26
+
+                sourceItem: Item {
+                    width: 52
+                    height: 52
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 52
+                        height: 52
+                        radius: 26
+                        color: Qt.rgba(126 / 255, 227 / 255, 255 / 255, 0.16)
+                    }
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 24
+                        height: 24
+                        radius: 12
+                        color: "#7ee3ff"
+                        border.color: "#f4f7fb"
+                        border.width: 3
+                    }
+                }
+            }
+
+            PinchHandler {
+                id: mapPinch
+                target: null
+                onActiveChanged: if (active) {
+                    navMap.startCentroid = navMap.toCoordinate(mapPinch.centroid.position, false);
+                }
+                onScaleChanged: (delta) => {
+                    navMap.zoomLevel += Math.log2(delta);
+                    navMap.alignCoordinateToPoint(navMap.startCentroid, mapPinch.centroid.position);
+                }
+                onRotationChanged: (delta) => {
+                    navMap.bearing -= delta;
+                    navMap.alignCoordinateToPoint(navMap.startCentroid, mapPinch.centroid.position);
+                }
+                grabPermissions: PointerHandler.TakeOverForbidden
+            }
+
+            WheelHandler {
+                id: mapWheel
+                acceptedDevices: Qt.platform.pluginName === "cocoa" || Qt.platform.pluginName === "wayland"
+                                 ? PointerDevice.Mouse | PointerDevice.TouchPad
+                                 : PointerDevice.Mouse
+                rotationScale: 1 / 120
+                property: "zoomLevel"
+            }
+
+            DragHandler {
+                id: mapDrag
+                target: null
+                onTranslationChanged: (delta) => navMap.pan(-delta.x, -delta.y)
+            }
         }
 
         Rectangle {
@@ -654,7 +738,9 @@ Item {
                     label: "CLEAR"
                     onClicked: {
                         root.navSearchText = "";
-                        root.navigationWebUrl = "https://www.google.com/maps";
+                        geocodeModel.reset();
+                        navMap.center = root.navDefaultCoordinate;
+                        navMap.zoomLevel = 13;
                     }
                 }
             }
