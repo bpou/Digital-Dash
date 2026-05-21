@@ -304,34 +304,41 @@ Item {
     }
 
     Item {
-        width: 74
-        height: 54
+        width: 96
+        height: 40
         anchors.horizontalCenter: rpmGauge.horizontalCenter
         anchors.top: rpmGauge.bottom
-        anchors.topMargin: -10
+        anchors.topMargin: -4
 
         MultiEffect {
-            anchors.fill: highBeamIcon
-            source: highBeamIcon
+            anchors.fill: highBeamIndicator
+            source: highBeamIndicator
             autoPaddingEnabled: true
             shadowEnabled: true
-            shadowBlur: 1.0
-            shadowScale: 1.78
-            shadowOpacity: root.highBeamActive ? 0.95 : 0.0
+            shadowBlur: 0.9
+            shadowScale: 1.16
+            shadowOpacity: root.highBeamActive ? 0.78 : 0.0
             shadowColor: "#8fd8ff"
             opacity: root.highBeamActive ? 1.0 : 0.0
         }
 
-        Image {
-            id: highBeamIcon
-            anchors.centerIn: parent
-            width: 62
-            height: 42
-            source: "file:///home/admin/digital-dash/public/highbeam.png"
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            mipmap: true
-            opacity: root.highBeamActive ? 1.0 : 0.32
+        Rectangle {
+            id: highBeamIndicator
+            anchors.fill: parent
+            radius: 10
+            color: root.highBeamActive ? Qt.rgba(143 / 255, 216 / 255, 255 / 255, 0.18) : Qt.rgba(16 / 255, 23 / 255, 25 / 255, 0.72)
+            border.color: root.highBeamActive ? "#8fd8ff" : "#2a363b"
+            border.width: 1
+
+            Text {
+                anchors.centerIn: parent
+                text: "HIGH BEAM"
+                color: root.highBeamActive ? "#dff5ff" : "#5f7078"
+                font.family: "sans-serif"
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: 1.4
+            }
         }
     }
 
