@@ -22,6 +22,8 @@ Item {
     property color ambientColor: ambient.color || "#7ee3ff"
     property real ambientStrength: Math.max(0.18, Math.min(1, (ambient.brightness || 65) / 100))
     property real mediaProgress: Math.min(1, (nowPlaying.positionSec || 0) / Math.max(1, nowPlaying.durationSec || 1))
+    property bool launcherOpen: false
+    property string activePage: "MEDIA"
 
     Timer {
         interval: 1000
@@ -400,7 +402,11 @@ Item {
             anchors.rightMargin: 18
             spacing: 18
 
-            DockButton { label: "APPS"; width: 56 }
+            DockButton {
+                label: "APPS"
+                width: 56
+                onClicked: root.launcherOpen = true
+            }
 
             Row {
                 anchors.verticalCenter: parent.verticalCenter
@@ -458,6 +464,39 @@ Item {
         }
     }
 
+    Rectangle {
+        id: appLauncherOverlay
+        anchors.fill: parent
+        z: 30
+        visible: root.launcherOpen
+        opacity: root.launcherOpen ? 1.0 : 0.0
+        color: Qt.rgba(0, 0, 0, 0.92)
+
+        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.launcherOpen = false
+        }
+
+        Grid {
+            id: launcherGrid
+            anchors.centerIn: parent
+            columns: 3
+            rows: 2
+            columnSpacing: 16
+            rowSpacing: 16
+
+            LauncherTile { label: "MEDIA"; icon: "media"; active: root.activePage === "MEDIA"; onClicked: { root.activePage = "MEDIA"; root.launcherOpen = false } }
+            LauncherTile { label: "CLIMATE"; icon: "climate"; active: root.activePage === "CLIMATE"; onClicked: { root.activePage = "CLIMATE"; root.launcherOpen = false } }
+            LauncherTile { label: "CAR"; icon: "car"; active: root.activePage === "CAR"; onClicked: { root.activePage = "CAR"; root.launcherOpen = false } }
+            LauncherTile { label: "NAVIGATION"; icon: "nav"; active: root.activePage === "NAVIGATION"; onClicked: { root.activePage = "NAVIGATION"; root.launcherOpen = false } }
+            LauncherTile { label: "PHONE"; icon: "phone"; active: root.activePage === "PHONE"; onClicked: { root.activePage = "PHONE"; root.launcherOpen = false } }
+            LauncherTile { label: "SETTINGS"; icon: "settings"; active: root.activePage === "SETTINGS"; onClicked: { root.activePage = "SETTINGS"; root.launcherOpen = false } }
+        }
+
+    }
+
     component GlassPanel: Rectangle {
         radius: 24
         color: Qt.rgba(1, 1, 1, 0.05)
@@ -513,6 +552,7 @@ Item {
     }
 
     component DockButton: Rectangle {
+        signal clicked()
         property string label: ""
 
         height: 42
@@ -527,6 +567,133 @@ Item {
             font.pixelSize: 12
             font.weight: Font.DemiBold
             font.letterSpacing: 1.3
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: parent.clicked()
+        }
+    }
+
+    component LauncherTile: Rectangle {
+        signal clicked()
+        property string label: ""
+        property string icon: ""
+        property bool active: false
+
+        width: 132
+        height: 132
+        radius: 14
+        color: active ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.065)
+        border.color: active ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.045)
+        border.width: 1
+
+        Canvas {
+            id: tileIcon
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: 34
+            width: 42
+            height: 42
+
+            onPaint: {
+                var ctx = getContext("2d");
+                ctx.reset();
+                ctx.strokeStyle = active ? "#f4f7fb" : "#9a9ca3";
+                ctx.fillStyle = active ? "#f4f7fb" : "#9a9ca3";
+                ctx.lineWidth = 2.4;
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+
+                if (icon === "media") {
+                    ctx.strokeRect(7, 11, 28, 22);
+                    ctx.beginPath();
+                    ctx.moveTo(18, 17);
+                    ctx.lineTo(27, 22);
+                    ctx.lineTo(18, 27);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (icon === "climate") {
+                    ctx.beginPath();
+                    ctx.moveTo(21, 8);
+                    ctx.lineTo(21, 34);
+                    ctx.moveTo(14, 14);
+                    ctx.lineTo(28, 14);
+                    ctx.moveTo(14, 28);
+                    ctx.lineTo(28, 28);
+                    ctx.stroke();
+                } else if (icon === "car") {
+                    ctx.beginPath();
+                    ctx.moveTo(9, 25);
+                    ctx.lineTo(12, 17);
+                    ctx.lineTo(30, 17);
+                    ctx.lineTo(33, 25);
+                    ctx.lineTo(33, 30);
+                    ctx.lineTo(9, 30);
+                    ctx.closePath();
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(14, 31, 2.5, 0, Math.PI * 2);
+                    ctx.arc(28, 31, 2.5, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (icon === "nav") {
+                    ctx.beginPath();
+                    ctx.moveTo(21, 5);
+                    ctx.lineTo(34, 37);
+                    ctx.lineTo(21, 30);
+                    ctx.lineTo(8, 37);
+                    ctx.closePath();
+                    ctx.stroke();
+                } else if (icon === "phone") {
+                    ctx.beginPath();
+                    ctx.moveTo(15, 8);
+                    ctx.quadraticCurveTo(10, 10, 13, 18);
+                    ctx.quadraticCurveTo(17, 29, 29, 32);
+                    ctx.quadraticCurveTo(34, 33, 34, 27);
+                    ctx.lineTo(28, 24);
+                    ctx.lineTo(24, 28);
+                    ctx.quadraticCurveTo(17, 25, 16, 18);
+                    ctx.lineTo(20, 14);
+                    ctx.closePath();
+                    ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(21, 21, 8, 0, Math.PI * 2);
+                    ctx.stroke();
+                    for (var i = 0; i < 8; i++) {
+                        var a = i * Math.PI / 4;
+                        ctx.beginPath();
+                        ctx.moveTo(21 + Math.cos(a) * 13, 21 + Math.sin(a) * 13);
+                        ctx.lineTo(21 + Math.cos(a) * 17, 21 + Math.sin(a) * 17);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            Connections {
+                target: parent
+                function onActiveChanged() { tileIcon.requestPaint(); }
+                function onIconChanged() { tileIcon.requestPaint(); }
+            }
+
+            Component.onCompleted: requestPaint()
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 24
+            text: label
+            color: active ? "#f4f7fb" : "#9a9ca3"
+            font.family: "sans-serif"
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: 1.6
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: parent.clicked()
         }
     }
 }
