@@ -17,6 +17,7 @@ Item {
     property var car: safeState.car || ({})
     property var ambient: safeState.ambient || ({})
     property var temp: safeState.temp || ({})
+    property var fuelState: safeState.fuel || ({})
     property var electrical: safeState.electrical || ({})
     property date clockTime: new Date()
     property color ambientColor: ambient.color || "#7ee3ff"
@@ -24,6 +25,18 @@ Item {
     property real mediaProgress: Math.min(1, (nowPlaying.positionSec || 0) / Math.max(1, nowPlaying.durationSec || 1))
     property bool launcherOpen: false
     property string activePage: "MEDIA"
+    property string dialNumber: ""
+    property string contactSearch: ""
+
+    function postBluetooth(path) {
+        var request = new XMLHttpRequest();
+        request.open("POST", "http://127.0.0.1:5175" + path);
+        request.send();
+    }
+
+    function sendClimate(next) {
+        vehicleClient.sendCommand("climate/set", next);
+    }
 
     Timer {
         interval: 1000
@@ -194,6 +207,7 @@ Item {
         anchors.fill: mainPanel
         anchors.margins: 24
         spacing: 22
+        visible: root.activePage === "MEDIA"
 
         GlassPanel {
             id: mediaPanel
@@ -257,6 +271,35 @@ Item {
                     ProgressBar {
                         width: parent.width
                         value: root.mediaProgress
+                    }
+
+                    Row {
+                        spacing: 10
+                        PillButton { label: "PREV"; width: 78; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "prev" }) }
+                        PillButton { label: root.nowPlaying.isPlaying ? "PAUSE" : "PLAY"; width: 86; active: true; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" }) }
+                        PillButton { label: "NEXT"; width: 78; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "next" }) }
+                    }
+
+                    Row {
+                        spacing: 10
+
+                        PillButton {
+                            label: "SPOTIFY"
+                            width: 96
+                            onClicked: Qt.openUrlExternally("https://open.spotify.com")
+                        }
+
+                        PillButton {
+                            label: "YOUTUBE MUSIC"
+                            width: 132
+                            onClicked: Qt.openUrlExternally("https://music.youtube.com")
+                        }
+
+                        PillButton {
+                            label: "PI YTM"
+                            width: 78
+                            onClicked: Qt.openUrlExternally("http://127.0.0.1:5174")
+                        }
                     }
                 }
             }
@@ -381,6 +424,368 @@ Item {
                         font.weight: Font.Medium
                         font.letterSpacing: 2
                     }
+                }
+            }
+        }
+    }
+
+    Item {
+        anchors.fill: mainPanel
+        anchors.margins: 24
+        visible: root.activePage === "CLIMATE"
+
+        Row {
+            anchors.fill: parent
+            spacing: 22
+
+            GlassPanel {
+                id: climateTempPanel
+                width: parent.width * 0.44
+                height: parent.height
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 18
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "CABIN TEMP"
+                        color: "#7b8591"
+                        font.family: "sans-serif"
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 2
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: Math.round(root.climate.tempSetC || 0) + " C"
+                        color: "#f4f7fb"
+                        font.family: "sans-serif"
+                        font.pixelSize: 96
+                        font.weight: Font.Light
+                    }
+
+                    Row {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 16
+
+                        RoundButton { label: "-"; onClicked: root.sendClimate({ "tempSetC": (root.climate.tempSetC || 0) - 1 }) }
+                        RoundButton { label: "+"; onClicked: root.sendClimate({ "tempSetC": (root.climate.tempSetC || 0) + 1 }) }
+                    }
+                }
+            }
+
+            GlassPanel {
+                id: climateFanPanel
+                width: parent.width * 0.25
+                height: parent.height
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 16
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "FAN"
+                        color: "#7b8591"
+                        font.family: "sans-serif"
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 2
+                    }
+
+                    Repeater {
+                        model: 6
+                        PillButton {
+                            width: 168
+                            label: "SPEED " + index
+                            active: Math.round(root.climate.fan || 0) === index
+                            onClicked: root.sendClimate({ "fan": index })
+                        }
+                    }
+                }
+            }
+
+            GlassPanel {
+                width: parent.width - parent.spacing * 2 - climateTempPanel.width - climateFanPanel.width
+                height: parent.height
+
+                Grid {
+                    anchors.centerIn: parent
+                    columns: 2
+                    columnSpacing: 14
+                    rowSpacing: 14
+
+                    PillButton { width: 138; height: 64; label: "AC"; active: root.climate.ac; onClicked: root.sendClimate({ "ac": !root.climate.ac }) }
+                    PillButton { width: 138; height: 64; label: "RECIRC"; active: root.climate.recirc; onClicked: root.sendClimate({ "recirc": !root.climate.recirc }) }
+                    PillButton { width: 138; height: 64; label: "DEFROST"; active: root.climate.defrost; onClicked: root.sendClimate({ "defrost": !root.climate.defrost }) }
+                    PillButton { width: 138; height: 64; label: "AUTO"; active: root.climate.auto; onClicked: root.sendClimate({ "auto": !root.climate.auto }) }
+                }
+            }
+        }
+    }
+
+    Item {
+        anchors.fill: mainPanel
+        anchors.margins: 24
+        visible: root.activePage === "CAR"
+
+        Row {
+            anchors.fill: parent
+            spacing: 22
+
+            GlassPanel {
+                id: carControlsPanel
+                width: parent.width * 0.48
+                height: parent.height
+
+                Grid {
+                    anchors.centerIn: parent
+                    columns: 2
+                    columnSpacing: 16
+                    rowSpacing: 16
+
+                    PillButton { width: 178; height: 74; label: "HAZARDS"; active: root.car.hazards; activeColor: "#ff5b5b"; onClicked: vehicleClient.sendCommand("car/toggleHazards") }
+                    PillButton { width: 178; height: 74; label: "LIGHTS"; active: root.car.lights; onClicked: vehicleClient.sendCommand("car/toggleLights") }
+                    PillButton { width: 178; height: 74; label: root.car.locked ? "LOCKED" : "UNLOCKED"; active: root.car.locked; activeColor: "#7ee3ff"; onClicked: vehicleClient.sendCommand("car/toggleLock") }
+                    PillButton { width: 178; height: 74; label: "AMBIENT"; active: true; activeColor: root.ambientColor; onClicked: vehicleClient.sendCommand("ambient/set", { "color": "#7EE3FF", "brightness": root.ambient.brightness || 65 }) }
+                }
+            }
+
+            GlassPanel {
+                width: parent.width - parent.spacing - carControlsPanel.width
+                height: parent.height
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 28
+                    spacing: 14
+
+                    Text { text: "VEHICLE STATUS"; color: "#7b8591"; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+                    InfoRow { label: "Fuel"; value: Math.round(root.fuelState.percent || 0) + "%" }
+                    InfoRow { label: "Battery"; value: Number(root.electrical.batteryV || 0).toFixed(1) + " V" }
+                    InfoRow { label: "Oil"; value: Math.round(root.temp.oilC || 0) + " C" }
+                    InfoRow { label: "Coolant"; value: Math.round(root.temp.coolantC || 0) + " C" }
+                }
+            }
+        }
+    }
+
+    Item {
+        anchors.fill: mainPanel
+        anchors.margins: 24
+        visible: root.activePage === "NAVIGATION"
+
+        GlassPanel {
+            anchors.fill: parent
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 28
+                spacing: 18
+
+                Text { text: "NAVIGATION"; color: "#7b8591"; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                Rectangle {
+                    width: parent.width
+                    height: 232
+                    radius: 20
+                    color: Qt.rgba(1, 1, 1, 0.045)
+                    border.color: Qt.rgba(1, 1, 1, 0.08)
+                    border.width: 1
+
+                    Canvas {
+                        anchors.fill: parent
+                        onPaint: {
+                            var ctx = getContext("2d");
+                            ctx.reset();
+                            ctx.strokeStyle = "rgba(126,227,255,0.32)";
+                            ctx.lineWidth = 2;
+                            for (var x = 28; x < width; x += 48) {
+                                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 80, height); ctx.stroke();
+                            }
+                            for (var y = 28; y < height; y += 48) {
+                                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y + 40); ctx.stroke();
+                            }
+                            ctx.strokeStyle = "#7ee3ff";
+                            ctx.lineWidth = 5;
+                            ctx.beginPath();
+                            ctx.moveTo(width * 0.18, height * 0.72);
+                            ctx.bezierCurveTo(width * 0.34, height * 0.35, width * 0.55, height * 0.55, width * 0.78, height * 0.25);
+                            ctx.stroke();
+                        }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "GOOGLE MAPS"
+                        color: "#f4f7fb"
+                        font.pixelSize: 28
+                        font.weight: Font.Medium
+                        font.letterSpacing: 2
+                    }
+                }
+
+                Row {
+                    spacing: 14
+                    PillButton { width: 180; label: "OPEN MAPS"; onClicked: Qt.openUrlExternally("https://www.google.com/maps/dir/?api=1") }
+                    PillButton { width: 180; label: "HOME"; onClicked: Qt.openUrlExternally("https://www.google.com/maps/dir/?api=1&destination=Home") }
+                    PillButton { width: 180; label: "RECENTER"; active: true }
+                }
+            }
+        }
+    }
+
+    Item {
+        anchors.fill: mainPanel
+        anchors.margins: 24
+        visible: root.activePage === "PHONE"
+
+        Row {
+            anchors.fill: parent
+            spacing: 22
+
+            GlassPanel {
+                id: phoneDialPanel
+                width: parent.width * 0.44
+                height: parent.height
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.dialNumber || "ENTER NUMBER"; color: root.dialNumber ? "#f4f7fb" : "#5f7078"; font.pixelSize: 28; font.weight: Font.Medium }
+
+                    Grid {
+                        columns: 3
+                        columnSpacing: 10
+                        rowSpacing: 10
+                        Repeater {
+                            model: ["1","2","3","4","5","6","7","8","9","*","0","#"]
+                            KeyButton { label: modelData; onClicked: root.dialNumber += modelData }
+                        }
+                    }
+
+                    Row {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 12
+                        PillButton {
+                            width: 88
+                            label: "CALL"
+                            active: true
+                            activeColor: "#62f2c1"
+                            onClicked: {
+                                if (root.dialNumber.length > 0) {
+                                    root.postBluetooth("/call/dial?number=" + encodeURIComponent(root.dialNumber));
+                                }
+                            }
+                        }
+                        PillButton { width: 88; label: "DELETE"; onClicked: root.dialNumber = root.dialNumber.slice(0, -1) }
+                        PillButton { width: 88; label: "HANGUP"; active: true; activeColor: "#ff5b5b"; onClicked: root.postBluetooth("/call/hangup") }
+                    }
+                }
+            }
+
+            GlassPanel {
+                id: phoneRecentPanel
+                width: parent.width * 0.27
+                height: parent.height
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 24
+                    spacing: 12
+                    Text { text: "RECENT CALLS"; color: "#7b8591"; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+                    InfoRow { label: "Lucka"; value: "Today" }
+                    InfoRow { label: "Home"; value: "Yesterday" }
+                    InfoRow { label: "Service"; value: "Monday" }
+                }
+            }
+
+            GlassPanel {
+                width: parent.width - phoneDialPanel.width - phoneRecentPanel.width - parent.spacing * 2
+                height: parent.height
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 24
+                    spacing: 12
+                    Text { text: "CONTACTS"; color: "#7b8591"; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 42
+                        radius: 12
+                        color: Qt.rgba(1, 1, 1, 0.06)
+                        border.color: Qt.rgba(1, 1, 1, 0.10)
+                        border.width: 1
+
+                        TextInput {
+                            anchors.fill: parent
+                            anchors.leftMargin: 14
+                            anchors.rightMargin: 14
+                            verticalAlignment: TextInput.AlignVCenter
+                            text: root.contactSearch
+                            color: "#f4f7fb"
+                            selectionColor: "#7ee3ff"
+                            font.family: "sans-serif"
+                            font.pixelSize: 14
+                            onTextChanged: root.contactSearch = text
+                        }
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: root.contactSearch.length === 0
+                            text: "Search contacts"
+                            color: "#5f7078"
+                            font.family: "sans-serif"
+                            font.pixelSize: 14
+                        }
+                    }
+
+                    ContactRow { name: "Lucka"; detail: "+46"; number: "+46"; filter: root.contactSearch }
+                    ContactRow { name: "Dad"; detail: "Mobile"; number: ""; filter: root.contactSearch }
+                    ContactRow { name: "Garage"; detail: "Work"; number: ""; filter: root.contactSearch }
+                }
+            }
+        }
+    }
+
+    Item {
+        anchors.fill: mainPanel
+        anchors.margins: 24
+        visible: root.activePage === "SETTINGS"
+
+        Row {
+            anchors.fill: parent
+            spacing: 22
+            GlassPanel {
+                id: settingsSystemPanel
+                width: parent.width * 0.5
+                height: parent.height
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 28
+                    spacing: 14
+                    Text { text: "SYSTEM"; color: "#7b8591"; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+                    InfoRow { label: "Vehicle WS"; value: vehicleClient.connected ? "CONNECTED" : "OFFLINE" }
+                    InfoRow { label: "Head unit"; value: "1280 x 640" }
+                    InfoRow { label: "Cluster"; value: "1920 x 720" }
+                    PillButton { width: 180; label: "CLUSTER VIEW"; onClicked: root.requestView("cluster") }
+                }
+            }
+            GlassPanel {
+                width: parent.width - parent.spacing - settingsSystemPanel.width
+                height: parent.height
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 28
+                    spacing: 14
+                    Text { text: "AUDIO SOURCES"; color: "#7b8591"; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: 2 }
+                    PillButton { width: 180; label: "BLUETOOTH"; active: root.audio.source === "bt"; onClicked: vehicleClient.sendCommand("audio/set", { "source": "bt" }) }
+                    PillButton { width: 180; label: "SPOTIFY"; active: root.audio.source === "spotify"; onClicked: vehicleClient.sendCommand("audio/set", { "source": "spotify" }) }
+                    PillButton { width: 180; label: "AUX"; active: root.audio.source === "aux"; onClicked: vehicleClient.sendCommand("audio/set", { "source": "aux" }) }
                 }
             }
         }
@@ -551,6 +956,50 @@ Item {
         }
     }
 
+    component ContactRow: Rectangle {
+        property string name: ""
+        property string detail: ""
+        property string number: ""
+        property string filter: ""
+
+        width: parent ? parent.width : 220
+        height: visible ? 42 : 0
+        visible: filter.length === 0 || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || detail.toLowerCase().indexOf(filter.toLowerCase()) !== -1
+        radius: 12
+        color: Qt.rgba(1, 1, 1, 0.05)
+
+        Text {
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            text: name
+            color: "#f4f7fb"
+            font.family: "sans-serif"
+            font.pixelSize: 14
+            font.weight: Font.Medium
+        }
+
+        Text {
+            anchors.right: parent.right
+            anchors.rightMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            text: detail
+            color: "#8b96a2"
+            font.family: "sans-serif"
+            font.pixelSize: 12
+            font.weight: Font.DemiBold
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                if (number.length > 0) {
+                    root.dialNumber = number;
+                }
+            }
+        }
+    }
+
     component DockButton: Rectangle {
         signal clicked()
         property string label: ""
@@ -567,6 +1016,87 @@ Item {
             font.pixelSize: 12
             font.weight: Font.DemiBold
             font.letterSpacing: 1.3
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: parent.clicked()
+        }
+    }
+
+    component PillButton: Rectangle {
+        signal clicked()
+        property string label: ""
+        property bool active: false
+        property color activeColor: "#7ee3ff"
+
+        width: 120
+        height: 42
+        radius: 12
+        color: active ? Qt.rgba(activeColor.r, activeColor.g, activeColor.b, 0.16) : Qt.rgba(1, 1, 1, 0.06)
+        border.color: active ? activeColor : Qt.rgba(1, 1, 1, 0.10)
+        border.width: 1
+
+        Text {
+            anchors.centerIn: parent
+            text: label
+            color: active ? "#f4f7fb" : "#a6b0b7"
+            font.family: "sans-serif"
+            font.pixelSize: 12
+            font.weight: Font.DemiBold
+            font.letterSpacing: 1.1
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: parent.clicked()
+        }
+    }
+
+    component RoundButton: Rectangle {
+        signal clicked()
+        property string label: ""
+
+        width: 56
+        height: 56
+        radius: width / 2
+        color: Qt.rgba(1, 1, 1, 0.07)
+        border.color: Qt.rgba(1, 1, 1, 0.12)
+        border.width: 1
+
+        Text {
+            anchors.centerIn: parent
+            text: label
+            color: "#f4f7fb"
+            font.family: "sans-serif"
+            font.pixelSize: 24
+            font.weight: Font.Medium
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: parent.clicked()
+        }
+    }
+
+    component KeyButton: Rectangle {
+        signal clicked()
+        property string label: ""
+
+        width: 72
+        height: 50
+        radius: 14
+        color: Qt.rgba(1, 1, 1, 0.065)
+        border.color: Qt.rgba(1, 1, 1, 0.09)
+        border.width: 1
+
+        Text {
+            anchors.centerIn: parent
+            text: label
+            color: "#f4f7fb"
+            font.family: "sans-serif"
+            font.pixelSize: 22
+            font.weight: Font.Medium
         }
 
         MouseArea {
