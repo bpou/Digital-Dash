@@ -36,5 +36,6 @@ fi
 cd "${ROOT_DIR}"
 
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland;xcb}"
+export QT_IM_MODULE="${QT_IM_MODULE:-qtvirtualkeyboard}"
 
 exec "${APP_BIN}" --view "${VIEW}" --ws "${WS_URL}"

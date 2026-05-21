@@ -284,6 +284,7 @@ Environment=XDG_SESSION_TYPE=wayland
 Environment=WAYLAND_DISPLAY=wayland-0
 Environment=DISPLAY=:0
 Environment=QT_QPA_PLATFORM=wayland;xcb
+Environment=QT_IM_MODULE=qtvirtualkeyboard
 ExecStart=${RUNNER} ${ROOT_DIR} ${VIEW} ${WS_URL}
 Restart=always
 RestartSec=1

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Effects
+import QtQuick.VirtualKeyboard
 import QtWebEngine
 
 Item {
@@ -20,6 +21,7 @@ Item {
     property var temp: safeState.temp || ({})
     property var fuelState: safeState.fuel || ({})
     property var electrical: safeState.electrical || ({})
+    property var gps: safeState.gps || ({})
     property date clockTime: new Date()
     property color ambientColor: ambient.color || "#7ee3ff"
     property real ambientStrength: Math.max(0.18, Math.min(1, (ambient.brightness || 65) / 100))
@@ -30,6 +32,7 @@ Item {
     property string contactSearch: ""
     property url mediaWebUrl: ""
     property url navigationWebUrl: "https://www.google.com/maps"
+    property bool googleMapsLocationLoaded: false
 
     function postBluetooth(path) {
         var request = new XMLHttpRequest();
@@ -39,6 +42,37 @@ Item {
 
     function sendClimate(next) {
         vehicleClient.sendCommand("climate/set", next);
+    }
+
+    function hasGpsLocation() {
+        return Number.isFinite(Number(root.gps.lat)) && Number.isFinite(Number(root.gps.lng));
+    }
+
+    function googleMapsLocationUrl() {
+        if (!root.hasGpsLocation()) {
+            return "https://www.google.com/maps";
+        }
+        return "https://www.google.com/maps/@" + Number(root.gps.lat).toFixed(6) + "," + Number(root.gps.lng).toFixed(6) + ",16z";
+    }
+
+    function loadGoogleMapsLocation(force) {
+        if (!force && root.googleMapsLocationLoaded) {
+            return;
+        }
+        root.navigationWebUrl = root.googleMapsLocationUrl();
+        root.googleMapsLocationLoaded = root.hasGpsLocation();
+    }
+
+    onGpsChanged: {
+        if (root.activePage === "NAVIGATION" && !root.googleMapsLocationLoaded) {
+            root.loadGoogleMapsLocation(false);
+        }
+    }
+
+    onActivePageChanged: {
+        if (root.activePage === "NAVIGATION") {
+            root.loadGoogleMapsLocation(false);
+        }
     }
 
     WebEngineProfile {
@@ -597,6 +631,12 @@ Item {
             anchors.fill: parent
             url: root.navigationWebUrl
             profile: androidMapsProfile
+
+            onFeaturePermissionRequested: function(securityOrigin, feature) {
+                if (feature === WebEngineView.Geolocation) {
+                    grantFeaturePermission(securityOrigin, feature, true);
+                }
+            }
         }
 
         Rectangle {
@@ -625,10 +665,40 @@ Item {
                 PillButton {
                     width: 72
                     height: 30
-                    label: "HOME"
+                    label: "GPS"
                     active: true
-                    onClicked: googleMapsView.url = root.navigationWebUrl
+                    onClicked: {
+                        root.googleMapsLocationLoaded = false;
+                        root.loadGoogleMapsLocation(true);
+                        googleMapsView.url = root.navigationWebUrl;
+                    }
                 }
+            }
+        }
+    }
+
+    InputPanel {
+        id: virtualKeyboard
+        z: 100
+        x: 0
+        y: root.height
+        width: root.width
+        visible: active
+
+        states: State {
+            name: "visible"
+            when: virtualKeyboard.active
+            PropertyChanges {
+                target: virtualKeyboard
+                y: root.height - virtualKeyboard.height
+            }
+        }
+
+        transitions: Transition {
+            NumberAnimation {
+                properties: "y"
+                duration: 140
+                easing.type: Easing.OutCubic
             }
         }
     }
