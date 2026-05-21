@@ -17,11 +17,13 @@ Item {
     property var car: safeState.car || ({})
     property var gps: safeState.gps || ({})
     property bool previewTurnSignals: true
+    property bool previewHighBeam: true
     property bool highBeamActive: car.highBeam === true ||
                                   car.highbeam === true ||
                                   car.highBeams === true ||
                                   car.high_beam === true ||
-                                  car.high_beams === true
+                                  car.high_beams === true ||
+                                  previewHighBeam
     property string gearText: {
         var drivetrain = safeState.drivetrain || safeState.transmission || vehicle || {};
         var gear = drivetrain.gear !== undefined ? drivetrain.gear : drivetrain.currentGear;
@@ -251,36 +253,6 @@ Item {
         anchors.topMargin: 26
         spacing: 12
 
-        Item {
-            width: 34
-            height: 28
-            anchors.verticalCenter: parent.verticalCenter
-
-            MultiEffect {
-                anchors.fill: highBeamIcon
-                source: highBeamIcon
-                autoPaddingEnabled: true
-                shadowEnabled: true
-                shadowBlur: 1.0
-                shadowScale: 1.34
-                shadowOpacity: root.highBeamActive ? 0.95 : 0.0
-                shadowColor: "#4db8ff"
-                opacity: root.highBeamActive ? 1.0 : 0.0
-            }
-
-            Image {
-                id: highBeamIcon
-                anchors.centerIn: parent
-                width: 28
-                height: 22
-                source: "file:///home/admin/digital-dash/public/highbeam.png"
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
-                opacity: root.highBeamActive ? 1.0 : 0.28
-            }
-        }
-
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: Qt.formatTime(root.clockTime, "HH:mm")
@@ -329,6 +301,38 @@ Item {
         warnColor: "#ff4d5e"
         dangerAt: 6500
         reverse: false
+    }
+
+    Item {
+        width: 74
+        height: 54
+        anchors.horizontalCenter: rpmGauge.horizontalCenter
+        anchors.top: rpmGauge.bottom
+        anchors.topMargin: -10
+
+        MultiEffect {
+            anchors.fill: highBeamIcon
+            source: highBeamIcon
+            autoPaddingEnabled: true
+            shadowEnabled: true
+            shadowBlur: 1.0
+            shadowScale: 1.42
+            shadowOpacity: root.highBeamActive ? 0.95 : 0.0
+            shadowColor: "#4db8ff"
+            opacity: root.highBeamActive ? 1.0 : 0.0
+        }
+
+        Image {
+            id: highBeamIcon
+            anchors.centerIn: parent
+            width: 62
+            height: 42
+            source: "file:///home/admin/digital-dash/public/highbeam.png"
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
+            opacity: root.highBeamActive ? 1.0 : 0.28
+        }
     }
 
     MultiEffect {
