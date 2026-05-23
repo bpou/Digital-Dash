@@ -907,6 +907,7 @@ Item {
 
             DockButton {
                 iconSource: "file:///home/admin/digital-dash/public/application.svg"
+                iconSize: 20
                 width: 56
                 onClicked: root.launcherOpen = true
             }
@@ -1106,6 +1107,7 @@ Item {
         signal clicked()
         property string label: ""
         property string iconSource: ""
+        property real iconSize: 18
 
         height: 42
         radius: 12
@@ -1114,16 +1116,19 @@ Item {
         Image {
             id: dockIcon
             anchors.centerIn: parent
-            width: 18
-            height: 18
-            visible: iconSource.length > 0
+            width: iconSize
+            height: iconSize
+            visible: false
             source: iconSource
             fillMode: Image.PreserveAspectFit
-            layer.enabled: true
-            layer.effect: MultiEffect {
-                colorization: 1.0
-                colorizationColor: "#dce6ec"
-            }
+        }
+
+        MultiEffect {
+            anchors.fill: dockIcon
+            visible: iconSource.length > 0
+            source: dockIcon
+            colorization: 1.0
+            colorizationColor: "#dce6ec"
         }
 
         Text {
@@ -1147,6 +1152,7 @@ Item {
         signal clicked()
         property string label: ""
         property string iconSource: ""
+        property real iconSize: 18
         property bool active: false
         property color activeColor: "#7ee3ff"
 
@@ -1160,16 +1166,19 @@ Item {
         Image {
             id: pillIcon
             anchors.centerIn: parent
-            width: 18
-            height: 18
-            visible: iconSource.length > 0
+            width: iconSize
+            height: iconSize
+            visible: false
             source: iconSource
             fillMode: Image.PreserveAspectFit
-            layer.enabled: true
-            layer.effect: MultiEffect {
-                colorization: 1.0
-                colorizationColor: active ? "#f4f7fb" : "#a6b0b7"
-            }
+        }
+
+        MultiEffect {
+            anchors.fill: pillIcon
+            visible: iconSource.length > 0
+            source: pillIcon
+            colorization: 1.0
+            colorizationColor: active ? "#f4f7fb" : "#a6b0b7"
         }
 
         Text {
