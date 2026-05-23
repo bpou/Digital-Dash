@@ -62,6 +62,13 @@ Item {
         return [title || "", artist || "", album || ""].join("\u001f");
     }
 
+    function formatDuration(totalSeconds) {
+        var safeSeconds = Math.max(0, Math.floor(totalSeconds || 0));
+        var minutes = Math.floor(safeSeconds / 60);
+        var seconds = safeSeconds % 60;
+        return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+    }
+
     function queueMediaUpdate() {
         var nextTitle = nowPlaying.title || "";
         var nextArtist = nowPlaying.artist || "";
@@ -307,34 +314,33 @@ Item {
         shadowColor: "#000000"
     }
 
-    Row {
+    Item {
         id: contentRow
         anchors.fill: mainPanel
         anchors.margins: 24
-        spacing: 22
         visible: root.activePage === "MEDIA"
 
         GlassPanel {
             id: mediaPanel
-            width: parent.width * 0.48
-            height: parent.height
+            anchors.fill: parent
 
             Row {
                 anchors.fill: parent
-                anchors.margins: 24
-                spacing: 22
+                anchors.margins: 34
+                spacing: 34
 
                 Rectangle {
                     id: mediaArtwork
-                    width: Math.min(parent.height - 48, parent.width * 0.36)
+                    width: Math.min(parent.height, parent.width * 0.34)
                     height: width
-                    radius: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    radius: 22
                     color: "#12191c"
                     clip: true
 
                     Image {
                         anchors.fill: parent
-                        source: root.nowPlaying.artworkUrl || "file:///home/admin/digital-dash/public/albumcover.jpg"
+                        source: root.displayedArtwork || "file:///home/admin/digital-dash/public/albumcover.jpg"
                         fillMode: Image.PreserveAspectCrop
                         smooth: true
                         mipmap: true
@@ -344,212 +350,130 @@ Item {
                 Column {
                     width: parent.width - parent.spacing - mediaArtwork.width
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 16
+                    spacing: 18
 
                     Text {
-                        text: "MEDIA"
+                        text: root.nowPlaying.isPlaying ? "NOW PLAYING" : "MEDIA"
                         color: "#7b8591"
                         font.family: "sans-serif"
-                        font.pixelSize: 13
+                        font.pixelSize: 12
                         font.weight: Font.DemiBold
+                        font.letterSpacing: 2
                     }
 
                     Text {
                         width: parent.width
                         elide: Text.ElideRight
-                        text: root.nowPlaying.title || "No track"
+                        maximumLineCount: 2
+                        wrapMode: Text.WordWrap
+                        text: root.displayedTitle || "Not Playing"
                         color: "#f4f7fb"
                         font.family: "sans-serif"
-                        font.pixelSize: 38
+                        font.pixelSize: 44
                         font.weight: Font.Medium
                     }
 
                     Text {
                         width: parent.width
                         elide: Text.ElideRight
-                        text: root.nowPlaying.artist || "Bluetooth audio"
+                        text: root.displayedArtist || root.displayedAlbum || "Bluetooth audio"
                         color: "#8b96a2"
                         font.family: "sans-serif"
                         font.pixelSize: 20
                     }
 
-                    ProgressBar {
+                    Rectangle {
                         width: parent.width
-                        value: root.mediaProgress
+                        height: 6
+                        radius: 3
+                        color: Qt.rgba(1, 1, 1, 0.12)
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: parent.width * root.mediaProgress
+                            radius: 3
+                            color: "#c7c7c7"
+                        }
                     }
 
                     Row {
+                        width: parent.width
+                        height: 18
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.formatDuration(root.displayMusicPosition)
+                            color: "#8b96a2"
+                            font.family: "sans-serif"
+                            font.pixelSize: 12
+                            font.weight: Font.DemiBold
+                        }
+
+                        Text {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "-" + root.formatDuration(root.musicDuration - root.displayMusicPosition)
+                            color: "#68777d"
+                            font.family: "sans-serif"
+                            font.pixelSize: 12
+                            font.weight: Font.DemiBold
+                        }
+                    }
+
+                    Row {
+                        anchors.horizontalCenter: parent.horizontalCenter
                         spacing: 10
                         PillButton {
                             iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-backward-3751095.png"
-                            iconSize: 24
-                            width: 78
+                            iconSize: 28
+                            width: 92
+                            height: 52
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "prev" })
                         }
                         PillButton {
                             iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-pause-3751099.png" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-play-3751096.png"
-                            iconSize: 24
-                            width: 86
+                            iconSize: 30
+                            width: 104
+                            height: 52
                             active: true
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
                         }
                         PillButton {
                             iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-forward-3751113.png"
-                            iconSize: 24
-                            width: 78
+                            iconSize: 28
+                            width: 92
+                            height: 52
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "next" })
                         }
                     }
 
                     Row {
+                        anchors.horizontalCenter: parent.horizontalCenter
                         spacing: 10
 
                         PillButton {
                             label: "SPOTIFY"
-                            width: 96
+                            width: 112
                             active: root.mediaWebUrl.toString().indexOf("spotify") !== -1
                             onClicked: root.mediaWebUrl = "https://open.spotify.com"
                         }
 
                         PillButton {
                             label: "YOUTUBE MUSIC"
-                            width: 132
+                            width: 154
                             active: root.mediaWebUrl.toString().indexOf("music.youtube.com") !== -1
                             onClicked: root.mediaWebUrl = "https://music.youtube.com"
                         }
 
                         PillButton {
                             label: "PI YTM"
-                            width: 78
+                            width: 90
                             active: root.mediaWebUrl.toString().indexOf("127.0.0.1:5174") !== -1
                             onClicked: root.mediaWebUrl = "http://127.0.0.1:5174"
                         }
-                    }
-                }
-            }
-        }
-
-        Column {
-            id: middleColumn
-            width: parent.width * 0.25
-            height: parent.height
-            spacing: 22
-
-            GlassPanel {
-                width: parent.width
-                height: (parent.height - parent.spacing) * 0.58
-
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 10
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: "CLIMATE"
-                        color: "#7b8591"
-                        font.family: "sans-serif"
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                    }
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: Math.round(root.climate.tempSetC || 0).toString()
-                        color: "#f4f7fb"
-                        font.family: "sans-serif"
-                        font.pixelSize: 96
-                        font.weight: Font.Light
-                    }
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: "C  Fan " + (root.climate.fan || 0)
-                        color: "#8b96a2"
-                        font.family: "sans-serif"
-                        font.pixelSize: 18
-                    }
-                }
-            }
-
-            GlassPanel {
-                width: parent.width
-                height: (parent.height - parent.spacing) * 0.42
-
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 10
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: "QUICK"
-                        color: "#7b8591"
-                        font.family: "sans-serif"
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                    }
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: root.car.lights ? "LIGHTS ON" : "LIGHTS OFF"
-                        color: "#f4f7fb"
-                        font.family: "sans-serif"
-                        font.pixelSize: 24
-                        font.weight: Font.Medium
-                    }
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: root.car.locked ? "LOCKED" : "UNLOCKED"
-                        color: "#8b96a2"
-                        font.family: "sans-serif"
-                        font.pixelSize: 14
-                        font.weight: Font.DemiBold
-                    }
-                }
-            }
-        }
-
-        GlassPanel {
-            width: contentRow.width - mediaPanel.width - middleColumn.width - contentRow.spacing * 2
-            height: parent.height
-
-            Column {
-                anchors.fill: parent
-                anchors.margins: 24
-                spacing: 18
-
-                Text {
-                    text: "APPS"
-                    color: "#7b8591"
-                    font.family: "sans-serif"
-                    font.pixelSize: 13
-                    font.weight: Font.DemiBold
-                }
-
-                Rectangle {
-                    width: parent.width
-                    height: parent.height - 36
-                    radius: 18
-                    color: Qt.rgba(1, 1, 1, 0.045)
-                    border.color: Qt.rgba(1, 1, 1, 0.08)
-                    border.width: 1
-                    clip: true
-
-                    Text {
-                        anchors.centerIn: parent
-                        visible: root.mediaWebUrl.toString().length === 0
-                        text: "SELECT APP"
-                        color: "#f4f7fb"
-                        font.family: "sans-serif"
-                        font.pixelSize: 22
-                        font.weight: Font.Medium
-                        font.letterSpacing: 2
-                    }
-
-                    WebEngineView {
-                        anchors.fill: parent
-                        visible: root.mediaWebUrl.toString().length > 0
-                        url: root.mediaWebUrl
                     }
                 }
             }
@@ -967,18 +891,6 @@ Item {
         color: Qt.rgba(5 / 255, 6 / 255, 8 / 255, 0.90)
         border.color: Qt.rgba(1, 1, 1, 0.08)
         border.width: 1
-
-        DockButton {
-            id: appsDockButton
-            anchors.left: parent.left
-            anchors.leftMargin: 30
-            anchors.verticalCenter: parent.verticalCenter
-            backgroundVisible: false
-            iconSource: "file:///home/admin/digital-dash/public/application.png"
-            iconSize: 20
-            width: 42
-            onClicked: root.launcherOpen = true
-        }
 
         Row {
             id: bottomMusicPlayer
