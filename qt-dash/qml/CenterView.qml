@@ -323,7 +323,12 @@ Item {
                     Row {
                         spacing: 10
                         PillButton { label: "PREV"; width: 78; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "prev" }) }
-                        PillButton { label: root.nowPlaying.isPlaying ? "PAUSE" : "PLAY"; width: 86; active: true; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" }) }
+                        PillButton {
+                            iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.svg" : "file:///home/admin/digital-dash/public/play-button-arrowhead.svg"
+                            width: 86
+                            active: true
+                            onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
+                        }
                         PillButton { label: "NEXT"; width: 78; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "next" }) }
                     }
 
@@ -901,7 +906,7 @@ Item {
             spacing: 18
 
             DockButton {
-                label: "APPS"
+                iconSource: "file:///home/admin/digital-dash/public/application.svg"
                 width: 56
                 onClicked: root.launcherOpen = true
             }
@@ -950,7 +955,11 @@ Item {
                     }
                 }
 
-                DockButton { label: root.nowPlaying.isPlaying ? "PAUSE" : "PLAY"; width: 72 }
+                DockButton {
+                    iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.svg" : "file:///home/admin/digital-dash/public/play-button-arrowhead.svg"
+                    width: 72
+                    onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
+                }
             }
 
             Item { width: parent.width - 18 * 2 - 56 - 340 - 96 - 18 * 3; height: 1 }
@@ -1096,13 +1105,30 @@ Item {
     component DockButton: Rectangle {
         signal clicked()
         property string label: ""
+        property string iconSource: ""
 
         height: 42
         radius: 12
         color: Qt.rgba(1, 1, 1, 0.07)
 
+        Image {
+            id: dockIcon
+            anchors.centerIn: parent
+            width: 18
+            height: 18
+            visible: iconSource.length > 0
+            source: iconSource
+            fillMode: Image.PreserveAspectFit
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                colorization: 1.0
+                colorizationColor: "#dce6ec"
+            }
+        }
+
         Text {
             anchors.centerIn: parent
+            visible: iconSource.length === 0
             text: label
             color: "#dce6ec"
             font.family: "sans-serif"
@@ -1120,6 +1146,7 @@ Item {
     component PillButton: Rectangle {
         signal clicked()
         property string label: ""
+        property string iconSource: ""
         property bool active: false
         property color activeColor: "#7ee3ff"
 
@@ -1130,8 +1157,24 @@ Item {
         border.color: active ? activeColor : Qt.rgba(1, 1, 1, 0.10)
         border.width: 1
 
+        Image {
+            id: pillIcon
+            anchors.centerIn: parent
+            width: 18
+            height: 18
+            visible: iconSource.length > 0
+            source: iconSource
+            fillMode: Image.PreserveAspectFit
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                colorization: 1.0
+                colorizationColor: active ? "#f4f7fb" : "#a6b0b7"
+            }
+        }
+
         Text {
             anchors.centerIn: parent
+            visible: iconSource.length === 0
             text: label
             color: active ? "#f4f7fb" : "#a6b0b7"
             font.family: "sans-serif"
