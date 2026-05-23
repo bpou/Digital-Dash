@@ -100,7 +100,7 @@ export default function MusicPlayer({
             onClick={() => sendVehicleCommand("bt/media/control", { action: "prev" })}
             className="music-control"
           >
-            <img src="/recolored_C7C7C7/noun-backward-3751095.svg" alt="" className="h-[18px] w-[18px] object-contain" />
+            <img src="/recolored_C7C7C7/noun-backward-3751095.png" alt="" className="h-[18px] w-[18px] object-contain" />
           </button>
           <button
             type="button"
@@ -113,9 +113,9 @@ export default function MusicPlayer({
             className="music-control music-control--primary"
           >
             {nowPlaying.isPlaying ? (
-              <img src="/recolored_C7C7C7/noun-pause-3751099.svg" alt="" className="h-[21px] w-[21px] object-contain" />
+              <img src="/recolored_C7C7C7/noun-pause-3751099.png" alt="" className="h-[21px] w-[21px] object-contain" />
             ) : (
-              <img src="/recolored_C7C7C7/noun-play-3751096.svg" alt="" className="h-[21px] w-[21px] object-contain" />
+              <img src="/recolored_C7C7C7/noun-play-3751096.png" alt="" className="h-[21px] w-[21px] object-contain" />
             )}
           </button>
           <button
@@ -124,7 +124,7 @@ export default function MusicPlayer({
             onClick={() => sendVehicleCommand("bt/media/control", { action: "next" })}
             className="music-control"
           >
-            <img src="/recolored_C7C7C7/noun-forward-3751113.svg" alt="" className="h-[18px] w-[18px] object-contain" />
+            <img src="/recolored_C7C7C7/noun-forward-3751113.png" alt="" className="h-[18px] w-[18px] object-contain" />
           </button>
         </div>
 

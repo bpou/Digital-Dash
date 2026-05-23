@@ -72,7 +72,7 @@ export default function MediaPage() {
               onClick={() => sendVehicleCommand("bt/media/control", { action: "prev" })}
               className="h-10 w-10 rounded-full border border-white/10 text-white/70 hover:text-white"
             >
-              <img src="/recolored_C7C7C7/noun-backward-3751095.svg" alt="" className="mx-auto h-4 w-4 object-contain" />
+              <img src="/recolored_C7C7C7/noun-backward-3751095.png" alt="" className="mx-auto h-4 w-4 object-contain" />
             </button>
             <button
               type="button"
@@ -84,9 +84,9 @@ export default function MediaPage() {
               className="h-12 w-12 rounded-full border border-white/20 bg-white/10 text-white"
             >
               {audio.nowPlaying.isPlaying ? (
-                <img src="/recolored_C7C7C7/noun-pause-3751099.svg" alt="" className="mx-auto h-5 w-5 object-contain" />
+                <img src="/recolored_C7C7C7/noun-pause-3751099.png" alt="" className="mx-auto h-5 w-5 object-contain" />
               ) : (
-                <img src="/recolored_C7C7C7/noun-play-3751096.svg" alt="" className="mx-auto h-5 w-5 object-contain" />
+                <img src="/recolored_C7C7C7/noun-play-3751096.png" alt="" className="mx-auto h-5 w-5 object-contain" />
               )}
             </button>
             <button
@@ -94,7 +94,7 @@ export default function MediaPage() {
               onClick={() => sendVehicleCommand("bt/media/control", { action: "next" })}
               className="h-10 w-10 rounded-full border border-white/10 text-white/70 hover:text-white"
             >
-              <img src="/recolored_C7C7C7/noun-forward-3751113.svg" alt="" className="mx-auto h-4 w-4 object-contain" />
+              <img src="/recolored_C7C7C7/noun-forward-3751113.png" alt="" className="mx-auto h-4 w-4 object-contain" />
             </button>
 </div>
 
