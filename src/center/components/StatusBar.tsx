@@ -99,8 +99,11 @@ export default function StatusBar({ outsideTemp = 22 }: StatusBarProps) {
         </div>
 
         {/* Cellular signal */}
-        <div className="flex h-4 w-4 items-center justify-center">
-          <img src="/recolored_C7C7C7/lte.svg" alt="" className="h-4 w-4 object-contain opacity-80" />
+        <div className="flex items-center gap-0.5">
+          <div className="h-2 w-1 rounded-sm bg-[var(--tesla-text-secondary)]" />
+          <div className="h-2.5 w-1 rounded-sm bg-[var(--tesla-text-secondary)]" />
+          <div className="h-3 w-1 rounded-sm bg-[var(--tesla-text-secondary)]" />
+          <div className="h-3.5 w-1 rounded-sm bg-[var(--tesla-text-tertiary)]" />
         </div>
 
         {/* WiFi icon */}
@@ -125,7 +128,19 @@ export default function StatusBar({ outsideTemp = 22 }: StatusBarProps) {
 
         {/* Bluetooth icon */}
         <div className="relative h-4 w-4">
-          <img src="/recolored_C7C7C7/bluetooth.svg" alt="" className="h-4 w-4 object-contain opacity-80" />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            className="h-4 w-4 text-[var(--tesla-text-tertiary)]"
+          >
+            <path
+              d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
           {!btConnected && (
             <span className="pointer-events-none absolute left-0 top-1/2 h-[1.5px] w-full -translate-y-1/2 rotate-45 rounded-full bg-[var(--tesla-text-tertiary)]" />
           )}

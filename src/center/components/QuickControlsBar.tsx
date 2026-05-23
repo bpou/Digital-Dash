@@ -1,4 +1,4 @@
-﻿import { motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { sendVehicleCommand, useVehicleState } from "../../vehicle/vehicleClient";
 
 interface QuickControlsBarProps {
@@ -71,9 +71,9 @@ export default function QuickControlsBar({
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-primary)] transition hover:bg-[var(--tesla-bg-surface-hover)]"
           >
             {audio.nowPlaying.isPlaying ? (
-              <img src="/recolored_C7C7C7/pause.svg" alt="" className="h-4 w-4 object-contain" />
+              <img src="/recolored_C7C7C7/noun-pause-3751099.svg" alt="" className="h-4 w-4 object-contain" />
             ) : (
-              <img src="/recolored_C7C7C7/play.svg" alt="" className="h-4 w-4 object-contain" />
+              <img src="/recolored_C7C7C7/noun-play-3751096.svg" alt="" className="h-4 w-4 object-contain" />
             )}
           </button>
           <button
@@ -81,7 +81,7 @@ export default function QuickControlsBar({
             onClick={() => sendVehicleCommand("bt/media/control", { action: "next" })}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--tesla-text-secondary)] transition hover:text-[var(--tesla-text-primary)]"
           >
-            <img src="/recolored_C7C7C7/skipandprevious.svg" alt="" className="h-4 w-4 rotate-180 object-contain" />
+            <img src="/recolored_C7C7C7/noun-forward-3751113.svg" alt="" className="h-4 w-4 object-contain" />
           </button>
         </div>
       </motion.button>

@@ -381,19 +381,18 @@ Item {
                     Row {
                         spacing: 10
                         PillButton {
-                            iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/skipandprevious.svg"
+                            iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-backward-3751095.svg"
                             width: 78
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "prev" })
                         }
                         PillButton {
-                            iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/pause.svg" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/play.svg"
+                            iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-pause-3751099.svg" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-play-3751096.svg"
                             width: 86
                             active: true
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
                         }
                         PillButton {
-                            iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/skipandprevious.svg"
-                            iconRotation: 180
+                            iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-forward-3751113.svg"
                             width: 78
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "next" })
                         }
@@ -1027,7 +1026,7 @@ Item {
             DockButton {
                 anchors.verticalCenter: parent.verticalCenter
                 backgroundVisible: false
-                iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/pause.svg" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/play.svg"
+                iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-pause-3751099.svg" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-play-3751096.svg"
                 iconSize: 22
                 width: 42
                 onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
@@ -1327,7 +1326,8 @@ Item {
             anchors.topMargin: 34
             width: 42
             height: 42
-            source: "file:///home/admin/digital-dash/public/recolored_C7C7C7/" + (icon === "nav" ? "navigation" : icon) + ".svg"
+            visible: false
+            source: ""
             fillMode: Image.PreserveAspectFit
             opacity: active ? 1.0 : 0.72
         }

@@ -1,37 +1,29 @@
 import { NavLink } from "react-router-dom";
 
-const iconBase = "/recolored_C7C7C7";
-
 const navItems = [
   {
     label: "Media",
     to: "/center/media",
-    icon: "media.svg",
   },
   {
     label: "Climate",
     to: "/center/climate",
-    icon: "climate.svg",
   },
   {
     label: "Car",
     to: "/center/car",
-    icon: "car.svg",
   },
   {
     label: "Nav",
     to: "/center/navigation",
-    icon: "navigation.svg",
   },
   {
     label: "Phone",
     to: "/center/phone",
-    icon: "phone.svg",
   },
   {
     label: "Settings",
     to: "/center/settings",
-    icon: "settings.svg",
   },
 ];
 
@@ -50,7 +42,6 @@ export default function BottomDock() {
             }`
           }
         >
-          <img src={`${iconBase}/${item.icon}`} alt="" className="h-5 w-5 object-contain opacity-80" />
           <span>{item.label}</span>
         </NavLink>
       ))}

@@ -12,18 +12,15 @@ interface AppLauncherProps {
 type LauncherApp = {
   app: AppType;
   label: string;
-  icon: string;
 };
 
-const iconBase = "/recolored_C7C7C7";
-
 const launcherApps: LauncherApp[] = [
-  { app: "media", label: "Media", icon: "media.svg" },
-  { app: "climate", label: "Climate", icon: "climate.svg" },
-  { app: "car", label: "Car", icon: "car.svg" },
-  { app: "nav", label: "Navigation", icon: "navigation.svg" },
-  { app: "phone", label: "Phone", icon: "phone.svg" },
-  { app: "settings", label: "Settings", icon: "settings.svg" },
+  { app: "media", label: "Media" },
+  { app: "climate", label: "Climate" },
+  { app: "car", label: "Car" },
+  { app: "nav", label: "Navigation" },
+  { app: "phone", label: "Phone" },
+  { app: "settings", label: "Settings" },
 ];
 
 interface AppIconProps extends LauncherApp {
@@ -31,7 +28,7 @@ interface AppIconProps extends LauncherApp {
   onClick: () => void;
 }
 
-const AppIcon = ({ label, icon, isActive, onClick }: AppIconProps) => (
+const AppIcon = ({ label, isActive, onClick }: AppIconProps) => (
   <motion.button
     type="button"
     onClick={onClick}
@@ -42,9 +39,6 @@ const AppIcon = ({ label, icon, isActive, onClick }: AppIconProps) => (
     }`}
     whileTap={{ scale: 0.95, opacity: 0.8 }}
   >
-    <div className="flex h-14 w-14 items-center justify-center">
-      <img src={`${iconBase}/${icon}`} alt="" className="h-10 w-10 object-contain opacity-85" />
-    </div>
     <span className="text-[11px] font-medium uppercase tracking-[0.14em]">{label}</span>
   </motion.button>
 );
