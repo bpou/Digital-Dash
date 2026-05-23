@@ -25,7 +25,21 @@ Item {
     property date clockTime: new Date()
     property color ambientColor: ambient.color || "#7ee3ff"
     property real ambientStrength: Math.max(0.18, Math.min(1, (ambient.brightness || 65) / 100))
-    property real mediaProgress: Math.min(1, (nowPlaying.positionSec || 0) / Math.max(1, nowPlaying.durationSec || 1))
+    property int musicPosition: nowPlaying.positionSec || 0
+    property int musicDuration: nowPlaying.durationSec || 0
+    property int displayMusicPosition: Math.round(Math.max(0, Math.min(musicPosition, musicDuration > 0 ? musicDuration : musicPosition)))
+    property real mediaProgress: Math.min(1, displayMusicPosition / Math.max(1, musicDuration))
+    property string displayedTitle: ""
+    property string displayedArtist: ""
+    property string displayedAlbum: ""
+    property string displayedArtwork: ""
+    property string displayedTrackKey: ""
+    property string pendingTitle: ""
+    property string pendingArtist: ""
+    property string pendingAlbum: ""
+    property string pendingArtwork: ""
+    property string pendingTrackKey: ""
+    property bool pendingHasMedia: false
     property bool launcherOpen: false
     property string activePage: "MEDIA"
     property string dialNumber: ""
@@ -43,6 +57,35 @@ Item {
     function sendClimate(next) {
         vehicleClient.sendCommand("climate/set", next);
     }
+
+    function mediaKey(title, artist, album) {
+        return [title || "", artist || "", album || ""].join("\u001f");
+    }
+
+    function queueMediaUpdate() {
+        var nextTitle = nowPlaying.title || "";
+        var nextArtist = nowPlaying.artist || "";
+        var nextAlbum = nowPlaying.album || "";
+        var nextArtwork = nowPlaying.artworkUrl || "";
+        var nextHasMedia = (nextTitle || nextArtist || nextAlbum || nextArtwork) ? true : false;
+        var nextKey = nextHasMedia ? mediaKey(nextTitle, nextArtist, nextAlbum) : "";
+
+        pendingTitle = nextTitle;
+        pendingArtist = nextArtist;
+        pendingAlbum = nextAlbum;
+        pendingArtwork = nextArtwork;
+        pendingTrackKey = nextKey;
+        pendingHasMedia = nextHasMedia;
+
+        if (nextKey !== displayedTrackKey) {
+            mediaSwapTimer.restart();
+            return;
+        }
+
+        displayedArtwork = nextArtwork;
+    }
+
+    onNowPlayingChanged: queueMediaUpdate()
 
     function hasGpsLocation() {
         return Number.isFinite(Number(root.gps.lat)) && Number.isFinite(Number(root.gps.lng));
@@ -91,6 +134,21 @@ Item {
         repeat: true
         onTriggered: root.clockTime = new Date()
     }
+
+    Timer {
+        id: mediaSwapTimer
+        interval: 280
+        repeat: false
+        onTriggered: {
+            displayedTitle = pendingTitle;
+            displayedArtist = pendingArtist;
+            displayedAlbum = pendingAlbum;
+            displayedArtwork = pendingArtwork;
+            displayedTrackKey = pendingTrackKey;
+        }
+    }
+
+    Component.onCompleted: queueMediaUpdate()
 
     Rectangle {
         anchors.fill: parent
@@ -899,76 +957,80 @@ Item {
         border.color: Qt.rgba(1, 1, 1, 0.08)
         border.width: 1
 
+        DockButton {
+            id: appsDockButton
+            anchors.left: parent.left
+            anchors.leftMargin: 30
+            anchors.verticalCenter: parent.verticalCenter
+            backgroundVisible: false
+            iconSource: "file:///home/admin/digital-dash/public/application.png"
+            iconSize: 20
+            width: 42
+            onClicked: root.launcherOpen = true
+        }
+
         Row {
-            anchors.fill: parent
-            anchors.leftMargin: 18
-            anchors.rightMargin: 18
-            spacing: 18
+            id: bottomMusicPlayer
+            anchors.centerIn: parent
+            height: 44
+            spacing: 12
 
-            DockButton {
-                iconSource: "file:///home/admin/digital-dash/public/application.png"
-                iconSize: 20
-                width: 56
-                onClicked: root.launcherOpen = true
-            }
-
-            Row {
+            Rectangle {
+                width: 42
+                height: 42
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 12
-                width: 340
+                radius: 10
+                color: "#12191c"
+                clip: true
 
-                Rectangle {
-                    width: 42
-                    height: 42
-                    radius: 10
-                    color: "#12191c"
-                    clip: true
-
-                    Image {
-                        anchors.fill: parent
-                        source: root.nowPlaying.artworkUrl || "file:///home/admin/digital-dash/public/albumcover.jpg"
-                        fillMode: Image.PreserveAspectCrop
-                    }
-                }
-
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 180
-                    spacing: 2
-
-                    Text {
-                        width: parent.width
-                        elide: Text.ElideRight
-                        text: root.nowPlaying.title || "Not Playing"
-                        color: "#f4f7fb"
-                        font.family: "sans-serif"
-                        font.pixelSize: 14
-                        font.weight: Font.Medium
-                    }
-
-                    Text {
-                        width: parent.width
-                        elide: Text.ElideRight
-                        text: root.nowPlaying.artist || "-"
-                        color: "#8b96a2"
-                        font.family: "sans-serif"
-                        font.pixelSize: 11
-                    }
-                }
-
-                DockButton {
-                    iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.png" : "file:///home/admin/digital-dash/public/play-button-arrowhead.png"
-                    width: 72
-                    onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
+                Image {
+                    anchors.fill: parent
+                    source: root.displayedArtwork || "file:///home/admin/digital-dash/public/albumcover.jpg"
+                    fillMode: Image.PreserveAspectCrop
                 }
             }
 
-            Item { width: parent.width - 18 * 2 - 56 - 340 - 96 - 18 * 3; height: 1 }
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 190
+                spacing: 2
+
+                Text {
+                    width: parent.width
+                    elide: Text.ElideRight
+                    text: root.displayedTitle || "Not Playing"
+                    color: "#f4f7fb"
+                    font.family: "sans-serif"
+                    font.pixelSize: 14
+                    font.weight: Font.Medium
+                }
+
+                Text {
+                    width: parent.width
+                    elide: Text.ElideRight
+                    text: root.displayedArtist || root.displayedAlbum || "-"
+                    color: "#8b96a2"
+                    font.family: "sans-serif"
+                    font.pixelSize: 11
+                }
+            }
 
             DockButton {
-                label: Math.round(root.climate.tempSetC || 0) + " C"
-                width: 96
+                anchors.verticalCenter: parent.verticalCenter
+                backgroundVisible: false
+                iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.png" : "file:///home/admin/digital-dash/public/play-button-arrowhead.png"
+                iconSize: 22
+                width: 42
+                onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
             }
+        }
+
+        DockButton {
+            anchors.right: parent.right
+            anchors.rightMargin: 30
+            anchors.verticalCenter: parent.verticalCenter
+            label: Math.round(root.climate.tempSetC || 0) + " C"
+            width: 96
         }
     }
 
@@ -1108,10 +1170,11 @@ Item {
         property string label: ""
         property string iconSource: ""
         property real iconSize: 18
+        property bool backgroundVisible: true
 
         height: 42
         radius: 12
-        color: Qt.rgba(1, 1, 1, 0.07)
+        color: backgroundVisible ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
 
         Image {
             id: dockIcon
