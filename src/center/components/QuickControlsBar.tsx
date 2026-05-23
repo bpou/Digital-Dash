@@ -1,5 +1,4 @@
 ﻿import { motion } from "framer-motion";
-import PublicSvgIcon from "../../components/PublicSvgIcon";
 import { sendVehicleCommand, useVehicleState } from "../../vehicle/vehicleClient";
 
 interface QuickControlsBarProps {
@@ -22,7 +21,7 @@ export default function QuickControlsBar({
         onClick={onLauncherToggle}
         className="flex h-11 w-11 items-center justify-center rounded-[var(--tesla-radius-md)] bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-secondary)] transition hover:bg-[var(--tesla-bg-surface-hover)] hover:text-[var(--tesla-text-primary)]"
       >
-        <PublicSvgIcon src="/application.svg" className="h-5 w-5" />
+        <img src="/application.png" alt="" className="h-5 w-5 object-contain" />
       </button>
 
       <motion.button
@@ -72,9 +71,9 @@ export default function QuickControlsBar({
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-primary)] transition hover:bg-[var(--tesla-bg-surface-hover)]"
           >
             {audio.nowPlaying.isPlaying ? (
-              <PublicSvgIcon src="/pause.svg" className="h-4 w-4" />
+              <img src="/pause.png" alt="" className="h-4 w-4 object-contain" />
             ) : (
-              <PublicSvgIcon src="/play-button-arrowhead.svg" className="h-4 w-4" />
+              <img src="/play-button-arrowhead.png" alt="" className="h-4 w-4 object-contain" />
             )}
           </button>
           <button

@@ -324,7 +324,7 @@ Item {
                         spacing: 10
                         PillButton { label: "PREV"; width: 78; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "prev" }) }
                         PillButton {
-                            iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.svg" : "file:///home/admin/digital-dash/public/play-button-arrowhead.svg"
+                            iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.png" : "file:///home/admin/digital-dash/public/play-button-arrowhead.png"
                             width: 86
                             active: true
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
@@ -906,7 +906,7 @@ Item {
             spacing: 18
 
             DockButton {
-                iconSource: "file:///home/admin/digital-dash/public/application.svg"
+                iconSource: "file:///home/admin/digital-dash/public/application.png"
                 iconSize: 20
                 width: 56
                 onClicked: root.launcherOpen = true
@@ -957,7 +957,7 @@ Item {
                 }
 
                 DockButton {
-                    iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.svg" : "file:///home/admin/digital-dash/public/play-button-arrowhead.svg"
+                    iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.png" : "file:///home/admin/digital-dash/public/play-button-arrowhead.png"
                     width: 72
                     onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
                 }
@@ -1118,17 +1118,9 @@ Item {
             anchors.centerIn: parent
             width: iconSize
             height: iconSize
-            visible: false
+            visible: iconSource.length > 0
             source: iconSource
             fillMode: Image.PreserveAspectFit
-        }
-
-        MultiEffect {
-            anchors.fill: dockIcon
-            visible: iconSource.length > 0
-            source: dockIcon
-            colorization: 1.0
-            colorizationColor: "#dce6ec"
         }
 
         Text {
@@ -1168,17 +1160,9 @@ Item {
             anchors.centerIn: parent
             width: iconSize
             height: iconSize
-            visible: false
+            visible: iconSource.length > 0
             source: iconSource
             fillMode: Image.PreserveAspectFit
-        }
-
-        MultiEffect {
-            anchors.fill: pillIcon
-            visible: iconSource.length > 0
-            source: pillIcon
-            colorization: 1.0
-            colorizationColor: active ? "#f4f7fb" : "#a6b0b7"
         }
 
         Text {

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { SkipBack, SkipForward } from "lucide-react";
-import PublicSvgIcon from "./PublicSvgIcon";
 import { sendVehicleCommand } from "../vehicle/vehicleClient";
 
 type NowPlaying = {
@@ -115,9 +114,9 @@ export default function MusicPlayer({
             className="music-control music-control--primary"
           >
             {nowPlaying.isPlaying ? (
-              <PublicSvgIcon src="/pause.svg" className="h-[21px] w-[21px]" />
+              <img src="/pause.png" alt="" className="h-[21px] w-[21px] object-contain" />
             ) : (
-              <PublicSvgIcon src="/play-button-arrowhead.svg" className="h-[21px] w-[21px]" />
+              <img src="/play-button-arrowhead.png" alt="" className="h-[21px] w-[21px] object-contain" />
             )}
           </button>
           <button
