@@ -380,14 +380,23 @@ Item {
 
                     Row {
                         spacing: 10
-                        PillButton { label: "PREV"; width: 78; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "prev" }) }
                         PillButton {
-                            iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.png" : "file:///home/admin/digital-dash/public/play-button-arrowhead.png"
+                            iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/skipandprevious.svg"
+                            width: 78
+                            onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "prev" })
+                        }
+                        PillButton {
+                            iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/pause.svg" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/play.svg"
                             width: 86
                             active: true
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
                         }
-                        PillButton { label: "NEXT"; width: 78; onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "next" }) }
+                        PillButton {
+                            iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/skipandprevious.svg"
+                            iconRotation: 180
+                            width: 78
+                            onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "next" })
+                        }
                     }
 
                     Row {
@@ -1018,7 +1027,7 @@ Item {
             DockButton {
                 anchors.verticalCenter: parent.verticalCenter
                 backgroundVisible: false
-                iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/pause.png" : "file:///home/admin/digital-dash/public/play-button-arrowhead.png"
+                iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/pause.svg" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/play.svg"
                 iconSize: 22
                 width: 42
                 onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
@@ -1208,6 +1217,7 @@ Item {
         property string label: ""
         property string iconSource: ""
         property real iconSize: 18
+        property real iconRotation: 0
         property bool active: false
         property color activeColor: "#7ee3ff"
 
@@ -1226,6 +1236,7 @@ Item {
             visible: iconSource.length > 0
             source: iconSource
             fillMode: Image.PreserveAspectFit
+            rotation: iconRotation
         }
 
         Text {
@@ -1310,95 +1321,15 @@ Item {
         border.color: active ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.045)
         border.width: 1
 
-        Canvas {
-            id: tileIcon
+        Image {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
             anchors.topMargin: 34
             width: 42
             height: 42
-
-            onPaint: {
-                var ctx = getContext("2d");
-                ctx.reset();
-                ctx.strokeStyle = active ? "#f4f7fb" : "#9a9ca3";
-                ctx.fillStyle = active ? "#f4f7fb" : "#9a9ca3";
-                ctx.lineWidth = 2.4;
-                ctx.lineCap = "round";
-                ctx.lineJoin = "round";
-
-                if (icon === "media") {
-                    ctx.strokeRect(7, 11, 28, 22);
-                    ctx.beginPath();
-                    ctx.moveTo(18, 17);
-                    ctx.lineTo(27, 22);
-                    ctx.lineTo(18, 27);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (icon === "climate") {
-                    ctx.beginPath();
-                    ctx.moveTo(21, 8);
-                    ctx.lineTo(21, 34);
-                    ctx.moveTo(14, 14);
-                    ctx.lineTo(28, 14);
-                    ctx.moveTo(14, 28);
-                    ctx.lineTo(28, 28);
-                    ctx.stroke();
-                } else if (icon === "car") {
-                    ctx.beginPath();
-                    ctx.moveTo(9, 25);
-                    ctx.lineTo(12, 17);
-                    ctx.lineTo(30, 17);
-                    ctx.lineTo(33, 25);
-                    ctx.lineTo(33, 30);
-                    ctx.lineTo(9, 30);
-                    ctx.closePath();
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(14, 31, 2.5, 0, Math.PI * 2);
-                    ctx.arc(28, 31, 2.5, 0, Math.PI * 2);
-                    ctx.stroke();
-                } else if (icon === "nav") {
-                    ctx.beginPath();
-                    ctx.moveTo(21, 5);
-                    ctx.lineTo(34, 37);
-                    ctx.lineTo(21, 30);
-                    ctx.lineTo(8, 37);
-                    ctx.closePath();
-                    ctx.stroke();
-                } else if (icon === "phone") {
-                    ctx.beginPath();
-                    ctx.moveTo(15, 8);
-                    ctx.quadraticCurveTo(10, 10, 13, 18);
-                    ctx.quadraticCurveTo(17, 29, 29, 32);
-                    ctx.quadraticCurveTo(34, 33, 34, 27);
-                    ctx.lineTo(28, 24);
-                    ctx.lineTo(24, 28);
-                    ctx.quadraticCurveTo(17, 25, 16, 18);
-                    ctx.lineTo(20, 14);
-                    ctx.closePath();
-                    ctx.stroke();
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(21, 21, 8, 0, Math.PI * 2);
-                    ctx.stroke();
-                    for (var i = 0; i < 8; i++) {
-                        var a = i * Math.PI / 4;
-                        ctx.beginPath();
-                        ctx.moveTo(21 + Math.cos(a) * 13, 21 + Math.sin(a) * 13);
-                        ctx.lineTo(21 + Math.cos(a) * 17, 21 + Math.sin(a) * 17);
-                        ctx.stroke();
-                    }
-                }
-            }
-
-            Connections {
-                target: parent
-                function onActiveChanged() { tileIcon.requestPaint(); }
-                function onIconChanged() { tileIcon.requestPaint(); }
-            }
-
-            Component.onCompleted: requestPaint()
+            source: "file:///home/admin/digital-dash/public/recolored_C7C7C7/" + (icon === "nav" ? "navigation" : icon) + ".svg"
+            fillMode: Image.PreserveAspectFit
+            opacity: active ? 1.0 : 0.72
         }
 
         Text {

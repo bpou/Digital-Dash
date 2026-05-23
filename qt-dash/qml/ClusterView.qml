@@ -1030,35 +1030,12 @@ Item {
                     border.color: root.nowPlaying.isPlaying ? "#66e5ff" : "#3a454a"
                     border.width: 1
 
-                    Canvas {
-                        id: playIconCanvas
+                    Image {
                         anchors.centerIn: parent
-                        width: 10
-                        height: 10
-
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.reset();
-                            ctx.fillStyle = "#ffffff";
-                            if (root.nowPlaying.isPlaying) {
-                                ctx.fillRect(2, 1, 2, 8);
-                                ctx.fillRect(6, 1, 2, 8);
-                            } else {
-                                ctx.beginPath();
-                                ctx.moveTo(3, 1);
-                                ctx.lineTo(9, 5);
-                                ctx.lineTo(3, 9);
-                                ctx.closePath();
-                                ctx.fill();
-                            }
-                        }
-
-                        Connections {
-                            target: root
-                            function onNowPlayingChanged() { playIconCanvas.requestPaint(); }
-                        }
-
-                        Component.onCompleted: requestPaint()
+                        width: 11
+                        height: 11
+                        source: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/pause.svg" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/play.svg"
+                        fillMode: Image.PreserveAspectFit
                     }
 
                     MouseArea {

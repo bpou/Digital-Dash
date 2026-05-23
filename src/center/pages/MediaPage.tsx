@@ -72,9 +72,7 @@ export default function MediaPage() {
               onClick={() => sendVehicleCommand("bt/media/control", { action: "prev" })}
               className="h-10 w-10 rounded-full border border-white/10 text-white/70 hover:text-white"
             >
-              <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-4 w-4">
-                <path d="M7 6v12M17 6l-8 6 8 6V6z" stroke="currentColor" strokeWidth="1.6" />
-              </svg>
+              <img src="/recolored_C7C7C7/skipandprevious.svg" alt="" className="mx-auto h-4 w-4 object-contain" />
             </button>
             <button
               type="button"
@@ -86,9 +84,9 @@ export default function MediaPage() {
               className="h-12 w-12 rounded-full border border-white/20 bg-white/10 text-white"
             >
               {audio.nowPlaying.isPlaying ? (
-                <img src="/pause.png" alt="" className="mx-auto h-5 w-5 object-contain" />
+                <img src="/recolored_C7C7C7/pause.svg" alt="" className="mx-auto h-5 w-5 object-contain" />
               ) : (
-                <img src="/play-button-arrowhead.png" alt="" className="mx-auto h-5 w-5 object-contain" />
+                <img src="/recolored_C7C7C7/play.svg" alt="" className="mx-auto h-5 w-5 object-contain" />
               )}
             </button>
             <button
@@ -96,9 +94,7 @@ export default function MediaPage() {
               onClick={() => sendVehicleCommand("bt/media/control", { action: "next" })}
               className="h-10 w-10 rounded-full border border-white/10 text-white/70 hover:text-white"
             >
-              <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-4 w-4">
-                <path d="M17 6v12M7 6l8 6-8 6V6z" stroke="currentColor" strokeWidth="1.6" />
-              </svg>
+              <img src="/recolored_C7C7C7/skipandprevious.svg" alt="" className="mx-auto h-4 w-4 rotate-180 object-contain" />
             </button>
 </div>
 

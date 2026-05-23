@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { SkipBack, SkipForward } from "lucide-react";
 import { sendVehicleCommand } from "../vehicle/vehicleClient";
 
 type NowPlaying = {
@@ -101,7 +100,7 @@ export default function MusicPlayer({
             onClick={() => sendVehicleCommand("bt/media/control", { action: "prev" })}
             className="music-control"
           >
-            <SkipBack size={18} fill="currentColor" />
+            <img src="/recolored_C7C7C7/skipandprevious.svg" alt="" className="h-[18px] w-[18px] object-contain" />
           </button>
           <button
             type="button"
@@ -114,9 +113,9 @@ export default function MusicPlayer({
             className="music-control music-control--primary"
           >
             {nowPlaying.isPlaying ? (
-              <img src="/pause.png" alt="" className="h-[21px] w-[21px] object-contain" />
+              <img src="/recolored_C7C7C7/pause.svg" alt="" className="h-[21px] w-[21px] object-contain" />
             ) : (
-              <img src="/play-button-arrowhead.png" alt="" className="h-[21px] w-[21px] object-contain" />
+              <img src="/recolored_C7C7C7/play.svg" alt="" className="h-[21px] w-[21px] object-contain" />
             )}
           </button>
           <button
@@ -125,7 +124,7 @@ export default function MusicPlayer({
             onClick={() => sendVehicleCommand("bt/media/control", { action: "next" })}
             className="music-control"
           >
-            <SkipForward size={18} fill="currentColor" />
+            <img src="/recolored_C7C7C7/skipandprevious.svg" alt="" className="h-[18px] w-[18px] rotate-180 object-contain" />
           </button>
         </div>
 

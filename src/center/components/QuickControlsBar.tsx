@@ -71,9 +71,9 @@ export default function QuickControlsBar({
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-primary)] transition hover:bg-[var(--tesla-bg-surface-hover)]"
           >
             {audio.nowPlaying.isPlaying ? (
-              <img src="/pause.png" alt="" className="h-4 w-4 object-contain" />
+              <img src="/recolored_C7C7C7/pause.svg" alt="" className="h-4 w-4 object-contain" />
             ) : (
-              <img src="/play-button-arrowhead.png" alt="" className="h-4 w-4 object-contain" />
+              <img src="/recolored_C7C7C7/play.svg" alt="" className="h-4 w-4 object-contain" />
             )}
           </button>
           <button
@@ -81,9 +81,7 @@ export default function QuickControlsBar({
             onClick={() => sendVehicleCommand("bt/media/control", { action: "next" })}
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--tesla-text-secondary)] transition hover:text-[var(--tesla-text-primary)]"
           >
-            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-              <path d="M17 6v12M7 6l8 6-8 6V6z" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
+            <img src="/recolored_C7C7C7/skipandprevious.svg" alt="" className="h-4 w-4 rotate-180 object-contain" />
           </button>
         </div>
       </motion.button>
