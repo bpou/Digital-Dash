@@ -382,17 +382,20 @@ Item {
                         spacing: 10
                         PillButton {
                             iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-backward-3751095.png"
+                            iconSize: 24
                             width: 78
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "prev" })
                         }
                         PillButton {
                             iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-pause-3751099.png" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-play-3751096.png"
+                            iconSize: 24
                             width: 86
                             active: true
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
                         }
                         PillButton {
                             iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-forward-3751113.png"
+                            iconSize: 24
                             width: 78
                             onClicked: vehicleClient.sendCommand("bt/media/control", { "action": "next" })
                         }
@@ -1027,7 +1030,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 backgroundVisible: false
                 iconSource: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-pause-3751099.png" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-play-3751096.png"
-                iconSize: 22
+                iconSize: 24
                 width: 42
                 onClicked: vehicleClient.sendCommand("bt/media/control", { "action": root.nowPlaying.isPlaying ? "pause" : "play" })
             }
@@ -1192,6 +1195,10 @@ Item {
             visible: iconSource.length > 0
             source: iconSource
             fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
+            sourceSize.width: iconSize * 4
+            sourceSize.height: iconSize * 4
         }
 
         Text {
@@ -1236,6 +1243,10 @@ Item {
             source: iconSource
             fillMode: Image.PreserveAspectFit
             rotation: iconRotation
+            smooth: true
+            mipmap: true
+            sourceSize.width: iconSize * 4
+            sourceSize.height: iconSize * 4
         }
 
         Text {

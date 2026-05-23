@@ -1032,10 +1032,14 @@ Item {
 
                     Image {
                         anchors.centerIn: parent
-                        width: 11
-                        height: 11
+                        width: 12
+                        height: 12
                         source: root.nowPlaying.isPlaying ? "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-pause-3751099.png" : "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-play-3751096.png"
                         fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        mipmap: true
+                        sourceSize.width: 48
+                        sourceSize.height: 48
                     }
 
                     MouseArea {
