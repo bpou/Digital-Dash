@@ -1,4 +1,5 @@
 ﻿import { useMemo } from "react";
+import PublicSvgIcon from "../../components/PublicSvgIcon";
 import { sendVehicleCommand, useVehicleState } from "../../vehicle/vehicleClient";
 
 const formatDuration = (totalSeconds: number) => {
@@ -86,13 +87,9 @@ export default function MediaPage() {
               className="h-12 w-12 rounded-full border border-white/20 bg-white/10 text-white"
             >
               {audio.nowPlaying.isPlaying ? (
-                <svg viewBox="0 0 24 24" fill="none" className="mx-auto h-5 w-5">
-                  <path d="M8 6v12M16 6v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+                <PublicSvgIcon src="/pause.svg" className="mx-auto h-5 w-5" />
               ) : (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="mx-auto h-5 w-5">
-                  <path d="M8 5l11 7-11 7V5z" />
-                </svg>
+                <PublicSvgIcon src="/play-button-arrowhead.svg" className="mx-auto h-5 w-5" />
               )}
             </button>
             <button

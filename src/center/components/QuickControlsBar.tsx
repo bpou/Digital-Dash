@@ -1,4 +1,5 @@
 ﻿import { motion } from "framer-motion";
+import PublicSvgIcon from "../../components/PublicSvgIcon";
 import { sendVehicleCommand, useVehicleState } from "../../vehicle/vehicleClient";
 
 interface QuickControlsBarProps {
@@ -21,12 +22,7 @@ export default function QuickControlsBar({
         onClick={onLauncherToggle}
         className="flex h-11 w-11 items-center justify-center rounded-[var(--tesla-radius-md)] bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-secondary)] transition hover:bg-[var(--tesla-bg-surface-hover)] hover:text-[var(--tesla-text-primary)]"
       >
-        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-          <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-          <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-          <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-          <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        </svg>
+        <PublicSvgIcon src="/application.svg" className="h-5 w-5" />
       </button>
 
       <motion.button
@@ -76,13 +72,9 @@ export default function QuickControlsBar({
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tesla-bg-surface)] text-[var(--tesla-text-primary)] transition hover:bg-[var(--tesla-bg-surface-hover)]"
           >
             {audio.nowPlaying.isPlaying ? (
-              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-                <path d="M8 6v12M16 6v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <PublicSvgIcon src="/pause.svg" className="h-4 w-4" />
             ) : (
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                <path d="M8 5l11 7-11 7V5z" />
-              </svg>
+              <PublicSvgIcon src="/play-button-arrowhead.svg" className="h-4 w-4" />
             )}
           </button>
           <button
