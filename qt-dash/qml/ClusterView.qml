@@ -447,9 +447,10 @@ Item {
             }
 
             Text {
-                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: 10
                 anchors.top: parent.top
-                anchors.topMargin: 6
+                anchors.topMargin: 5
                 text: "BOOST"
                 color: "#71838a"
                 font.family: "sans-serif"
@@ -458,15 +459,17 @@ Item {
                 font.letterSpacing: 1.1
             }
 
-            Row {
+            Item {
+                height: 27
+                width: boostValue.implicitWidth + boostUnit.implicitWidth + 3
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 4
-                spacing: 3
+                anchors.bottomMargin: 3
 
                 Text {
                     id: boostValue
-                    anchors.baseline: boostUnit.baseline
+                    anchors.left: parent.left
+                    anchors.bottom: parent.bottom
                     text: root.boostBar.toFixed(1)
                     color: "#ffffff"
                     font.family: "sans-serif"
@@ -476,6 +479,9 @@ Item {
 
                 Text {
                     id: boostUnit
+                    anchors.left: boostValue.right
+                    anchors.leftMargin: 3
+                    anchors.baseline: boostValue.baseline
                     text: "BAR"
                     color: "#9aa8ae"
                     font.family: "sans-serif"
