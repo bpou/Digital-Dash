@@ -30,11 +30,13 @@ int main(int argc, char *argv[]) {
     vehicleClient.connectTo(vehicleUrl);
 
     QQmlApplicationEngine engine;
-    const QString externalQmlPath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral("../runtime-qml/"));
+    const QDir appDir(QCoreApplication::applicationDirPath());
+    const QString mainQmlPath = appDir.absoluteFilePath(QStringLiteral("../qml/Main.qml"));
+    const QString externalQmlPath = appDir.absoluteFilePath(QStringLiteral("../runtime-qml/"));
     engine.rootContext()->setContextProperty("vehicleClient", &vehicleClient);
     engine.rootContext()->setContextProperty("initialView", initialView);
     engine.rootContext()->setContextProperty("externalQmlDir", QUrl::fromLocalFile(externalQmlPath + QLatin1Char('/')).toString());
-    engine.loadFromModule("DigitalDash", "Main");
+    engine.load(QUrl::fromLocalFile(mainQmlPath));
 
     if (engine.rootObjects().isEmpty()) {
         return -1;

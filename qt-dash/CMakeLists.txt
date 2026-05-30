@@ -15,19 +15,6 @@ qt_add_executable(digital-dash-qt
     src/VehicleClient.h
 )
 
-qt_add_qml_module(digital-dash-qt
-    URI DigitalDash
-    VERSION 1.0
-    NO_IMPORT_SCAN
-    QML_FILES
-        qml/Main.qml
-        qml/ClusterView.qml
-        qml/CenterView.qml
-        qml/Gauge.qml
-        qml/MetricRow.qml
-        qml/StatusPill.qml
-)
-
 target_link_libraries(digital-dash-qt
     PRIVATE
         Qt6::Quick

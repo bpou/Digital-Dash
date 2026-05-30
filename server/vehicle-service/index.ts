@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import mqtt from "mqtt";
-import { exec } from "child_process";
+import { exec, spawn } from "child_process";
 import { fileURLToPath } from "url";
 import { WebSocketServer } from "ws";
 import type { VehicleState } from "../../src/shared/vehicleTypes";
@@ -13,6 +13,8 @@ const BLINK_ON_MS = 330;
 const BLINK_OFF_MS = 330;
 const CAN_IFACE = process.env.CAN_IFACE ?? "can0";
 const CAN_LIGHT_ID = process.env.CAN_LIGHT_ID ?? "321";
+const GPSPIPE_BIN = process.env.GPSPIPE_BIN ?? "gpspipe";
+const GPSD_RETRY_MS = Number(process.env.GPSD_RETRY_MS ?? 5000);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_PATH = path.join(__dirname, "state.json");
@@ -311,6 +313,76 @@ const applyGpsUpdate = (next: Partial<VehicleState["gps"]>) => {
   const merged = ensureSpeedFields({ ...current, ...next });
   state = { ...state, gps: merged };
   scheduleBroadcast();
+};
+
+const startGpsdReader = () => {
+  let buffer = "";
+  let retryTimer: NodeJS.Timeout | null = null;
+
+  const scheduleRestart = () => {
+    if (retryTimer) return;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      start();
+    }, GPSD_RETRY_MS);
+  };
+
+  const handleGpsdLine = (line: string) => {
+    if (!line.trim()) return;
+    try {
+      const message = JSON.parse(line) as Record<string, unknown>;
+      if (message.class !== "TPV") return;
+      const lat = parseFloatValue(message.lat);
+      const lng = parseFloatValue(message.lon ?? message.lng);
+      if (lat == null || lng == null) return;
+      const heading = parseFloatValue(message.track);
+      const speedMps = parseFloatValue(message.speed);
+      applyGpsUpdate({
+        lat,
+        lng,
+        heading: heading ?? undefined,
+        speedMps: speedMps ?? undefined,
+        speedKmh: speedMps != null ? speedMps * 3.6 : undefined,
+      });
+    } catch {
+      // gpspipe can emit non-JSON noise during startup.
+    }
+  };
+
+  const start = () => {
+    const child = spawn(GPSPIPE_BIN, ["-w"], { stdio: ["ignore", "pipe", "pipe"] });
+    console.log(`gpsd reader started: ${GPSPIPE_BIN} -w pid=${child.pid}`);
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      buffer += chunk;
+      let newline = buffer.indexOf("\n");
+      while (newline !== -1) {
+        const line = buffer.slice(0, newline);
+        buffer = buffer.slice(newline + 1);
+        handleGpsdLine(line);
+        newline = buffer.indexOf("\n");
+      }
+    });
+
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk: string) => {
+      const text = chunk.trim();
+      if (text) console.warn(`gpspipe: ${text}`);
+    });
+
+    child.on("error", (err) => {
+      console.warn(`gpsd reader failed to start: ${err.message}`);
+      scheduleRestart();
+    });
+
+    child.on("exit", (code, signal) => {
+      console.warn(`gpsd reader exited code=${code} signal=${signal ?? ""}`);
+      scheduleRestart();
+    });
+  };
+
+  start();
 };
 
 const parseGpsPayload = (raw: string): Partial<VehicleState["gps"]> | null => {
