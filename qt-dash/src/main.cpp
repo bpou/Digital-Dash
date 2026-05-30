@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <QDir>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -29,8 +30,10 @@ int main(int argc, char *argv[]) {
     vehicleClient.connectTo(vehicleUrl);
 
     QQmlApplicationEngine engine;
+    const QString externalQmlPath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral("../qml/"));
     engine.rootContext()->setContextProperty("vehicleClient", &vehicleClient);
     engine.rootContext()->setContextProperty("initialView", initialView);
+    engine.rootContext()->setContextProperty("externalQmlDir", QUrl::fromLocalFile(externalQmlPath + QLatin1Char('/')).toString());
     engine.loadFromModule("DigitalDash", "Main");
 
     if (engine.rootObjects().isEmpty()) {
