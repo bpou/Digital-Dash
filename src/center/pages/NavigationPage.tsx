@@ -316,8 +316,7 @@ export default function NavigationPage() {
     mapboxgl.accessToken = mapboxToken;
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/navigation-night-v1",
-      center: [defaultCenter.lng, defaultCenter.lat],
+style: "mapbox://styles/mapbox/streets-v12",      center: [defaultCenter.lng, defaultCenter.lat],
       zoom: 12,
       pitch: 0,
       bearing: 0,
