@@ -1255,16 +1255,16 @@ Item {
 
         Image {
             x: Math.round((parent.width - width) / 2)
-            y: 10
-            width: 96
-            height: 96
+            y: 44
+            width: 32
+            height: 32
             visible: iconSource.length > 0
             source: iconSource
             fillMode: Image.PreserveAspectFit
             smooth: true
             mipmap: true
-            sourceSize.width: 96
-            sourceSize.height: 96
+            sourceSize.width: 32
+            sourceSize.height: 32
             opacity: active ? 1.0 : 0.72
         }
 
