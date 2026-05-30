@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { VehicleState } from "../../shared/vehicleTypes";
 import { subscribe } from "../../vehicle/vehicleClient";
 
@@ -37,21 +37,46 @@ const positionsEqual = (a: GpsPosition | null, b: GpsPosition | null) => {
   );
 };
 
+// Default Stockholm coordinates used in mock data
+const DEFAULT_LAT = 59.3293;
+const DEFAULT_LNG = 18.0686;
+// Consider coordinates "default" if within ~11m of Stockholm coordinates (0.0001°)
+const DEFAULT_THRESHOLD_DEGREES = 0.0001;
+
+const isDefaultCoordinates = (lat: number, lng: number): boolean => {
+  const latDiff = Math.abs(lat - DEFAULT_LAT);
+  const lngDiff = Math.abs(lng - DEFAULT_LNG);
+  return latDiff < DEFAULT_THRESHOLD_DEGREES && lngDiff < DEFAULT_THRESHOLD_DEGREES;
+};
+
 const useVehicleGpsPosition = () => {
   const [position, setPosition] = useState<GpsPosition | null>(null);
+  const lastUpdateRef = useRef<number>(0);
 
   useEffect(() => {
     const unsubscribe = subscribe((state) => {
       const current = toGpsPosition(state.gps ?? null);
       setPosition((prev) => {
         if (positionsEqual(prev, current)) return prev;
+        lastUpdateRef.current = Date.now();
         return current;
       });
     });
     return unsubscribe;
   }, []);
 
-  return position;
+  // Return null if using default coordinates or hasn't updated in 30 seconds
+  const vehicleGps = position;
+  if (vehicleGps) {
+    const isDefault = isDefaultCoordinates(vehicleGps.location.lat, vehicleGps.location.lng);
+    const isStale = Date.now() - lastUpdateRef.current > 30000; // 30 seconds
+    
+    if (isDefault || isStale) {
+      return null;
+    }
+  }
+  
+  return vehicleGps;
 };
 
 const useBrowserGeolocation = () => {
@@ -89,5 +114,6 @@ const useBrowserGeolocation = () => {
 export const useGpsPosition = () => {
   const vehicleGps = useVehicleGpsPosition();
   const browserGps = useBrowserGeolocation();
-  return vehicleGps ?? browserGps;
+  // Prefer browser geolocation if vehicle GPS appears to be mock/stale data
+  return browserGps ?? vehicleGps;
 };
