@@ -3,13 +3,10 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QUrl>
-#include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
 #include "VehicleClient.h"
 
 int main(int argc, char *argv[]) {
-    QtWebEngineQuick::initialize();
-
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName("Digital Dash Qt");
     QGuiApplication::setOrganizationName("DigitalDash");
