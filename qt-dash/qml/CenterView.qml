@@ -1246,8 +1246,8 @@ Item {
         property string iconSource: ""
         property bool active: false
 
-        width: 132
-        height: 132
+        width: 148
+        height: 168
         radius: 14
         color: active ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.065)
         border.color: active ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.045)
@@ -1256,23 +1256,23 @@ Item {
         Image {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            anchors.topMargin: 34
-            width: 42
-            height: 42
+            anchors.topMargin: 10
+            width: 128
+            height: 128
             visible: iconSource.length > 0
             source: iconSource
             fillMode: Image.PreserveAspectFit
             smooth: true
             mipmap: true
-            sourceSize.width: 168
-            sourceSize.height: 168
+            sourceSize.width: 128
+            sourceSize.height: 128
             opacity: active ? 1.0 : 0.72
         }
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 24
+            anchors.bottomMargin: 12
             text: label
             color: active ? "#f4f7fb" : "#9a9ca3"
             font.family: "sans-serif"
