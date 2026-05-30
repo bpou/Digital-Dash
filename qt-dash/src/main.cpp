@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     vehicleClient.connectTo(vehicleUrl);
 
     QQmlApplicationEngine engine;
-    const QString externalQmlPath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral("../qml/"));
+    const QString externalQmlPath = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral("../runtime-qml/"));
     engine.rootContext()->setContextProperty("vehicleClient", &vehicleClient);
     engine.rootContext()->setContextProperty("initialView", initialView);
     engine.rootContext()->setContextProperty("externalQmlDir", QUrl::fromLocalFile(externalQmlPath + QLatin1Char('/')).toString());
