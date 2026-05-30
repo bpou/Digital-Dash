@@ -990,12 +990,12 @@ Item {
             columnSpacing: 16
             rowSpacing: 16
 
-            LauncherTile { label: "MEDIA"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-play-icon-3523397.png"; active: root.activePage === "MEDIA"; onClicked: { root.activePage = "MEDIA"; root.launcherOpen = false } }
-            LauncherTile { label: "CLIMATE"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-temperature-4701938.png"; active: root.activePage === "CLIMATE"; onClicked: { root.activePage = "CLIMATE"; root.launcherOpen = false } }
-            LauncherTile { label: "CAR"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-car-2441109.png"; active: root.activePage === "CAR"; onClicked: { root.activePage = "CAR"; root.launcherOpen = false } }
-            LauncherTile { label: "NAVIGATION"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-navigation-5603242.png"; active: root.activePage === "NAVIGATION"; onClicked: { root.activePage = "NAVIGATION"; root.launcherOpen = false } }
-            LauncherTile { label: "PHONE"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-phone-8365903.png"; active: root.activePage === "PHONE"; onClicked: { root.activePage = "PHONE"; root.launcherOpen = false } }
-            LauncherTile { label: "SETTINGS"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-setting-7376103.png"; active: root.activePage === "SETTINGS"; onClicked: { root.activePage = "SETTINGS"; root.launcherOpen = false } }
+            LauncherTile { label: "MEDIA"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-play-icon-3523397.png"; active: root.activePage === "MEDIA"; onClicked: { root.activePage = "MEDIA"; root.launcherOpen = false } }
+            LauncherTile { label: "CLIMATE"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-temperature-4701938.png"; active: root.activePage === "CLIMATE"; onClicked: { root.activePage = "CLIMATE"; root.launcherOpen = false } }
+            LauncherTile { label: "CAR"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-car-2441109.png"; active: root.activePage === "CAR"; onClicked: { root.activePage = "CAR"; root.launcherOpen = false } }
+            LauncherTile { label: "NAVIGATION"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-navigation-5603242.png"; active: root.activePage === "NAVIGATION"; onClicked: { root.activePage = "NAVIGATION"; root.launcherOpen = false } }
+            LauncherTile { label: "PHONE"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-phone-8365903.png"; active: root.activePage === "PHONE"; onClicked: { root.activePage = "PHONE"; root.launcherOpen = false } }
+            LauncherTile { label: "SETTINGS"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-setting-7376103.png"; active: root.activePage === "SETTINGS"; onClicked: { root.activePage = "SETTINGS"; root.launcherOpen = false } }
         }
 
     }
@@ -1254,9 +1254,8 @@ Item {
         border.width: 1
 
         Image {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.topMargin: 10
+            x: Math.round((parent.width - width) / 2)
+            y: 10
             width: 128
             height: 128
             visible: iconSource.length > 0
