@@ -990,12 +990,12 @@ Item {
             columnSpacing: 16
             rowSpacing: 16
 
-            LauncherTile { label: "MEDIA"; icon: "media"; active: root.activePage === "MEDIA"; onClicked: { root.activePage = "MEDIA"; root.launcherOpen = false } }
-            LauncherTile { label: "CLIMATE"; icon: "climate"; active: root.activePage === "CLIMATE"; onClicked: { root.activePage = "CLIMATE"; root.launcherOpen = false } }
-            LauncherTile { label: "CAR"; icon: "car"; active: root.activePage === "CAR"; onClicked: { root.activePage = "CAR"; root.launcherOpen = false } }
-            LauncherTile { label: "NAVIGATION"; icon: "nav"; active: root.activePage === "NAVIGATION"; onClicked: { root.activePage = "NAVIGATION"; root.launcherOpen = false } }
-            LauncherTile { label: "PHONE"; icon: "phone"; active: root.activePage === "PHONE"; onClicked: { root.activePage = "PHONE"; root.launcherOpen = false } }
-            LauncherTile { label: "SETTINGS"; icon: "settings"; active: root.activePage === "SETTINGS"; onClicked: { root.activePage = "SETTINGS"; root.launcherOpen = false } }
+            LauncherTile { label: "MEDIA"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-play-icon-3523397.png"; active: root.activePage === "MEDIA"; onClicked: { root.activePage = "MEDIA"; root.launcherOpen = false } }
+            LauncherTile { label: "CLIMATE"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-temperature-4701938.png"; active: root.activePage === "CLIMATE"; onClicked: { root.activePage = "CLIMATE"; root.launcherOpen = false } }
+            LauncherTile { label: "CAR"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-car-2441109.png"; active: root.activePage === "CAR"; onClicked: { root.activePage = "CAR"; root.launcherOpen = false } }
+            LauncherTile { label: "NAVIGATION"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-navigation-5603242.png"; active: root.activePage === "NAVIGATION"; onClicked: { root.activePage = "NAVIGATION"; root.launcherOpen = false } }
+            LauncherTile { label: "PHONE"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-phone-8365903.png"; active: root.activePage === "PHONE"; onClicked: { root.activePage = "PHONE"; root.launcherOpen = false } }
+            LauncherTile { label: "SETTINGS"; iconSource: "file:///home/admin/digital-dash/public/recolored_C7C7C7/noun-setting-7376103.png"; active: root.activePage === "SETTINGS"; onClicked: { root.activePage = "SETTINGS"; root.launcherOpen = false } }
         }
 
     }
@@ -1243,7 +1243,7 @@ Item {
     component LauncherTile: Rectangle {
         signal clicked()
         property string label: ""
-        property string icon: ""
+        property string iconSource: ""
         property bool active: false
 
         width: 132
@@ -1259,9 +1259,13 @@ Item {
             anchors.topMargin: 34
             width: 42
             height: 42
-            visible: false
-            source: ""
+            visible: iconSource.length > 0
+            source: iconSource
             fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
+            sourceSize.width: 168
+            sourceSize.height: 168
             opacity: active ? 1.0 : 0.72
         }
 
