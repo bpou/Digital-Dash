@@ -949,6 +949,16 @@ Item {
         }
 
         DockButton {
+            anchors.left: parent.left
+            anchors.leftMargin: 30
+            anchors.verticalCenter: parent.verticalCenter
+            iconSource: "file:///home/admin/digital-dash/public/application.png"
+            iconSize: 22
+            width: 44
+            onClicked: root.launcherOpen = !root.launcherOpen
+        }
+
+        DockButton {
             anchors.right: parent.right
             anchors.rightMargin: 30
             anchors.verticalCenter: parent.verticalCenter
