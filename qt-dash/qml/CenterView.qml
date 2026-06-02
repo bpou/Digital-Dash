@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Effects
 import QtQuick.VirtualKeyboard
-import QtWebEngine
 
 Item {
     id: root
