@@ -129,20 +129,25 @@ export default function NavigationPage() {
     }
     if (!mapContainerRef.current || mapRef.current) return;
 
-    mapboxgl.accessToken = mapboxToken;
-
     const initialLocation = gpsPosition?.location ?? fallbackLocation;
     const initialHeading = gpsPosition?.heading;
 
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/navigation-night-v1",
-      center: [initialLocation.lng, initialLocation.lat],
-      zoom: gpsPosition?.location ? 16 : 12,
-      pitch: 58,
-      bearing: isFiniteNumber(initialHeading) ? initialHeading : 0,
-      attributionControl: false,
-    });
+    let map: mapboxgl.Map;
+    try {
+      mapboxgl.accessToken = mapboxToken;
+      map = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/mapbox/navigation-night-v1",
+        center: [initialLocation.lng, initialLocation.lat],
+        zoom: gpsPosition?.location ? 16 : 12,
+        pitch: 58,
+        bearing: isFiniteNumber(initialHeading) ? initialHeading : 0,
+        attributionControl: false,
+      });
+    } catch (err) {
+      setMapError(err instanceof Error ? err.message : "Map failed to initialize");
+      return;
+    }
 
     mapRef.current = map;
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
