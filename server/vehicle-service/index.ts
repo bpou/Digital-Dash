@@ -274,7 +274,6 @@ wss.on("connection", (socket) => {
 
 console.log(`Vehicle WS listening on ws://localhost:${WS_PORT}`);
 restoreHazards();
-startGpsdReader();
 
 const mqttClient = mqtt.connect(MQTT_URL);
 
@@ -465,6 +464,8 @@ const startGpsdReader = () => {
 
   start();
 };
+
+startGpsdReader();
 
 const parseGpsPayload = (raw: string): Partial<VehicleState["gps"]> | null => {
   const trimmed = raw.trim();
