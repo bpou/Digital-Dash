@@ -15,6 +15,12 @@ qt_add_executable(digital-dash-qt
     src/VehicleClient.h
 )
 
+add_custom_command(TARGET digital-dash-qt POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/runtime-qml
+        $<TARGET_FILE_DIR:digital-dash-qt>/../runtime-qml
+)
+
 target_link_libraries(digital-dash-qt
     PRIVATE
         Qt6::Quick
@@ -24,4 +30,8 @@ target_link_libraries(digital-dash-qt
 install(TARGETS digital-dash-qt
     BUNDLE DESTINATION .
     RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY runtime-qml/
+    DESTINATION runtime-qml
 )
