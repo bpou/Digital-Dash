@@ -13,8 +13,15 @@ const BLINK_ON_MS = 330;
 const BLINK_OFF_MS = 330;
 const CAN_IFACE = process.env.CAN_IFACE ?? "can0";
 const CAN_LIGHT_ID = process.env.CAN_LIGHT_ID ?? "321";
+const GPSD_BIN = process.env.GPSD_BIN ?? "gpsd";
 const GPSPIPE_BIN = process.env.GPSPIPE_BIN ?? "gpspipe";
+const GPSD_SOCKET = process.env.GPSD_SOCKET ?? "/var/run/gpsd.sock";
 const GPSD_RETRY_MS = Number(process.env.GPSD_RETRY_MS ?? 5000);
+const GPSD_AUTO_START = process.env.GPSD_AUTO_START !== "0";
+const GPSD_DEVICES = (process.env.GPSD_DEVICES ?? "/dev/serial/by-id,/dev/ttyACM0,/dev/ttyUSB0,/dev/ttyAMA0,/dev/serial0")
+  .split(",")
+  .map((device) => device.trim())
+  .filter(Boolean);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_PATH = path.join(__dirname, "state.json");
@@ -56,7 +63,6 @@ const defaultState: VehicleState = {
     color: "#7EE3FF",
     brightness: 65,
   },
-  gps: defaultGps,
 };
 
 let state: VehicleState = { ...defaultState };
@@ -268,6 +274,7 @@ wss.on("connection", (socket) => {
 
 console.log(`Vehicle WS listening on ws://localhost:${WS_PORT}`);
 restoreHazards();
+startGpsdReader();
 
 const mqttClient = mqtt.connect(MQTT_URL);
 
@@ -315,6 +322,79 @@ const applyGpsUpdate = (next: Partial<VehicleState["gps"]>) => {
   scheduleBroadcast();
 };
 
+let gpsdProcess: ReturnType<typeof spawn> | null = null;
+
+const resolveGpsDevices = () => {
+  const devices: string[] = [];
+
+  for (const candidate of GPSD_DEVICES) {
+    try {
+      if (!fs.existsSync(candidate)) continue;
+      const stat = fs.statSync(candidate);
+      if (stat.isDirectory()) {
+        const entries = fs
+          .readdirSync(candidate)
+          .map((entry) => path.join(candidate, entry))
+          .filter((entry) => {
+            try {
+              const entryStat = fs.lstatSync(entry);
+              if (entryStat.isSymbolicLink()) return true;
+              return entryStat.isCharacterDevice() || entryStat.isFile();
+            } catch {
+              return false;
+            }
+          });
+        devices.push(...entries);
+        continue;
+      }
+      devices.push(candidate);
+    } catch {
+      // Ignore paths that disappear while probing.
+    }
+  }
+
+  return Array.from(new Set(devices));
+};
+
+const ensureGpsdStarted = () => {
+  if (!GPSD_AUTO_START || gpsdProcess) return;
+
+  const devices = resolveGpsDevices();
+  if (!devices.length) {
+    console.warn(`No GPS devices found for gpsd. Checked: ${GPSD_DEVICES.join(", ")}`);
+    return;
+  }
+
+  try {
+    fs.mkdirSync(path.dirname(GPSD_SOCKET), { recursive: true });
+  } catch (err) {
+    console.warn(`Could not create gpsd socket directory ${path.dirname(GPSD_SOCKET)}: ${(err as Error).message}`);
+  }
+
+  const args = ["-N", "-F", GPSD_SOCKET, ...devices];
+  try {
+    gpsdProcess = spawn(GPSD_BIN, args, { stdio: ["ignore", "ignore", "pipe"] });
+  } catch (err) {
+    console.warn(`gpsd failed to start: ${(err as Error).message}`);
+    return;
+  }
+  console.log(`gpsd started for GPS devices: ${devices.join(", ")} pid=${gpsdProcess.pid}`);
+
+  gpsdProcess.stderr.setEncoding("utf8");
+  gpsdProcess.stderr.on("data", (chunk: string) => {
+    const text = chunk.trim();
+    if (text) console.warn(`gpsd: ${text}`);
+  });
+  gpsdProcess.on("error", (err) => {
+    console.warn(`gpsd failed to start: ${err.message}`);
+    gpsdProcess = null;
+  });
+  gpsdProcess.on("exit", (code, signal) => {
+    console.warn(`gpsd exited code=${code} signal=${signal ?? ""}`);
+    gpsdProcess = null;
+  });
+};
+
 const startGpsdReader = () => {
   let buffer = "";
   let retryTimer: NodeJS.Timeout | null = null;
@@ -350,6 +430,7 @@ const startGpsdReader = () => {
   };
 
   const start = () => {
+    ensureGpsdStarted();
     const child = spawn(GPSPIPE_BIN, ["-w"], { stdio: ["ignore", "pipe", "pipe"] });
     console.log(`gpsd reader started: ${GPSPIPE_BIN} -w pid=${child.pid}`);
 
