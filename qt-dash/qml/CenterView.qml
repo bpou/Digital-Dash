@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import QtQuick.VirtualKeyboard
+import QtWebEngine
 
 Item {
     id: root
@@ -863,55 +864,12 @@ Item {
         }
 
         DockButton {
-            anchors.left: parent.left
-            anchors.leftMargin: 30
-            anchors.verticalCenter: parent.verticalCenter
-            iconSource: "file:///home/admin/digital-dash/public/application.png"
-            iconSize: 22
-            width: 44
-            onClicked: root.launcherOpen = !root.launcherOpen
-        }
-
-        DockButton {
             anchors.right: parent.right
             anchors.rightMargin: 30
             anchors.verticalCenter: parent.verticalCenter
             label: Math.round(root.climate.tempSetC || 0) + " C"
             width: 96
         }
-    }
-
-    Rectangle {
-        id: appLauncherOverlay
-        anchors.fill: parent
-        z: 30
-        visible: root.launcherOpen
-        opacity: root.launcherOpen ? 1.0 : 0.0
-        color: Qt.rgba(0, 0, 0, 0.92)
-
-        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: root.launcherOpen = false
-        }
-
-        Grid {
-            id: launcherGrid
-            anchors.centerIn: parent
-            columns: 3
-            rows: 2
-            columnSpacing: 16
-            rowSpacing: 16
-
-            LauncherTile { label: "MEDIA"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-play-icon-3523397.png"; active: root.activePage === "MEDIA"; onClicked: { root.activePage = "MEDIA"; root.launcherOpen = false } }
-            LauncherTile { label: "CLIMATE"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-temperature-4701938.png"; active: root.activePage === "CLIMATE"; onClicked: { root.activePage = "CLIMATE"; root.launcherOpen = false } }
-            LauncherTile { label: "CAR"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-car-2441109.png"; active: root.activePage === "CAR"; onClicked: { root.activePage = "CAR"; root.launcherOpen = false } }
-            LauncherTile { label: "NAVIGATION"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-navigation-5603242.png"; active: root.activePage === "NAVIGATION"; onClicked: { root.activePage = "NAVIGATION"; root.launcherOpen = false } }
-            LauncherTile { label: "PHONE"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-phone-8365903.png"; active: root.activePage === "PHONE"; onClicked: { root.activePage = "PHONE"; root.launcherOpen = false } }
-            LauncherTile { label: "SETTINGS"; iconSource: "file:///home/admin/digital-dash/public/Cluster%20and%20headunit%20icons/headunit/noun-setting-7376103.png"; active: root.activePage === "SETTINGS"; onClicked: { root.activePage = "SETTINGS"; root.launcherOpen = false } }
-        }
-
     }
 
     component GlassPanel: Rectangle {
@@ -1154,49 +1112,4 @@ Item {
         }
     }
 
-    component LauncherTile: Rectangle {
-        signal clicked()
-        property string label: ""
-        property string iconSource: ""
-        property bool active: false
-
-        width: 148
-        height: 168
-        radius: 14
-        color: active ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.065)
-        border.color: active ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.045)
-        border.width: 1
-
-        Image {
-            x: Math.round((parent.width - width) / 2)
-            y: 36
-            width: 64
-            height: 64
-            visible: iconSource.length > 0
-            source: iconSource
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            mipmap: true
-            sourceSize.width: 64
-            sourceSize.height: 64
-            opacity: active ? 1.0 : 0.72
-        }
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 12
-            text: label
-            color: active ? "#f4f7fb" : "#9a9ca3"
-            font.family: "sans-serif"
-            font.pixelSize: 11
-            font.weight: Font.Bold
-            font.letterSpacing: 1.6
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: parent.clicked()
-        }
-    }
 }
